@@ -95,9 +95,10 @@ class RuleModel
         $json_encode = function_exists('wp_json_encode') ? 'wp_json_encode' : 'json_encode';
 
         $db_data = [
-            'enabled'      => isset($data['enabled']) ? (int)$data['enabled'] : 1,
-            'deleted'      => 0,
-            'exclusive'    => isset($data['exclusive']) ? (int)$data['exclusive'] : 0,
+            'enabled'            => isset($data['enabled']) ? (int)$data['enabled'] : 1,
+            'deleted'            => 0,
+            'exclusive'          => isset($data['exclusive']) ? (int)$data['exclusive'] : 0,
+            'no_coupon_stacking' => isset($data['no_coupon_stacking']) ? (int)(bool)$data['no_coupon_stacking'] : 0,
             'title'        => sanitize_text_field($data['title']),
             'priority'     => isset($data['priority']) ? (int)$data['priority'] : 10,
             'apply_to'     => sanitize_text_field($data['apply_to']),
@@ -177,6 +178,8 @@ class RuleModel
         $row['used_count']  = (int)$row['used_count'];
         $row['date_from']   = !empty($row['date_from']) ? (int)$row['date_from'] : null;
         $row['date_to']     = !empty($row['date_to']) ? (int)$row['date_to'] : null;
+
+        $row['no_coupon_stacking'] = !empty($row['no_coupon_stacking']) && (int)$row['no_coupon_stacking'] === 1;
 
         $row['filters']     = !empty($row['filters']) ? json_decode($row['filters'], true) : [];
         $row['conditions']   = !empty($row['conditions']) ? json_decode($row['conditions'], true) : [];

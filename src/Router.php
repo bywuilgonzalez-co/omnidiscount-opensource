@@ -45,6 +45,10 @@ class Router
         $api_controller     = \Drw\App\Controllers\ApiController::instance();
         $shortcode_controller = \Drw\App\Controllers\ShortcodeController::instance();
         $updater            = \Drw\App\Controllers\Updater::instance();
+        $store_api_controller    = \Drw\App\Controllers\StoreApiController::instance();
+        $analytics_controller    = \Drw\App\Controllers\AnalyticsController::instance();
+        $import_export_controller = \Drw\App\Controllers\ImportExportController::instance();
+        $progress_bar_controller = \Drw\App\Controllers\ProgressBarController::instance();
 
         // 3. Register hooks
         $catalog_controller->register_hooks();
@@ -53,6 +57,10 @@ class Router
         $api_controller->register_hooks();
         $shortcode_controller->register_hooks();
         $updater->register_hooks();
+        $store_api_controller->register_hooks();
+        $analytics_controller->register_hooks();
+        $import_export_controller->register_hooks();
+        $progress_bar_controller->register_hooks();
     }
 
     /**

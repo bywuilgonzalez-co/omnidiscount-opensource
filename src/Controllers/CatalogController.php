@@ -112,19 +112,18 @@ class CatalogController
         }
 
         $this->is_calculating = true;
-        
+
         $regular_price = (float)$product->get_regular_price();
-        $engine = \Drw\App\Controllers\RulesEngine::instance();
-        
+        $db_price      = (float)$product->get_price(); // read while guard is on → gets raw DB price
+        $engine        = \Drw\App\Controllers\RulesEngine::instance();
+
         $discounted_price = $engine->calculate_catalog_discount($product, $regular_price);
-        
+
         $this->is_calculating = false;
 
-        $wc_price = (float)$product->get_price();
-        $final_price = $discounted_price !== null ? min($wc_price, $discounted_price) : $wc_price;
+        $final_price = ($discounted_price !== null) ? min($db_price, $discounted_price) : $db_price;
 
-        if ($discounted_price !== null && $final_price < $wc_price) {
-            // Render crossed-out style
+        if ($final_price < $regular_price && $regular_price > 0) {
             $html = sprintf(
                 '<del aria-hidden="true">%s</del> <ins>%s</ins>',
                 wc_price($regular_price),
