@@ -43,12 +43,14 @@ class Router
         $cart_controller    = \Drw\App\Controllers\CartController::instance();
         $admin_controller   = \Drw\App\Controllers\AdminController::instance();
         $api_controller     = \Drw\App\Controllers\ApiController::instance();
+        $updater            = \Drw\App\Controllers\Updater::instance();
 
         // 3. Register hooks
         $catalog_controller->register_hooks();
         $cart_controller->register_hooks();
         $admin_controller->register_hooks();
         $api_controller->register_hooks();
+        $updater->register_hooks();
     }
 
     /**
