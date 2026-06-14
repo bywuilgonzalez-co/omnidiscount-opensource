@@ -81,6 +81,31 @@ class ApiController
                 ],
             ]
         ]);
+
+        // Search products for async admin selectors.
+        register_rest_route($namespace, '/products', [
+            [
+                'methods'             => \WP_REST_Server::READABLE,
+                'callback'            => [$this, 'search_products'],
+                'permission_callback' => [$this, 'check_permission'],
+                'args' => [
+                    'search' => [
+                        'sanitize_callback' => 'sanitize_text_field',
+                    ],
+                    'include' => [
+                        'sanitize_callback' => 'sanitize_text_field',
+                    ],
+                    'page' => [
+                        'default'           => 1,
+                        'sanitize_callback' => 'absint',
+                    ],
+                    'per_page' => [
+                        'default'           => 20,
+                        'sanitize_callback' => 'absint',
+                    ],
+                ],
+            ],
+        ]);
     }
 
     /**
@@ -98,6 +123,66 @@ class ApiController
     {
         $rules = RuleModel::get_all_rules();
         return new \WP_REST_Response($rules, 200);
+    }
+
+    /**
+     * GET /drw/v1/products
+     */
+    public function search_products($request)
+    {
+        $search = sanitize_text_field((string)$request->get_param('search'));
+        $include = $this->parse_id_list($request->get_param('include'));
+        $page = max(1, absint($request->get_param('page')));
+        $per_page = min(50, max(1, absint($request->get_param('per_page'))));
+
+        $query_args = [
+            'post_type'              => 'product',
+            'post_status'            => 'publish',
+            'posts_per_page'         => $per_page,
+            'paged'                  => $page,
+            'orderby'                => 'title',
+            'order'                  => 'ASC',
+            'fields'                 => 'ids',
+            'no_found_rows'          => true,
+            'update_post_meta_cache' => false,
+            'update_post_term_cache' => false,
+        ];
+
+        if ($search !== '') {
+            $query_args['s'] = $search;
+        }
+
+        if (!empty($include)) {
+            $query_args['post__in'] = $include;
+            $query_args['orderby'] = 'post__in';
+            $query_args['posts_per_page'] = min(50, count($include));
+            unset($query_args['s']);
+        }
+
+        $product_ids = get_posts($query_args);
+        $items = [];
+
+        foreach ($product_ids as $product_id) {
+            $product_id = is_object($product_id) && isset($product_id->ID) ? $product_id->ID : $product_id;
+            $product = function_exists('wc_get_product') ? wc_get_product($product_id) : null;
+            if (!$product) {
+                continue;
+            }
+
+            $sku = (string)$product->get_sku();
+            $items[] = [
+                'id'   => (int)$product->get_id(),
+                'name' => $product->get_name(),
+                'sku'  => $sku,
+                'type' => $product->get_type(),
+                'text' => $sku !== '' ? sprintf('%s (%s)', $product->get_name(), $sku) : $product->get_name(),
+            ];
+        }
+
+        return new \WP_REST_Response([
+            'items' => $items,
+            'page'  => $page,
+        ], 200);
     }
 
     /**
@@ -156,5 +241,29 @@ class ApiController
         \Drw\App\Controllers\RulesEngine::instance()->clear_cache();
 
         return new \WP_REST_Response(['success' => true, 'message' => __('Rule deleted', 'discount-rules-woo')], 200);
+    }
+
+    /**
+     * Normalize comma-separated or array IDs from REST query params.
+     */
+    private function parse_id_list($value)
+    {
+        if (is_string($value)) {
+            $value = explode(',', $value);
+        }
+
+        if (!is_array($value)) {
+            return [];
+        }
+
+        $ids = [];
+        foreach ($value as $item) {
+            $id = (int)$item;
+            if ($id > 0) {
+                $ids[] = $id;
+            }
+        }
+
+        return array_values(array_unique($ids));
     }
 }

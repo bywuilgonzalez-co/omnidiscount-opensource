@@ -29,6 +29,139 @@
         roles: []
     };
 
+    if (adminData.nonce && apiFetch.createNonceMiddleware) {
+        apiFetch.use(apiFetch.createNonceMiddleware(adminData.nonce));
+    }
+
+    const normalizeIds = (ids) => {
+        if (!Array.isArray(ids)) {
+            return [];
+        }
+        return ids.map((id) => parseInt(id, 10)).filter((id) => id > 0);
+    };
+
+    const productLabel = (product) => {
+        if (!product) {
+            return '';
+        }
+        return product.sku ? `${product.name} (${product.sku})` : product.name;
+    };
+
+    /**
+     * Async product selector for stores with large catalogs.
+     */
+    function ProductSearchMultiSelect({ label, selectedIds, onChange, help }) {
+        const ids = normalizeIds(selectedIds);
+        const [search, setSearch] = useState('');
+        const [results, setResults] = useState([]);
+        const [selectedProducts, setSelectedProducts] = useState([]);
+        const [loading, setLoading] = useState(false);
+        const [error, setError] = useState('');
+
+        useEffect(() => {
+            if (ids.length === 0) {
+                setSelectedProducts([]);
+                return;
+            }
+
+            apiFetch({ path: `/drw/v1/products?include=${encodeURIComponent(ids.join(','))}&per_page=50` })
+                .then((data) => {
+                    setSelectedProducts(data.items || []);
+                })
+                .catch(() => {
+                    const fallback = (adminData.products || []).filter((product) => ids.includes(parseInt(product.id, 10)));
+                    setSelectedProducts(fallback);
+                });
+        }, [ids.join(',')]);
+
+        useEffect(() => {
+            const query = search.trim();
+            if (query.length < 2) {
+                setResults([]);
+                setLoading(false);
+                setError('');
+                return;
+            }
+
+            setLoading(true);
+            const timeout = setTimeout(() => {
+                apiFetch({ path: `/drw/v1/products?search=${encodeURIComponent(query)}&per_page=20` })
+                    .then((data) => {
+                        setResults(data.items || []);
+                        setError('');
+                    })
+                    .catch((err) => {
+                        setResults([]);
+                        setError(err.message || 'Could not search products.');
+                    })
+                    .finally(() => setLoading(false));
+            }, 250);
+
+            return () => clearTimeout(timeout);
+        }, [search]);
+
+        const addProduct = (product) => {
+            const productId = parseInt(product.id, 10);
+            if (!ids.includes(productId)) {
+                onChange([...ids, productId]);
+                setSelectedProducts([...selectedProducts, product]);
+            }
+            setSearch('');
+            setResults([]);
+        };
+
+        const removeProduct = (productId) => {
+            onChange(ids.filter((id) => id !== productId));
+            setSelectedProducts(selectedProducts.filter((product) => parseInt(product.id, 10) !== productId));
+        };
+
+        const mergedSelected = ids.map((id) => {
+            return selectedProducts.find((product) => parseInt(product.id, 10) === id)
+                || (adminData.products || []).find((product) => parseInt(product.id, 10) === id)
+                || { id, name: `Product #${id}`, sku: '' };
+        });
+
+        return el('div', { className: 'drw-product-search' },
+            el(TextControl, {
+                label,
+                type: 'search',
+                value: search,
+                help: help || 'Type at least 2 characters to search the full WooCommerce catalog.',
+                placeholder: 'Search products by name or SKU...',
+                onChange: setSearch
+            }),
+            loading && el('div', { className: 'drw-product-search-status' }, el(Spinner), el('span', null, 'Searching products...')),
+            error && el('div', { className: 'drw-product-search-error' }, error),
+            results.length > 0 && el('ul', { className: 'drw-product-search-results' },
+                results.map((product) => {
+                    const productId = parseInt(product.id, 10);
+                    const disabled = ids.includes(productId);
+                    return el('li', { key: productId },
+                        el(Button, {
+                            type: 'button',
+                            disabled,
+                            onClick: () => addProduct(product)
+                        }, disabled ? `${productLabel(product)} - selected` : productLabel(product))
+                    );
+                })
+            ),
+            mergedSelected.length > 0 && el('div', { className: 'drw-selected-products' },
+                mergedSelected.map((product) => {
+                    const productId = parseInt(product.id, 10);
+                    return el('span', { key: productId, className: 'drw-selected-product' },
+                        productLabel(product),
+                        el(Button, {
+                            type: 'button',
+                            className: 'drw-selected-product-remove',
+                            onClick: () => removeProduct(productId),
+                            label: `Remove ${product.name}`
+                        }, 'x')
+                    );
+                })
+            )
+        );
+    }
+
     /**
      * Main App Component
      */
@@ -201,8 +334,8 @@
                     detailsText = `BOGO: Buy ${rule.adjustments.buy_qty || 1} Get ${rule.adjustments.get_qty || 1} (${bogoText})`;
                 } else if (adjType === 'free_shipping') {
                     detailsText = 'Free Shipping';
-                } else if (adjType === 'bundle') {
-                    detailsText = `Bundle Set Price ($${rule.adjustments.set_price || 0})`;
+                } else if (adjType === 'bundle_set' || adjType === 'bundle') {
+                    detailsText = `Bundle Set Price ($${rule.adjustments.bundle_price || rule.adjustments.set_price || 0})`;
                 }
 
                 return el('div', { key: rule.id, className: 'drw-rule-card' },
@@ -354,32 +487,11 @@
 
                 // Specific Products Select
                 rule.apply_to === 'specific_products' && el('div', { style: { marginTop: '12px' } },
-                    el('p', { style: { fontWeight: '600', marginBottom: '6px' } }, 'Select Target Products:'),
-                    el('div', { style: { maxHeight: '150px', overflowY: 'auto', border: '1px solid #cbd5e1', padding: '10px', borderRadius: '6px', background: '#fff' } },
-                        adminData.products.map((prod) => {
-                            const isChecked = (rule.filters.product_ids || []).includes(prod.id);
-                            return el('div', { key: prod.id, style: { marginBottom: '6px' } },
-                                el('label', null,
-                                    el('input', {
-                                        type: 'checkbox',
-                                        checked: isChecked,
-                                        style: { marginRight: '8px' },
-                                        onChange: (e) => {
-                                            const list = [...(rule.filters.product_ids || [])];
-                                            if (e.target.checked) {
-                                                list.push(prod.id);
-                                            } else {
-                                                const idx = list.indexOf(prod.id);
-                                                if (idx > -1) list.splice(idx, 1);
-                                            }
-                                            updateFilters('product_ids', list);
-                                        }
-                                    }),
-                                    prod.name
-                                )
-                            );
-                        })
-                    )
+                    el(ProductSearchMultiSelect, {
+                        label: 'Select Target Products',
+                        selectedIds: rule.filters.product_ids || [],
+                        onChange: (ids) => updateFilters('product_ids', ids)
+                    })
                 ),
 
                 // Specific Categories Select
@@ -418,14 +530,14 @@
                 el('h3', null, 'Pricing Adjustments'),
                 el(SelectControl, {
                     label: 'Discount Type',
-                    value: rule.adjustments.type,
+                    value: rule.adjustments.type === 'bundle' ? 'bundle_set' : rule.adjustments.type,
                     options: [
                         { label: 'Percentage Discount', value: 'percentage' },
                         { label: 'Fixed Price Discount', value: 'fixed' },
                         { label: 'Bulk Tiered Discount', value: 'bulk' },
                         { label: 'BOGO Buy X Get Y', value: 'bogo' },
                         { label: 'Free Shipping', value: 'free_shipping' },
-                        { label: 'Bundle Set Pricing', value: 'bundle' }
+                        { label: 'Bundle Set Pricing', value: 'bundle_set' }
                     ],
                     onChange: (val) => updateAdjustments('type', val)
                 }),
@@ -447,14 +559,20 @@
                             value: rule.adjustments.buy_qty || '',
                             onChange: (val) => updateAdjustments('buy_qty', parseInt(val) || 1)
                         }),
-                        el(SelectControl, {
+                        el(ProductSearchMultiSelect, {
                             label: 'Get Product Selection',
-                            value: rule.adjustments.get_product_id || '',
-                            options: [
-                                { label: '-- Select Product --', value: '' },
-                                ...(adminData.products || []).map(p => ({ label: p.name, value: String(p.id) }))
-                            ],
-                            onChange: (val) => updateAdjustments('get_product_id', val)
+                            selectedIds: rule.adjustments.get_products || (rule.adjustments.get_product_id ? [rule.adjustments.get_product_id] : []),
+                            help: 'Search and select one or more products to discount as the Get items.',
+                            onChange: (ids) => {
+                                setRule({
+                                    ...rule,
+                                    adjustments: {
+                                        ...rule.adjustments,
+                                        get_product_type: ids.length > 0 ? 'different' : 'same',
+                                        get_products: ids
+                                    }
+                                });
+                            }
                         }),
                         el(TextControl, {
                             label: 'Get Qty',
@@ -466,30 +584,30 @@
                     el('div', { className: 'drw-flex-row', style: { marginTop: '8px' } },
                         el(SelectControl, {
                             label: 'BOGO Discount Type',
-                            value: rule.adjustments.bogo_discount_type || 'free',
+                            value: rule.adjustments.discount_type || rule.adjustments.bogo_discount_type || 'free',
                             options: [
                                 { label: 'Free Product', value: 'free' },
                                 { label: 'Percentage Discount', value: 'percentage' },
                                 { label: 'Fixed Price Discount', value: 'fixed' }
                             ],
-                            onChange: (val) => updateAdjustments('bogo_discount_type', val)
+                            onChange: (val) => updateAdjustments('discount_type', val)
                         }),
-                        (rule.adjustments.bogo_discount_type === 'percentage' || rule.adjustments.bogo_discount_type === 'fixed') && el(TextControl, {
+                        ((rule.adjustments.discount_type || rule.adjustments.bogo_discount_type) === 'percentage' || (rule.adjustments.discount_type || rule.adjustments.bogo_discount_type) === 'fixed') && el(TextControl, {
                             label: 'BOGO Discount Value',
                             type: 'number',
-                            value: rule.adjustments.bogo_value || '',
-                            onChange: (val) => updateAdjustments('bogo_value', parseFloat(val) || 0)
+                            value: rule.adjustments.discount_value || rule.adjustments.bogo_value || '',
+                            onChange: (val) => updateAdjustments('discount_value', parseFloat(val) || 0)
                         })
                     )
                 ),
 
                 // Bundle parameters
-                rule.adjustments.type === 'bundle' && el('div', { className: 'drw-bundle-container', style: { marginTop: '12px' } },
+                (rule.adjustments.type === 'bundle_set' || rule.adjustments.type === 'bundle') && el('div', { className: 'drw-bundle-container', style: { marginTop: '12px' } },
                     el(TextControl, {
                         label: 'Bundle Set Price Value ($)',
                         type: 'number',
-                        value: rule.adjustments.set_price || '',
-                        onChange: (val) => updateAdjustments('set_price', parseFloat(val) || 0)
+                        value: rule.adjustments.bundle_price || rule.adjustments.set_price || '',
+                        onChange: (val) => updateAdjustments('bundle_price', parseFloat(val) || 0)
                     })
                 ),
 
@@ -755,31 +873,11 @@
                             }),
                             el('div', { className: 'drw-flex-row', style: { marginTop: '8px' } },
                                 el('div', null,
-                                    el('span', { className: 'drw-field-label' }, 'Products:'),
-                                    el('div', { className: 'drw-checklist-box' },
-                                        (adminData.products || []).map(p => {
-                                            const isChecked = (cond.product_ids || []).includes(p.id);
-                                            return el('div', { key: p.id, className: 'drw-checkbox-item' },
-                                                el('label', null,
-                                                    el('input', {
-                                                        type: 'checkbox',
-                                                        checked: isChecked,
-                                                        onChange: (e) => {
-                                                            const list = [...(cond.product_ids || [])];
-                                                            if (e.target.checked) {
-                                                                list.push(p.id);
-                                                            } else {
-                                                                const idxOf = list.indexOf(p.id);
-                                                                if (idxOf > -1) list.splice(idxOf, 1);
-                                                            }
-                                                            updateCondition(idx, 'product_ids', list);
-                                                        }
-                                                    }),
-                                                    ' ' + p.name
-                                                )
-                                            );
-                                        })
-                                    )
+                                    el(ProductSearchMultiSelect, {
+                                        label: 'Products',
+                                        selectedIds: cond.product_ids || [],
+                                        onChange: (ids) => updateCondition(idx, 'product_ids', ids)
+                                    })
                                 ),
                                 el('div', null,
                                     el('span', { className: 'drw-field-label' }, 'Categories:'),
@@ -952,31 +1050,11 @@
                                     ],
                                     onChange: (val) => updateCondition(idx, 'operator', val)
                                 }),
-                                el('span', { className: 'drw-field-label', style: { marginTop: '6px', display: 'block' } }, 'Select Products:'),
-                                el('div', { className: 'drw-checklist-box' },
-                                    (adminData.products || []).map(p => {
-                                        const isChecked = (cond.value || []).includes(p.id);
-                                        return el('div', { key: p.id, className: 'drw-checkbox-item' },
-                                            el('label', null,
-                                                el('input', {
-                                                    type: 'checkbox',
-                                                    checked: isChecked,
-                                                    onChange: (e) => {
-                                                        const list = Array.isArray(cond.value) ? [...cond.value] : [];
-                                                        if (e.target.checked) {
-                                                            list.push(p.id);
-                                                        } else {
-                                                            const idxOf = list.indexOf(p.id);
-                                                            if (idxOf > -1) list.splice(idxOf, 1);
-                                                        }
-                                                        updateCondition(idx, 'value', list);
-                                                    }
-                                                }),
-                                                ' ' + p.name
-                                            )
-                                        );
-                                    })
-                                )
+                                el(ProductSearchMultiSelect, {
+                                    label: 'Select Products',
+                                    selectedIds: Array.isArray(cond.value) ? cond.value : [],
+                                    onChange: (ids) => updateCondition(idx, 'value', ids)
+                                })
                             )
                         ),
 

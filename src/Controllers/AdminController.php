@@ -79,19 +79,8 @@ class AdminController
             true
         );
 
-        // Fetch WC products and categories to pass as initial data
+        // Product selection is handled by the async REST search endpoint.
         $products = [];
-        $product_posts = get_posts([
-            'post_type'      => 'product',
-            'posts_per_page' => 100,
-            'post_status'    => 'publish',
-        ]);
-        foreach ($product_posts as $post) {
-            $products[] = [
-                'id'   => $post->ID,
-                'name' => $post->post_title,
-            ];
-        }
 
         $categories = [];
         $cat_terms = get_terms([

@@ -89,8 +89,10 @@ class RuleModel
     {
         global $wpdb;
         $table = $wpdb->prefix . 'drw_rules';
+        $data = self::sanitize_rule_payload($data);
 
         $id = !empty($data['id']) ? (int)$data['id'] : null;
+        $json_encode = function_exists('wp_json_encode') ? 'wp_json_encode' : 'json_encode';
 
         $db_data = [
             'enabled'      => isset($data['enabled']) ? (int)$data['enabled'] : 1,
@@ -99,9 +101,9 @@ class RuleModel
             'title'        => sanitize_text_field($data['title']),
             'priority'     => isset($data['priority']) ? (int)$data['priority'] : 10,
             'apply_to'     => sanitize_text_field($data['apply_to']),
-            'filters'      => is_array($data['filters']) ? json_encode($data['filters']) : $data['filters'],
-            'conditions'   => is_array($data['conditions']) ? json_encode($data['conditions']) : $data['conditions'],
-            'adjustments'  => is_array($data['adjustments']) ? json_encode($data['adjustments']) : $data['adjustments'],
+            'filters'      => $json_encode($data['filters']),
+            'conditions'   => $json_encode($data['conditions']),
+            'adjustments'  => $json_encode($data['adjustments']),
             'date_from'    => !empty($data['date_from']) ? (int)$data['date_from'] : null,
             'date_to'      => !empty($data['date_to']) ? (int)$data['date_to'] : null,
             'usage_limit'  => !empty($data['usage_limit']) ? (int)$data['usage_limit'] : null,
@@ -117,6 +119,27 @@ class RuleModel
             $wpdb->insert($table, $db_data);
             return $wpdb->insert_id;
         }
+    }
+
+    /**
+     * Normalize rule payloads before persistence.
+     */
+    public static function sanitize_rule_payload($data)
+    {
+        $data = is_array($data) ? $data : [];
+        $allowed_apply_to = ['all_products', 'specific_products', 'specific_categories'];
+        $apply_to = !empty($data['apply_to']) ? sanitize_text_field($data['apply_to']) : 'all_products';
+        if (!in_array($apply_to, $allowed_apply_to, true)) {
+            $apply_to = 'all_products';
+        }
+
+        $data['title'] = !empty($data['title']) ? sanitize_text_field($data['title']) : '';
+        $data['apply_to'] = $apply_to;
+        $data['filters'] = self::sanitize_filters(!empty($data['filters']) && is_array($data['filters']) ? $data['filters'] : []);
+        $data['conditions'] = self::sanitize_conditions(!empty($data['conditions']) && is_array($data['conditions']) ? $data['conditions'] : []);
+        $data['adjustments'] = self::sanitize_adjustments(!empty($data['adjustments']) && is_array($data['adjustments']) ? $data['adjustments'] : []);
+
+        return $data;
     }
 
     /**
@@ -160,5 +183,153 @@ class RuleModel
         $row['adjustments']  = !empty($row['adjustments']) ? json_decode($row['adjustments'], true) : [];
 
         return $row;
+    }
+
+    /**
+     * Sanitize target filters.
+     */
+    private static function sanitize_filters($filters)
+    {
+        $filters['product_ids'] = self::normalize_id_list(isset($filters['product_ids']) ? $filters['product_ids'] : []);
+        $filters['category_ids'] = self::normalize_id_list(isset($filters['category_ids']) ? $filters['category_ids'] : []);
+
+        return $filters;
+    }
+
+    /**
+     * Sanitize condition rows while preserving supported condition-specific fields.
+     */
+    private static function sanitize_conditions($conditions)
+    {
+        $normalized = [];
+
+        foreach ($conditions as $condition) {
+            if (!is_array($condition)) {
+                continue;
+            }
+
+            $condition = self::sanitize_deep($condition);
+
+            if (isset($condition['product_ids'])) {
+                $condition['product_ids'] = self::normalize_id_list($condition['product_ids']);
+            }
+            if (isset($condition['category_ids'])) {
+                $condition['category_ids'] = self::normalize_id_list($condition['category_ids']);
+            }
+            if (isset($condition['value']) && is_array($condition['value'])) {
+                $condition['value'] = self::normalize_id_list($condition['value']);
+            }
+
+            $normalized[] = $condition;
+        }
+
+        return $normalized;
+    }
+
+    /**
+     * Sanitize adjustment payloads and normalize legacy admin field names.
+     */
+    private static function sanitize_adjustments($adjustments)
+    {
+        $adjustments = self::sanitize_deep($adjustments);
+        $type = !empty($adjustments['type']) ? sanitize_text_field($adjustments['type']) : 'percentage';
+        if ($type === 'bundle') {
+            $type = 'bundle_set';
+        }
+
+        $allowed_types = ['percentage', 'fixed', 'bulk', 'bogo', 'free_shipping', 'bundle_set'];
+        if (!in_array($type, $allowed_types, true)) {
+            $type = 'percentage';
+        }
+        $adjustments['type'] = $type;
+
+        if ($type === 'bogo') {
+            if (!empty($adjustments['get_product_id'])) {
+                $adjustments['get_products'] = self::normalize_id_list([$adjustments['get_product_id']]);
+                unset($adjustments['get_product_id']);
+            } elseif (isset($adjustments['get_products'])) {
+                $adjustments['get_products'] = self::normalize_id_list($adjustments['get_products']);
+            }
+
+            if (isset($adjustments['buy_products'])) {
+                $adjustments['buy_products'] = self::normalize_id_list($adjustments['buy_products']);
+            }
+            if (isset($adjustments['buy_categories'])) {
+                $adjustments['buy_categories'] = self::normalize_id_list($adjustments['buy_categories']);
+            }
+            if (isset($adjustments['get_categories'])) {
+                $adjustments['get_categories'] = self::normalize_id_list($adjustments['get_categories']);
+            }
+            if (!empty($adjustments['bogo_discount_type']) && empty($adjustments['discount_type'])) {
+                $adjustments['discount_type'] = sanitize_text_field($adjustments['bogo_discount_type']);
+                unset($adjustments['bogo_discount_type']);
+            }
+            if (isset($adjustments['bogo_value']) && !isset($adjustments['discount_value'])) {
+                $adjustments['discount_value'] = (float)$adjustments['bogo_value'];
+                unset($adjustments['bogo_value']);
+            }
+        }
+
+        if ($type === 'bundle_set') {
+            if (isset($adjustments['set_price']) && !isset($adjustments['bundle_price'])) {
+                $adjustments['bundle_price'] = (float)$adjustments['set_price'];
+                unset($adjustments['set_price']);
+            }
+            if (isset($adjustments['bundle_items']) && is_array($adjustments['bundle_items'])) {
+                foreach ($adjustments['bundle_items'] as $index => $item) {
+                    if (isset($item['id'])) {
+                        $adjustments['bundle_items'][$index]['id'] = (int)$item['id'];
+                    }
+                    if (isset($item['product_id'])) {
+                        $adjustments['bundle_items'][$index]['product_id'] = (int)$item['product_id'];
+                    }
+                    if (isset($item['qty'])) {
+                        $adjustments['bundle_items'][$index]['qty'] = max(1, (int)$item['qty']);
+                    }
+                }
+            }
+        }
+
+        return $adjustments;
+    }
+
+    /**
+     * Recursively sanitize scalar values inside rule JSON payloads.
+     */
+    private static function sanitize_deep($value)
+    {
+        if (is_array($value)) {
+            $clean = [];
+            foreach ($value as $key => $item) {
+                $clean[sanitize_text_field((string)$key)] = self::sanitize_deep($item);
+            }
+            return $clean;
+        }
+
+        if (is_bool($value) || is_int($value) || is_float($value) || $value === null) {
+            return $value;
+        }
+
+        return sanitize_text_field((string)$value);
+    }
+
+    /**
+     * Normalize mixed ID lists into unique positive integers.
+     */
+    private static function normalize_id_list($ids)
+    {
+        if (!is_array($ids)) {
+            $ids = [$ids];
+        }
+
+        $normalized = [];
+        foreach ($ids as $id) {
+            $id = (int)$id;
+            if ($id > 0) {
+                $normalized[] = $id;
+            }
+        }
+
+        return array_values(array_unique($normalized));
     }
 }
