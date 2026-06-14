@@ -240,72 +240,12 @@ class CatalogController
             }
         }
 
-        $engine = \Drw\App\Controllers\RulesEngine::instance();
-        $has_discount = false;
-        $max_percentage = 0;
-        $max_fixed = 0;
-
-        if ($product->is_type('variable')) {
-            foreach ($product->get_visible_children() as $variation_id) {
-                $variation = wc_get_product($variation_id);
-                if (!$variation) {
-                    continue;
-                }
-
-                $reg_price = (float)$variation->get_regular_price();
-                if ($reg_price <= 0) {
-                    continue;
-                }
-                $discounted_price = $engine->calculate_catalog_discount($variation, $reg_price);
-
-                if ($discounted_price !== null && $discounted_price < $reg_price) {
-                    $has_discount = true;
-                    $diff = $reg_price - $discounted_price;
-                    $pct = ($diff / $reg_price) * 100;
-                    if ($pct > $max_percentage) {
-                        $max_percentage = $pct;
-                    }
-                    if ($diff > $max_fixed) {
-                        $max_fixed = $diff;
-                    }
-                }
-            }
-        } else {
-            $reg_price = (float)$product->get_regular_price();
-            if ($reg_price > 0) {
-                $discounted_price = $engine->calculate_catalog_discount($product, $reg_price);
-                if ($discounted_price !== null && $discounted_price < $reg_price) {
-                    $has_discount = true;
-                    $diff = $reg_price - $discounted_price;
-                    $max_percentage = ($diff / $reg_price) * 100;
-                    $max_fixed = $diff;
-                }
-            }
-        }
-
-        if (!$has_discount) {
+        $sale_data = ShortcodeController::get_sale_data_for_product($product);
+        if (empty($sale_data['percentage'])) {
             return $html;
         }
 
-        $badge_text = '';
-        if ($max_percentage > 0) {
-            $round_pct = round($max_percentage);
-            if ($product->is_type('variable')) {
-                $badge_text = sprintf(__('Save up to %d%%!', 'discount-rules-woo'), $round_pct);
-            } else {
-                $badge_text = sprintf(__('Save %d%%!', 'discount-rules-woo'), $round_pct);
-            }
-        } else {
-            $badge_text = __('Offer Active', 'discount-rules-woo');
-        }
-
-        $badge_text = apply_filters('drw_sale_badge_text', $badge_text, $product, $max_percentage, $max_fixed);
-
-        if (!empty($badge_text)) {
-            return '<span class="onsale">' . esc_html($badge_text) . '</span>';
-        }
-
-        return $html;
+        return ShortcodeController::render_sale_percentage_badge($sale_data['percentage']);
     }
 
     /**

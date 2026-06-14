@@ -17,6 +17,27 @@ A 100% complete, high-performance, and unified dynamic pricing and discount rule
 - **Order Fees**: Cart-level subtotal discounts automatically applied as native order fees for accurate tax processing.
 - **HPOS Compatibility**: Declarative support for WooCommerce High-Performance Order Storage (HPOS).
 - **React Admin UI**: Seamless, modern administrator interface built native to the WordPress dashboard using `@wordpress/components`.
+- **Sale Items Shortcodes**: Display discounted products with `[drw_sale_items_list]`, `[awdr_sale_items_list]`, or `[on_sale]`.
+
+## Shortcodes
+
+Use this on an offers page to render products that have a native WooCommerce sale price or a dynamic discount rule:
+
+```text
+[awdr_sale_items_list limit="12" columns="4"]
+```
+
+Optional category filtering:
+
+```text
+[awdr_sale_items_list category="combos" limit="12" columns="4"]
+```
+
+Discounted products render a percentage badge using this markup:
+
+```html
+<div class="sale-perc">-12 %</div>
+```
 
 ## Installation
 
