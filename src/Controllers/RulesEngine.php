@@ -3,6 +3,9 @@
 namespace Drw\App\Controllers;
 
 use Drw\App\Models\RuleModel;
+use Drw\App\Adjustments\Bogo;
+use Drw\App\Adjustments\FreeShipping;
+use Drw\App\Adjustments\BundleSet;
 
 if (!defined('ABSPATH')) {
     exit;
@@ -12,6 +15,11 @@ class RulesEngine
 {
     private static $instance = null;
     private $cached_rules = null;
+
+    private $cached_cart_hash = null;
+    private $cached_cart_item_prices = null;
+    private $cached_cart_level_discounts = null;
+    private $compounding_strategy = 'priority_exclusivity';
 
     /**
      * Singleton instance.
@@ -43,6 +51,29 @@ class RulesEngine
     public function clear_cache()
     {
         $this->cached_rules = null;
+        $this->cached_cart_hash = null;
+        $this->cached_cart_item_prices = null;
+        $this->cached_cart_level_discounts = null;
+    }
+
+    /**
+     * Get the current compounding strategy.
+     *
+     * @return string
+     */
+    public function get_compounding_strategy()
+    {
+        return apply_filters('drw_compounding_strategy', $this->compounding_strategy);
+    }
+
+    /**
+     * Set the current compounding strategy.
+     *
+     * @param string $strategy
+     */
+    public function set_compounding_strategy($strategy)
+    {
+        $this->compounding_strategy = $strategy;
     }
 
     /**
@@ -63,12 +94,30 @@ class RulesEngine
         // Map condition types to their respective classes
         $map = [
             'subtotal'          => '\\Drw\\App\\Conditions\\CartSubtotal',
+            'cart_subtotal'     => '\\Drw\\App\\Conditions\\CartSubtotal',
             'items_count'       => '\\Drw\\App\\Conditions\\CartLineItemsCount',
+            'cart_line_items_count' => '\\Drw\\App\\Conditions\\CartLineItemsCount',
             'user_role'         => '\\Drw\\App\\Conditions\\UserRole',
             'user_email'        => '\\Drw\\App\\Conditions\\UserEmail',
             'shipping_location' => '\\Drw\\App\\Conditions\\ShippingLocation',
             'products'          => '\\Drw\\App\\Conditions\\Products',
             'categories'        => '\\Drw\\App\\Conditions\\Categories',
+            'billing_city'      => '\\Drw\\App\\Conditions\\BillingCity',
+            'cart_coupon'       => '\\Drw\\App\\Conditions\\CartCoupon',
+            'coupon'            => '\\Drw\\App\\Conditions\\CartCoupon',
+            'cart_item_product_combination' => '\\Drw\\App\\Conditions\\CartItemProductCombination',
+            'cart_item_product_onsale'      => '\\Drw\\App\\Conditions\\CartItemProductOnsale',
+            'cart_items_quantity'           => '\\Drw\\App\\Conditions\\CartItemsQuantity',
+            'items_quantity'                => '\\Drw\\App\\Conditions\\CartItemsQuantity',
+            'cart_items_qty'                => '\\Drw\\App\\Conditions\\CartItemsQuantity',
+            'cart_items_weight'             => '\\Drw\\App\\Conditions\\CartItemsWeight',
+            'order_date'                    => '\\Drw\\App\\Conditions\\OrderDate',
+            'date'                          => '\\Drw\\App\\Conditions\\OrderDate',
+            'purchase_history'              => '\\Drw\\App\\Conditions\\PurchaseHistory',
+            'history'                       => '\\Drw\\App\\Conditions\\PurchaseHistory',
+            'user_list'                     => '\\Drw\\App\\Conditions\\UserList',
+            'user_logged_in'                => '\\Drw\\App\\Conditions\\UserLoggedIn',
+            'logged_in'                     => '\\Drw\\App\\Conditions\\UserLoggedIn',
         ];
 
         foreach ($conditions as $cond) {
@@ -124,6 +173,39 @@ class RulesEngine
     }
 
     /**
+     * Check if a rule is a cart-level rule (applied as a fee or free shipping).
+     *
+     * @param array $rule
+     * @return bool
+     */
+    public function is_cart_level_rule(array $rule)
+    {
+        $apply_to = !empty($rule['apply_to']) ? $rule['apply_to'] : 'all_products';
+        if ($apply_to !== 'all_products') {
+            return false;
+        }
+
+        $adjustments = !empty($rule['adjustments']) ? (array)$rule['adjustments'] : [];
+        $type = !empty($adjustments['type']) ? $adjustments['type'] : '';
+
+        if ($type === 'free_shipping') {
+            return true;
+        }
+
+        if (in_array($type, ['percentage', 'fixed'])) {
+            $conditions = !empty($rule['conditions']) ? (array)$rule['conditions'] : [];
+            foreach ($conditions as $cond) {
+                $cond_type = !empty($cond['type']) ? $cond['type'] : '';
+                if (in_array($cond_type, ['subtotal', 'items_count', 'cart_coupon', 'cart_items_count'])) {
+                    return true;
+                }
+            }
+        }
+
+        return false;
+    }
+
+    /**
      * Calculate catalog discount for a specific product.
      * Used for product page and shop loops to show dynamic pricing.
      *
@@ -138,70 +220,121 @@ class RulesEngine
             return null;
         }
 
-        $price = (float)$original_price;
-        $applied = false;
+        $strategy = $this->get_compounding_strategy();
 
-        foreach ($rules as $rule) {
-            $adjustments = !empty($rule['adjustments']) ? (array)$rule['adjustments'] : [];
-            $type = !empty($adjustments['type']) ? $adjustments['type'] : '';
+        if ($strategy === 'highest') {
+            $best_price = (float)$original_price;
+            $applied = false;
 
-            // Catalog rules only support simple percentage, fixed product adjustments, and bulk tiering.
-            // BOGO is cart-only and handled during cart recalculation.
-            if (!in_array($type, ['percentage', 'fixed', 'bulk'])) {
-                continue;
-            }
+            foreach ($rules as $rule) {
+                $adjustments = !empty($rule['adjustments']) ? (array)$rule['adjustments'] : [];
+                $type = !empty($adjustments['type']) ? $adjustments['type'] : '';
 
-            // Check if rule conditions (like user roles, dates) match
-            if (!$this->is_rule_matched($rule, null, $product)) {
-                continue;
-            }
+                if (!in_array($type, ['percentage', 'fixed', 'bulk'])) {
+                    continue;
+                }
 
-            // Check if this specific product is targeted by the rule
-            if (!$this->is_product_targeted_by_rule($rule, $product)) {
-                continue;
-            }
+                if (!$this->is_rule_matched($rule, null, $product)) {
+                    continue;
+                }
 
-            // Apply adjustment
-            if ($type === 'percentage') {
-                $discount_val = (float)$adjustments['value'];
-                $price -= ($price * ($discount_val / 100));
-                $applied = true;
-            } elseif ($type === 'fixed') {
-                $discount_val = (float)$adjustments['value'];
-                $price = max(0.0, $price - $discount_val);
-                $applied = true;
-            } elseif ($type === 'bulk') {
-                // Bulk discount tiering (checks quantity breaks).
-                // In catalog view, we assume qty = 1 or default tier unless we have a specific qty.
-                // Let's use the lowest tier or check if bulk adjustments contains tier 1.
-                $tiers = !empty($adjustments['tiers']) ? (array)$adjustments['tiers'] : [];
-                foreach ($tiers as $tier) {
-                    $min_qty = isset($tier['min']) ? (int)$tier['min'] : 0;
-                    $max_qty = isset($tier['max']) && $tier['max'] !== '' ? (int)$tier['max'] : PHP_INT_MAX;
-                    
-                    // Default to tier 1 check (qty = 1)
-                    if (1 >= $min_qty && 1 <= $max_qty) {
-                        $tier_type  = !empty($tier['type']) ? $tier['type'] : 'percentage';
-                        $tier_value = (float)(!empty($tier['value']) ? $tier['value'] : 0);
+                if (!$this->is_product_targeted_by_rule($rule, $product)) {
+                    continue;
+                }
 
-                        if ($tier_type === 'percentage') {
-                            $price -= ($price * ($tier_value / 100));
-                        } elseif ($tier_type === 'fixed') {
-                            $price = max(0.0, $price - $tier_value);
+                $temp_price = (float)$original_price;
+                if ($type === 'percentage') {
+                    $discount_val = (float)$adjustments['value'];
+                    $temp_price -= ($temp_price * ($discount_val / 100));
+                } elseif ($type === 'fixed') {
+                    $discount_val = (float)$adjustments['value'];
+                    $temp_price = max(0.0, $temp_price - $discount_val);
+                } elseif ($type === 'bulk') {
+                    $tiers = !empty($adjustments['tiers']) ? (array)$adjustments['tiers'] : [];
+                    foreach ($tiers as $tier) {
+                        $min_qty = isset($tier['min']) ? (int)$tier['min'] : 0;
+                        $max_qty = isset($tier['max']) && $tier['max'] !== '' ? (int)$tier['max'] : PHP_INT_MAX;
+                        if (1 >= $min_qty && 1 <= $max_qty) {
+                            $tier_type  = !empty($tier['type']) ? $tier['type'] : 'percentage';
+                            $tier_value = (float)(!empty($tier['value']) ? $tier['value'] : 0);
+
+                            if ($tier_type === 'percentage') {
+                                $temp_price -= ($temp_price * ($tier_value / 100));
+                            } elseif ($tier_type === 'fixed') {
+                                $temp_price = max(0.0, $temp_price - $tier_value);
+                            }
+                            break;
                         }
-                        $applied = true;
+                    }
+                }
+
+                if ($temp_price < $best_price) {
+                    $best_price = $temp_price;
+                    $applied = true;
+                }
+            }
+
+            return $applied ? $best_price : null;
+
+        } else {
+            $price = (float)$original_price;
+            $applied = false;
+
+            foreach ($rules as $rule) {
+                $adjustments = !empty($rule['adjustments']) ? (array)$rule['adjustments'] : [];
+                $type = !empty($adjustments['type']) ? $adjustments['type'] : '';
+
+                if (!in_array($type, ['percentage', 'fixed', 'bulk'])) {
+                    continue;
+                }
+
+                if (!$this->is_rule_matched($rule, null, $product)) {
+                    continue;
+                }
+
+                if (!$this->is_product_targeted_by_rule($rule, $product)) {
+                    continue;
+                }
+
+                $rule_applied = false;
+                if ($type === 'percentage') {
+                    $discount_val = (float)$adjustments['value'];
+                    $price -= ($price * ($discount_val / 100));
+                    $rule_applied = true;
+                } elseif ($type === 'fixed') {
+                    $discount_val = (float)$adjustments['value'];
+                    $price = max(0.0, $price - $discount_val);
+                    $rule_applied = true;
+                } elseif ($type === 'bulk') {
+                    $tiers = !empty($adjustments['tiers']) ? (array)$adjustments['tiers'] : [];
+                    foreach ($tiers as $tier) {
+                        $min_qty = isset($tier['min']) ? (int)$tier['min'] : 0;
+                        $max_qty = isset($tier['max']) && $tier['max'] !== '' ? (int)$tier['max'] : PHP_INT_MAX;
+                        if (1 >= $min_qty && 1 <= $max_qty) {
+                            $tier_type  = !empty($tier['type']) ? $tier['type'] : 'percentage';
+                            $tier_value = (float)(!empty($tier['value']) ? $tier['value'] : 0);
+
+                            if ($tier_type === 'percentage') {
+                                $price -= ($price * ($tier_value / 100));
+                            } elseif ($tier_type === 'fixed') {
+                                $price = max(0.0, $price - $tier_value);
+                            }
+                            $rule_applied = true;
+                            break;
+                        }
+                    }
+                }
+
+                if ($rule_applied) {
+                    $applied = true;
+                    if ($strategy === 'priority_exclusivity' && $rule['exclusive']) {
                         break;
                     }
                 }
             }
 
-            // Stop processing further rules if this rule is marked exclusive
-            if ($applied && $rule['exclusive']) {
-                break;
-            }
+            return $applied ? $price : null;
         }
-
-        return $applied ? $price : null;
     }
 
     /**
@@ -214,69 +347,332 @@ class RulesEngine
      */
     public function calculate_cart_item_discount(array $cart_item, \WC_Cart $cart)
     {
-        $product = $cart_item['data'];
-        $rules   = $this->get_active_rules();
-        if (empty($rules)) {
-            return null;
+        $this->calculate_all_cart_discounts($cart);
+
+        $key = isset($cart_item['key']) ? $cart_item['key'] : '';
+        if (empty($key)) {
+            foreach ($cart->get_cart() as $k => $item) {
+                if ($item['data'] === $cart_item['data']) {
+                    $key = $k;
+                    break;
+                }
+            }
         }
 
-        $original_price = (float)$product->get_regular_price();
-        $price = $original_price;
-        $qty = (int)$cart_item['quantity'];
-        $applied = false;
+        if ($key && isset($this->cached_cart_item_prices[$key])) {
+            $discounted_price = $this->cached_cart_item_prices[$key];
+            $regular_price = (float)$cart_item['data']->get_regular_price();
+            if ($discounted_price < $regular_price) {
+                return $discounted_price;
+            }
+        }
 
-        foreach ($rules as $rule) {
-            $adjustments = !empty($rule['adjustments']) ? (array)$rule['adjustments'] : [];
-            $type = !empty($adjustments['type']) ? $adjustments['type'] : '';
+        return null;
+    }
 
-            if (!in_array($type, ['percentage', 'fixed', 'bulk'])) {
-                continue;
+    /**
+     * Calculate cart-wide fee/discount and shipping status.
+     *
+     * @param \WC_Cart $cart
+     * @return array Array describing the adjustments made:
+     *               [
+     *                   'fees' => [ [ 'name' => string, 'amount' => float ], ... ],
+     *                   'free_shipping' => bool
+     *               ]
+     */
+    public function calculate_cart_level_discounts($cart)
+    {
+        $this->calculate_all_cart_discounts($cart);
+
+        return $this->cached_cart_level_discounts;
+    }
+
+    /**
+     * Calculate all discounts for the cart in a single pass.
+     *
+     * @param \WC_Cart $cart
+     */
+    private function calculate_all_cart_discounts($cart)
+    {
+        if (!$cart || $cart->is_empty()) {
+            $this->cached_cart_item_prices = [];
+            $this->cached_cart_level_discounts = [
+                'fees' => [],
+                'free_shipping' => false,
+            ];
+            $this->cached_cart_hash = null;
+            return;
+        }
+
+        // Generate cart hash
+        $hash_parts = [];
+        foreach ($cart->get_cart() as $key => $item) {
+            $hash_parts[$key] = [
+                'id' => $item['product_id'],
+                'variation_id' => $item['variation_id'],
+                'qty' => $item['quantity'],
+                'price' => (float)$item['data']->get_regular_price(),
+            ];
+        }
+        $cart_hash = md5(serialize($hash_parts));
+
+        if ($this->cached_cart_item_prices !== null && $this->cached_cart_hash === $cart_hash) {
+            return;
+        }
+
+        $rules = $this->get_active_rules();
+        $item_regular_prices = [];
+        $item_prices = [];
+        foreach ($cart->get_cart() as $key => $item) {
+            $reg_price = (float)$item['data']->get_regular_price();
+            $item_regular_prices[$key] = $reg_price;
+            $item_prices[$key] = $reg_price;
+        }
+
+        if (empty($rules)) {
+            $this->cached_cart_item_prices = $item_prices;
+            $this->cached_cart_level_discounts = [
+                'fees' => [],
+                'free_shipping' => false,
+            ];
+            $this->cached_cart_hash = $cart_hash;
+            return;
+        }
+
+        $strategy = $this->get_compounding_strategy();
+
+        // Backup original cart prices and subtotal
+        $original_prices = [];
+        foreach ($cart->get_cart() as $key => $item) {
+            $original_prices[$key] = $item['data']->get_price();
+        }
+        $original_subtotal = $cart->get_subtotal();
+
+        $apply_current_prices = function($prices) use ($cart) {
+            $current_subtotal = 0.0;
+            foreach ($cart->get_cart() as $key => $item) {
+                $price = isset($prices[$key]) ? $prices[$key] : (float)$item['data']->get_regular_price();
+                $item['data']->set_price($price);
+                $current_subtotal += $price * $item['quantity'];
+            }
+            if (method_exists($cart, 'set_subtotal')) {
+                $cart->set_subtotal($current_subtotal);
+            } else {
+                $cart->subtotal = $current_subtotal;
+            }
+            return $current_subtotal;
+        };
+
+        $restore_cart = function() use ($cart, $original_prices, $original_subtotal) {
+            foreach ($cart->get_cart() as $key => $item) {
+                if (isset($original_prices[$key])) {
+                    $item['data']->set_price($original_prices[$key]);
+                }
+            }
+            if (method_exists($cart, 'set_subtotal')) {
+                $cart->set_subtotal($original_subtotal);
+            } else {
+                $cart->subtotal = $original_subtotal;
+            }
+        };
+
+        $fees = [];
+        $free_shipping = false;
+
+        if ($strategy === 'highest') {
+            $best_item_prices = $item_regular_prices;
+            $best_fees = [];
+            $best_free_shipping = false;
+            $max_savings = 0.0;
+
+            foreach ($rules as $rule) {
+                $apply_current_prices($item_regular_prices);
+
+                if (!$this->is_rule_matched($rule, $cart)) {
+                    continue;
+                }
+
+                $temp_prices = $item_regular_prices;
+                $temp_fees = [];
+                $temp_free_shipping = false;
+
+                $this->apply_rule_adjustments($rule, $cart, $temp_prices, $temp_fees, $temp_free_shipping);
+
+                $savings = 0.0;
+                foreach ($cart->get_cart() as $key => $item) {
+                    $savings += ($item_regular_prices[$key] - $temp_prices[$key]) * $item['quantity'];
+                }
+                foreach ($temp_fees as $fee) {
+                    $savings += abs($fee['amount']);
+                }
+
+                if ($savings > $max_savings) {
+                    $max_savings = $savings;
+                    $best_item_prices = $temp_prices;
+                    $best_fees = $temp_fees;
+                    $best_free_shipping = $temp_free_shipping;
+                }
             }
 
-            // Evaluate conditions in cart context
-            if (!$this->is_rule_matched($rule, $cart, $product)) {
-                continue;
-            }
+            $item_prices = $best_item_prices;
+            $fees = $best_fees;
+            $free_shipping = $best_free_shipping;
 
-            // Check if product is targeted
-            if (!$this->is_product_targeted_by_rule($rule, $product)) {
-                continue;
-            }
+        } else {
+            foreach ($rules as $rule) {
+                $apply_current_prices($item_prices);
 
-            if ($type === 'percentage') {
-                $discount_val = (float)$adjustments['value'];
-                $price -= ($price * ($discount_val / 100));
-                $applied = true;
-            } elseif ($type === 'fixed') {
-                $discount_val = (float)$adjustments['value'];
-                $price = max(0.0, $price - $discount_val);
-                $applied = true;
-            } elseif ($type === 'bulk') {
-                $tiers = !empty($adjustments['tiers']) ? (array)$adjustments['tiers'] : [];
-                foreach ($tiers as $tier) {
-                    $min_qty = isset($tier['min']) ? (int)$tier['min'] : 0;
-                    $max_qty = isset($tier['max']) && $tier['max'] !== '' ? (int)$tier['max'] : PHP_INT_MAX;
+                if (!$this->is_rule_matched($rule, $cart)) {
+                    continue;
+                }
 
-                    if ($qty >= $min_qty && $qty <= $max_qty) {
-                        $tier_type  = !empty($tier['type']) ? $tier['type'] : 'percentage';
-                        $tier_value = (float)(!empty($tier['value']) ? $tier['value'] : 0);
+                $old_prices = $item_prices;
+                $old_fees_count = count($fees);
+                $old_free_shipping = $free_shipping;
 
-                        if ($tier_type === 'percentage') {
-                            $price -= ($price * ($tier_value / 100));
-                        } elseif ($tier_type === 'fixed') {
-                            $price = max(0.0, $price - $tier_value);
-                        }
+                $this->apply_rule_adjustments($rule, $cart, $item_prices, $fees, $free_shipping);
+
+                $applied = false;
+                foreach ($item_prices as $k => $p) {
+                    if ($p < $old_prices[$k]) {
                         $applied = true;
                         break;
                     }
                 }
-            }
+                if (count($fees) > $old_fees_count) {
+                    $applied = true;
+                }
+                if ($free_shipping && !$old_free_shipping) {
+                    $applied = true;
+                }
 
-            if ($applied && $rule['exclusive']) {
-                break;
+                if ($applied && $strategy === 'priority_exclusivity' && !empty($rule['exclusive'])) {
+                    break;
+                }
             }
         }
 
-        return $applied ? $price : null;
+        $restore_cart();
+
+        $this->cached_cart_item_prices = $item_prices;
+        $this->cached_cart_level_discounts = [
+            'fees' => $fees,
+            'free_shipping' => $free_shipping,
+        ];
+        $this->cached_cart_hash = $cart_hash;
+    }
+
+    /**
+     * Apply a single rule's adjustments to the item prices, fees, and free shipping status.
+     *
+     * @param array $rule
+     * @param \WC_Cart $cart
+     * @param array &$item_prices
+     * @param array &$fees
+     * @param bool &$free_shipping
+     */
+    private function apply_rule_adjustments($rule, $cart, &$item_prices, &$fees, &$free_shipping)
+    {
+        $adjustments = !empty($rule['adjustments']) ? (array)$rule['adjustments'] : [];
+        $type = !empty($adjustments['type']) ? $adjustments['type'] : '';
+
+        if (empty($type)) {
+            return;
+        }
+
+        if ($this->is_cart_level_rule($rule)) {
+            if ($type === 'free_shipping') {
+                $shipping_engine = new FreeShipping();
+                if ($shipping_engine->is_free_shipping_unlocked($adjustments, $cart)) {
+                    $free_shipping = true;
+                }
+            } elseif (in_array($type, ['percentage', 'fixed'])) {
+                $subtotal = 0.0;
+                foreach ($cart->get_cart() as $key => $item) {
+                    $subtotal += $item_prices[$key] * $item['quantity'];
+                }
+
+                $fee_amount = 0.0;
+                if ($type === 'percentage') {
+                    $discount_val = (float)$adjustments['value'];
+                    $fee_amount = $subtotal * ($discount_val / 100);
+                } elseif ($type === 'fixed') {
+                    $discount_val = (float)$adjustments['value'];
+                    $fee_amount = $discount_val;
+                }
+
+                if ($fee_amount > 0) {
+                    $fee_amount = min($fee_amount, $subtotal);
+                    $fees[] = [
+                        'name' => $rule['title'],
+                        'amount' => -$fee_amount,
+                    ];
+                }
+            }
+        } else {
+            if ($type === 'percentage' || $type === 'fixed') {
+                $value = (float)$adjustments['value'];
+                foreach ($cart->get_cart() as $key => $item) {
+                    $product = $item['data'];
+                    if ($this->is_product_targeted_by_rule($rule, $product)) {
+                        if ($type === 'percentage') {
+                            $item_prices[$key] -= $item_prices[$key] * ($value / 100);
+                        } elseif ($type === 'fixed') {
+                            $item_prices[$key] = max(0.0, $item_prices[$key] - $value);
+                        }
+                    }
+                }
+            } elseif ($type === 'bulk') {
+                $tiers = !empty($adjustments['tiers']) ? (array)$adjustments['tiers'] : [];
+                foreach ($cart->get_cart() as $key => $item) {
+                    $product = $item['data'];
+                    if ($this->is_product_targeted_by_rule($rule, $product)) {
+                        $qty = (int)$item['quantity'];
+                        foreach ($tiers as $tier) {
+                            $min_qty = isset($tier['min']) ? (int)$tier['min'] : 0;
+                            $max_qty = isset($tier['max']) && $tier['max'] !== '' ? (int)$tier['max'] : PHP_INT_MAX;
+
+                            if ($qty >= $min_qty && $qty <= $max_qty) {
+                                $tier_type  = !empty($tier['type']) ? $tier['type'] : 'percentage';
+                                $tier_value = (float)(!empty($tier['value']) ? $tier['value'] : 0);
+
+                                if ($tier_type === 'percentage') {
+                                    $item_prices[$key] -= $item_prices[$key] * ($tier_value / 100);
+                                } elseif ($tier_type === 'fixed') {
+                                    $item_prices[$key] = max(0.0, $item_prices[$key] - $tier_value);
+                                }
+                                break;
+                            }
+                        }
+                    }
+                }
+            } elseif ($type === 'bogo') {
+                $bogo_engine = new Bogo();
+                $bogo_results = $bogo_engine->calculate($adjustments, $cart);
+                if (!empty($bogo_results)) {
+                    foreach ($bogo_results as $key => $new_price) {
+                        $item = $cart->get_cart()[$key];
+                        $reg_price = (float)$item['data']->get_regular_price();
+                        if ($reg_price > 0) {
+                            $ratio = $new_price / $reg_price;
+                            $item_prices[$key] = $item_prices[$key] * $ratio;
+                        }
+                    }
+                }
+            } elseif ($type === 'bundle_set') {
+                $bundle_engine = new BundleSet();
+                $bundle_results = $bundle_engine->calculate($adjustments, $cart);
+                if (!empty($bundle_results['applied']) && !empty($bundle_results['items'])) {
+                    foreach ($bundle_results['items'] as $key => $new_price) {
+                        $item = $cart->get_cart()[$key];
+                        $reg_price = (float)$item['data']->get_regular_price();
+                        if ($reg_price > 0) {
+                            $ratio = $new_price / $reg_price;
+                            $item_prices[$key] = $item_prices[$key] * $ratio;
+                        }
+                    }
+                }
+            }
+        }
     }
 }

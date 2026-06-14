@@ -194,6 +194,15 @@
                     detailsText = `$${adjVal} Flat Off`;
                 } else if (adjType === 'bulk') {
                     detailsText = 'Bulk Tiered Discount';
+                } else if (adjType === 'bogo') {
+                    const bogoType = rule.adjustments.bogo_discount_type || 'free';
+                    const bogoVal = rule.adjustments.bogo_value || 0;
+                    const bogoText = bogoType === 'free' ? 'Free' : (bogoType === 'percentage' ? `${bogoVal}% Off` : `$${bogoVal} Off`);
+                    detailsText = `BOGO: Buy ${rule.adjustments.buy_qty || 1} Get ${rule.adjustments.get_qty || 1} (${bogoText})`;
+                } else if (adjType === 'free_shipping') {
+                    detailsText = 'Free Shipping';
+                } else if (adjType === 'bundle') {
+                    detailsText = `Bundle Set Price ($${rule.adjustments.set_price || 0})`;
                 }
 
                 return el('div', { key: rule.id, className: 'drw-rule-card' },
@@ -413,7 +422,10 @@
                     options: [
                         { label: 'Percentage Discount', value: 'percentage' },
                         { label: 'Fixed Price Discount', value: 'fixed' },
-                        { label: 'Bulk Tiered Discount', value: 'bulk' }
+                        { label: 'Bulk Tiered Discount', value: 'bulk' },
+                        { label: 'BOGO Buy X Get Y', value: 'bogo' },
+                        { label: 'Free Shipping', value: 'free_shipping' },
+                        { label: 'Bundle Set Pricing', value: 'bundle' }
                     ],
                     onChange: (val) => updateAdjustments('type', val)
                 }),
@@ -425,6 +437,61 @@
                     value: rule.adjustments.value,
                     onChange: (val) => updateAdjustments('value', parseFloat(val) || 0)
                 }),
+
+                // BOGO parameters
+                rule.adjustments.type === 'bogo' && el('div', { className: 'drw-bogo-container', style: { marginTop: '12px' } },
+                    el('div', { className: 'drw-flex-row' },
+                        el(TextControl, {
+                            label: 'Buy Qty',
+                            type: 'number',
+                            value: rule.adjustments.buy_qty || '',
+                            onChange: (val) => updateAdjustments('buy_qty', parseInt(val) || 1)
+                        }),
+                        el(SelectControl, {
+                            label: 'Get Product Selection',
+                            value: rule.adjustments.get_product_id || '',
+                            options: [
+                                { label: '-- Select Product --', value: '' },
+                                ...(adminData.products || []).map(p => ({ label: p.name, value: String(p.id) }))
+                            ],
+                            onChange: (val) => updateAdjustments('get_product_id', val)
+                        }),
+                        el(TextControl, {
+                            label: 'Get Qty',
+                            type: 'number',
+                            value: rule.adjustments.get_qty || '',
+                            onChange: (val) => updateAdjustments('get_qty', parseInt(val) || 1)
+                        })
+                    ),
+                    el('div', { className: 'drw-flex-row', style: { marginTop: '8px' } },
+                        el(SelectControl, {
+                            label: 'BOGO Discount Type',
+                            value: rule.adjustments.bogo_discount_type || 'free',
+                            options: [
+                                { label: 'Free Product', value: 'free' },
+                                { label: 'Percentage Discount', value: 'percentage' },
+                                { label: 'Fixed Price Discount', value: 'fixed' }
+                            ],
+                            onChange: (val) => updateAdjustments('bogo_discount_type', val)
+                        }),
+                        (rule.adjustments.bogo_discount_type === 'percentage' || rule.adjustments.bogo_discount_type === 'fixed') && el(TextControl, {
+                            label: 'BOGO Discount Value',
+                            type: 'number',
+                            value: rule.adjustments.bogo_value || '',
+                            onChange: (val) => updateAdjustments('bogo_value', parseFloat(val) || 0)
+                        })
+                    )
+                ),
+
+                // Bundle parameters
+                rule.adjustments.type === 'bundle' && el('div', { className: 'drw-bundle-container', style: { marginTop: '12px' } },
+                    el(TextControl, {
+                        label: 'Bundle Set Price Value ($)',
+                        type: 'number',
+                        value: rule.adjustments.set_price || '',
+                        onChange: (val) => updateAdjustments('set_price', parseFloat(val) || 0)
+                    })
+                ),
 
                 // Tiered values
                 rule.adjustments.type === 'bulk' && el('div', { style: { marginTop: '12px' } },
@@ -490,7 +557,17 @@
                                 { label: 'Cart Item Count', value: 'items_count' },
                                 { label: 'User Role', value: 'user_role' },
                                 { label: 'User Email', value: 'user_email' },
-                                { label: 'Shipping Address', value: 'shipping_location' }
+                                { label: 'Shipping Address', value: 'shipping_location' },
+                                { label: 'Cart Coupon Applied', value: 'cart_coupon' },
+                                { label: 'Total Cart Items Quantity', value: 'cart_items_quantity' },
+                                { label: 'Total Cart Weight', value: 'cart_items_weight' },
+                                { label: 'Already On Sale Status', value: 'onsale_products' },
+                                { label: 'Product/Category Combination', value: 'product_combination' },
+                                { label: 'User Logged In Status', value: 'user_logged_in' },
+                                { label: 'User List (Specific IDs)', value: 'user_list' },
+                                { label: 'Billing Address City', value: 'billing_city' },
+                                { label: 'Scheduling (Dates/Times/Days)', value: 'order_date' },
+                                { label: 'Customer Purchase History', value: 'purchase_history' }
                             ],
                             onChange: (val) => updateCondition(idx, 'type', val)
                         }),
@@ -604,6 +681,304 @@
                             value: Array.isArray(cond.value) ? cond.value.join(', ') : cond.value,
                             onChange: (val) => updateCondition(idx, 'value', val.split(',').map(s => s.trim()))
                         }),
+
+                        // Cart Coupon Applied Condition
+                        cond.type === 'cart_coupon' && el(SelectControl, {
+                            value: cond.operator || 'applied',
+                            options: [
+                                { label: 'Is Applied', value: 'applied' },
+                                { label: 'Is Not Applied', value: 'not_applied' }
+                            ],
+                            onChange: (val) => updateCondition(idx, 'operator', val)
+                        }),
+                        cond.type === 'cart_coupon' && el(TextControl, {
+                            placeholder: 'e.g. promo50, summer20',
+                            value: cond.value || '',
+                            onChange: (val) => updateCondition(idx, 'value', val)
+                        }),
+
+                        // Total Cart Items Quantity Condition
+                        cond.type === 'cart_items_quantity' && el(SelectControl, {
+                            value: cond.operator || 'greater_than_or_equal',
+                            options: [
+                                { label: '>= Greater Than or Equal', value: 'greater_than_or_equal' },
+                                { label: '<= Less Than or Equal', value: 'less_than_or_equal' },
+                                { label: '> Greater Than', value: 'greater_than' },
+                                { label: '< Less Than', value: 'less_than' },
+                                { label: '== Equal', value: 'equal' }
+                            ],
+                            onChange: (val) => updateCondition(idx, 'operator', val)
+                        }),
+                        cond.type === 'cart_items_quantity' && el(TextControl, {
+                            type: 'number',
+                            value: cond.value || '',
+                            onChange: (val) => updateCondition(idx, 'value', parseInt(val) || 0)
+                        }),
+
+                        // Total Cart Weight Condition
+                        cond.type === 'cart_items_weight' && el(SelectControl, {
+                            value: cond.operator || 'greater_than_or_equal',
+                            options: [
+                                { label: '>= Greater Than or Equal', value: 'greater_than_or_equal' },
+                                { label: '<= Less Than or Equal', value: 'less_than_or_equal' },
+                                { label: '> Greater Than', value: 'greater_than' },
+                                { label: '< Less Than', value: 'less_than' }
+                            ],
+                            onChange: (val) => updateCondition(idx, 'operator', val)
+                        }),
+                        cond.type === 'cart_items_weight' && el(TextControl, {
+                            type: 'number',
+                            value: cond.value || '',
+                            onChange: (val) => updateCondition(idx, 'value', parseFloat(val) || 0)
+                        }),
+
+                        // Already On Sale Status Condition
+                        cond.type === 'onsale_products' && el(SelectControl, {
+                            value: cond.value || 'exclude',
+                            options: [
+                                { label: 'Exclude On-Sale Products', value: 'exclude' },
+                                { label: 'Only On-Sale Products', value: 'only' }
+                            ],
+                            onChange: (val) => updateCondition(idx, 'value', val)
+                        }),
+
+                        // Product/Category Combination Condition
+                        cond.type === 'product_combination' && el('div', { className: 'drw-combination-wrapper' },
+                            el(SelectControl, {
+                                value: cond.operator || 'contains_any',
+                                options: [
+                                    { label: 'Contains Any of these', value: 'contains_any' },
+                                    { label: 'Contains All of these', value: 'contains_all' },
+                                    { label: 'Contains None of these', value: 'contains_none' }
+                                ],
+                                onChange: (val) => updateCondition(idx, 'operator', val)
+                            }),
+                            el('div', { className: 'drw-flex-row', style: { marginTop: '8px' } },
+                                el('div', null,
+                                    el('span', { className: 'drw-field-label' }, 'Products:'),
+                                    el('div', { className: 'drw-checklist-box' },
+                                        (adminData.products || []).map(p => {
+                                            const isChecked = (cond.product_ids || []).includes(p.id);
+                                            return el('div', { key: p.id, className: 'drw-checkbox-item' },
+                                                el('label', null,
+                                                    el('input', {
+                                                        type: 'checkbox',
+                                                        checked: isChecked,
+                                                        onChange: (e) => {
+                                                            const list = [...(cond.product_ids || [])];
+                                                            if (e.target.checked) {
+                                                                list.push(p.id);
+                                                            } else {
+                                                                const idxOf = list.indexOf(p.id);
+                                                                if (idxOf > -1) list.splice(idxOf, 1);
+                                                            }
+                                                            updateCondition(idx, 'product_ids', list);
+                                                        }
+                                                    }),
+                                                    ' ' + p.name
+                                                )
+                                            );
+                                        })
+                                    )
+                                ),
+                                el('div', null,
+                                    el('span', { className: 'drw-field-label' }, 'Categories:'),
+                                    el('div', { className: 'drw-checklist-box' },
+                                        (adminData.categories || []).map(c => {
+                                            const isChecked = (cond.category_ids || []).includes(c.id);
+                                            return el('div', { key: c.id, className: 'drw-checkbox-item' },
+                                                el('label', null,
+                                                    el('input', {
+                                                        type: 'checkbox',
+                                                        checked: isChecked,
+                                                        onChange: (e) => {
+                                                            const list = [...(cond.category_ids || [])];
+                                                            if (e.target.checked) {
+                                                                list.push(c.id);
+                                                            } else {
+                                                                const idxOf = list.indexOf(c.id);
+                                                                if (idxOf > -1) list.splice(idxOf, 1);
+                                                            }
+                                                            updateCondition(idx, 'category_ids', list);
+                                                        }
+                                                    }),
+                                                    ' ' + c.name
+                                                )
+                                            );
+                                        })
+                                    )
+                                )
+                            )
+                        ),
+
+                        // User Logged In Status Condition
+                        cond.type === 'user_logged_in' && el(SelectControl, {
+                            value: cond.value || 'yes',
+                            options: [
+                                { label: 'User Is Logged In', value: 'yes' },
+                                { label: 'User Is Guest (Not Logged In)', value: 'no' }
+                            ],
+                            onChange: (val) => updateCondition(idx, 'value', val)
+                        }),
+
+                        // User List (Specific IDs) Condition
+                        cond.type === 'user_list' && el(SelectControl, {
+                            value: cond.operator || 'in_list',
+                            options: [
+                                { label: 'User ID is in list', value: 'in_list' },
+                                { label: 'User ID is NOT in list', value: 'not_in_list' }
+                            ],
+                            onChange: (val) => updateCondition(idx, 'operator', val)
+                        }),
+                        cond.type === 'user_list' && el(TextControl, {
+                            placeholder: 'e.g. 1, 25, 48',
+                            value: cond.value || '',
+                            onChange: (val) => updateCondition(idx, 'value', val)
+                        }),
+
+                        // Billing Address City Condition
+                        cond.type === 'billing_city' && el(SelectControl, {
+                            value: cond.operator || 'in_list',
+                            options: [
+                                { label: 'Matches City', value: 'in_list' },
+                                { label: 'Does Not Match City', value: 'not_in_list' }
+                            ],
+                            onChange: (val) => updateCondition(idx, 'operator', val)
+                        }),
+                        cond.type === 'billing_city' && el(TextControl, {
+                            placeholder: 'e.g. New York, London, Paris',
+                            value: cond.value || '',
+                            onChange: (val) => updateCondition(idx, 'value', val)
+                        }),
+
+                        // Scheduling Condition
+                        cond.type === 'order_date' && el('div', { className: 'drw-order-date-container' },
+                            el('div', { className: 'drw-flex-row' },
+                                el(TextControl, {
+                                    label: 'Start Date',
+                                    type: 'date',
+                                    value: cond.start_date || '',
+                                    onChange: (val) => updateCondition(idx, 'start_date', val)
+                                }),
+                                el(TextControl, {
+                                    label: 'End Date',
+                                    type: 'date',
+                                    value: cond.end_date || '',
+                                    onChange: (val) => updateCondition(idx, 'end_date', val)
+                                })
+                            ),
+                            el('div', { className: 'drw-flex-row', style: { marginTop: '8px' } },
+                                el(TextControl, {
+                                    label: 'Start Time',
+                                    type: 'time',
+                                    value: cond.start_time || '',
+                                    onChange: (val) => updateCondition(idx, 'start_time', val)
+                                }),
+                                el(TextControl, {
+                                    label: 'End Time',
+                                    type: 'time',
+                                    value: cond.end_time || '',
+                                    onChange: (val) => updateCondition(idx, 'end_time', val)
+                                })
+                            ),
+                            el('div', { style: { marginTop: '8px' } },
+                                el('span', { className: 'drw-field-label' }, 'Active Days of Week:'),
+                                el('div', { className: 'drw-days-checkboxes' },
+                                    ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'].map(day => {
+                                        const isChecked = (cond.weekdays || []).includes(day);
+                                        return el('label', { key: day, className: 'drw-day-checkbox-label' },
+                                            el('input', {
+                                                type: 'checkbox',
+                                                checked: isChecked,
+                                                onChange: (e) => {
+                                                    const list = [...(cond.weekdays || [])];
+                                                    if (e.target.checked) {
+                                                        list.push(day);
+                                                    } else {
+                                                        const idxOf = list.indexOf(day);
+                                                        if (idxOf > -1) list.splice(idxOf, 1);
+                                                    }
+                                                    updateCondition(idx, 'weekdays', list);
+                                                }
+                                            }),
+                                            ' ' + day.substring(0, 3)
+                                        );
+                                    })
+                                )
+                            )
+                        ),
+
+                        // Customer Purchase History Condition
+                        cond.type === 'purchase_history' && el('div', { className: 'drw-history-container' },
+                            el(SelectControl, {
+                                value: cond.history_metric || 'orders_count',
+                                options: [
+                                    { label: 'Total Orders Count', value: 'orders_count' },
+                                    { label: 'Total Amount Spent ($)', value: 'revenue' },
+                                    { label: 'Previously Purchased Products', value: 'products_bought' }
+                                ],
+                                onChange: (val) => {
+                                    updateCondition(idx, 'history_metric', val);
+                                    if (val === 'products_bought') {
+                                        updateCondition(idx, 'operator', 'contains_any');
+                                        updateCondition(idx, 'value', []);
+                                    } else {
+                                        updateCondition(idx, 'operator', 'greater_than_or_equal');
+                                        updateCondition(idx, 'value', 0);
+                                    }
+                                }
+                            }),
+                            (cond.history_metric === 'orders_count' || cond.history_metric === 'revenue' || !cond.history_metric) && el('div', { className: 'drw-flex-row', style: { marginTop: '8px' } },
+                                el(SelectControl, {
+                                    value: cond.operator || 'greater_than_or_equal',
+                                    options: [
+                                        { label: '>= Greater Than or Equal', value: 'greater_than_or_equal' },
+                                        { label: '<= Less Than or Equal', value: 'less_than_or_equal' }
+                                    ],
+                                    onChange: (val) => updateCondition(idx, 'operator', val)
+                                }),
+                                el(TextControl, {
+                                    type: 'number',
+                                    value: cond.value || '',
+                                    onChange: (val) => updateCondition(idx, 'value', parseFloat(val) || 0)
+                                })
+                            ),
+                            cond.history_metric === 'products_bought' && el('div', { style: { marginTop: '8px' } },
+                                el(SelectControl, {
+                                    value: cond.operator || 'contains_any',
+                                    options: [
+                                        { label: 'Contains Any of these', value: 'contains_any' },
+                                        { label: 'Contains All of these', value: 'contains_all' }
+                                    ],
+                                    onChange: (val) => updateCondition(idx, 'operator', val)
+                                }),
+                                el('span', { className: 'drw-field-label', style: { marginTop: '6px', display: 'block' } }, 'Select Products:'),
+                                el('div', { className: 'drw-checklist-box' },
+                                    (adminData.products || []).map(p => {
+                                        const isChecked = (cond.value || []).includes(p.id);
+                                        return el('div', { key: p.id, className: 'drw-checkbox-item' },
+                                            el('label', null,
+                                                el('input', {
+                                                    type: 'checkbox',
+                                                    checked: isChecked,
+                                                    onChange: (e) => {
+                                                        const list = Array.isArray(cond.value) ? [...cond.value] : [];
+                                                        if (e.target.checked) {
+                                                            list.push(p.id);
+                                                        } else {
+                                                            const idxOf = list.indexOf(p.id);
+                                                            if (idxOf > -1) list.splice(idxOf, 1);
+                                                        }
+                                                        updateCondition(idx, 'value', list);
+                                                    }
+                                                }),
+                                                ' ' + p.name
+                                            )
+                                        );
+                                    })
+                                )
+                            )
+                        ),
 
                         el(Button, { className: 'drw-remove-btn', onClick: () => removeCondition(idx) }, 'Delete')
                     );
