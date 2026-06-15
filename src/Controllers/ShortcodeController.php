@@ -77,12 +77,31 @@ class ShortcodeController
         $ids = $this->parse_id_list($atts['ids']);
 
         $product_ids = $this->get_sale_candidate_product_ids($ids, $category, $scan_limit);
+
+        // Pre-pass: when individual variations appear in the list, skip their parent variable
+        // product so "FLOR JAMAICA 50g / 500g" shows separately instead of "FLOR JAMAICA" 4x.
+        $covered_parent_ids = [];
+        if (function_exists('wc_get_product')) {
+            foreach ($product_ids as $pid) {
+                $pid = is_object($pid) && isset($pid->ID) ? (int)$pid->ID : (int)$pid;
+                $p   = wc_get_product($pid);
+                if ($p && $p->is_type('variation')) {
+                    $covered_parent_ids[(int)$p->get_parent_id()] = true;
+                }
+            }
+        }
+
         $cards = [];
 
         foreach ($product_ids as $product_id) {
             $product_id = is_object($product_id) && isset($product_id->ID) ? $product_id->ID : $product_id;
             $product = function_exists('wc_get_product') ? wc_get_product($product_id) : null;
             if (!$product) {
+                continue;
+            }
+
+            // Skip parent variable product when individual variations are already in the list.
+            if ($product->is_type('variable') && isset($covered_parent_ids[(int)$product->get_id()])) {
                 continue;
             }
 
@@ -302,28 +321,60 @@ class ShortcodeController
      */
     private function render_product_card($product, array $sale_data)
     {
-        // Variations come from wc_get_product_ids_on_sale(); normalize to parent
-        // so we get the correct "Imagen del producto" and the right product page URL.
-        $display = $product->is_type('variation')
-            ? (wc_get_product($product->get_parent_id()) ?: $product)
-            : $product;
+        $is_variation = $product->is_type('variation');
 
-        $product_id  = (int)$display->get_id();
-        $product_url = get_permalink($product_id);
+        if ($is_variation) {
+            $parent_id    = (int)$product->get_parent_id();
+            $product_url  = get_permalink($parent_id);
+            $display_name = $product->get_name();
+            $cat_post_id  = $parent_id;
+            $data_id      = $parent_id;
 
-        // Image — use "Imagen del producto" (parent featured image) first,
-        // then gallery, then WC placeholder. Never use variation-specific images.
-        $image = get_the_post_thumbnail($product_id, 'woocommerce_thumbnail', ['class' => 'drw-sale-item-image']);
+            // "Imagen del producto" = parent featured image, then parent gallery
+            $image = get_the_post_thumbnail($parent_id, 'woocommerce_thumbnail', ['class' => 'drw-sale-item-image']);
+            if (empty($image)) {
+                $parent  = wc_get_product($parent_id);
+                $gallery = $parent ? $parent->get_gallery_image_ids() : [];
+                if (!empty($gallery)) {
+                    $image = wp_get_attachment_image($gallery[0], 'woocommerce_thumbnail', false, ['class' => 'drw-sale-item-image']);
+                }
+            }
 
-        if (empty($image)) {
-            $gallery = $display->get_gallery_image_ids();
-            if (!empty($gallery)) {
-                $image = wp_get_attachment_image($gallery[0], 'woocommerce_thumbnail', false, ['class' => 'drw-sale-item-image']);
+            $btn_url   = $product_url;
+            $btn_class = 'drw-sale-item-btn';
+        } else {
+            $display_id   = (int)$product->get_id();
+            $product_url  = get_permalink($display_id);
+            $display_name = $product->get_name();
+            $cat_post_id  = $display_id;
+            $data_id      = $display_id;
+
+            $image = get_the_post_thumbnail($display_id, 'woocommerce_thumbnail', ['class' => 'drw-sale-item-image']);
+            if (empty($image)) {
+                $gallery = $product->get_gallery_image_ids();
+                if (!empty($gallery)) {
+                    $image = wp_get_attachment_image($gallery[0], 'woocommerce_thumbnail', false, ['class' => 'drw-sale-item-image']);
+                }
+            }
+
+            if ($product->is_type('variable') || $product->is_type('grouped')) {
+                $btn_url   = $product_url;
+                $btn_class = 'drw-sale-item-btn';
+            } else {
+                $btn_url   = $product->add_to_cart_url();
+                $btn_class = 'drw-sale-item-btn add_to_cart_button ajax_add_to_cart';
             }
         }
 
         if (empty($image) && function_exists('wc_placeholder_img')) {
             $image = wc_placeholder_img('woocommerce_thumbnail', ['class' => 'drw-sale-item-image']);
+        }
+
+        // First product category
+        $terms = function_exists('get_the_terms') ? get_the_terms($cat_post_id, 'product_cat') : false;
+        $category_html = '';
+        if (!empty($terms) && !is_wp_error($terms)) {
+            $category_html = '<span class="drw-sale-item-cat">' . esc_html($terms[0]->name) . '</span>';
         }
 
         $price_html = sprintf(
@@ -332,40 +383,28 @@ class ShortcodeController
             wc_price($sale_data['sale_price'])
         );
 
-        // WooCommerce's add_to_cart_text() is already translated by WC language packs
-        // (Spanish: "Añadir al carrito" / "Seleccionar opciones").
-        if ($display->is_type('variable') || $display->is_type('grouped')) {
-            $btn_url   = $product_url;
-            $btn_class = 'drw-sale-item-btn button';
-        } else {
-            $btn_url   = $display->add_to_cart_url();
-            $btn_class = 'drw-sale-item-btn button add_to_cart_button ajax_add_to_cart';
-        }
-
-        $btn_text = $display->add_to_cart_text();
-
         $button = sprintf(
             '<a href="%s" data-product_id="%d" data-quantity="1" class="%s" aria-label="%s" rel="nofollow">%s</a>',
             esc_url($btn_url),
-            $product_id,
+            $data_id,
             esc_attr($btn_class),
-            esc_attr($btn_text),
-            esc_html($btn_text)
+            esc_attr($display_name),
+            esc_html__('Agregar', 'discount-rules-woo')
         );
 
         return sprintf(
             '<article class="drw-sale-item">
             <a class="drw-sale-item-link" href="%s">
                 <span class="drw-sale-item-media">%s%s</span>
-                <span class="drw-sale-item-title">%s</span>
-                %s
+                <span class="drw-sale-item-body">%s<span class="drw-sale-item-title">%s</span>%s</span>
             </a>
             <div class="drw-sale-item-footer">%s</div>
         </article>',
             esc_url($product_url),
             self::render_sale_percentage_badge($sale_data['percentage']),
             $image,
-            esc_html($display->get_name()),
+            $category_html,
+            esc_html($display_name),
             $price_html,
             $button
         );
