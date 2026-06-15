@@ -302,23 +302,21 @@ class ShortcodeController
      */
     private function render_product_card($product, array $sale_data)
     {
-        $product_id = (int)$product->get_id();
+        // Variations come from wc_get_product_ids_on_sale(); normalize to parent
+        // so we get the correct "Imagen del producto" and the right product page URL.
+        $display = $product->is_type('variation')
+            ? (wc_get_product($product->get_parent_id()) ?: $product)
+            : $product;
 
-        // Image: fallback chain so variable products always show a photo.
+        $product_id  = (int)$display->get_id();
+        $product_url = get_permalink($product_id);
+
+        // Image — use "Imagen del producto" (parent featured image) first,
+        // then gallery, then WC placeholder. Never use variation-specific images.
         $image = get_the_post_thumbnail($product_id, 'woocommerce_thumbnail', ['class' => 'drw-sale-item-image']);
 
-        if (empty($image) && $product->is_type('variable')) {
-            foreach ($product->get_children() as $child_id) {
-                $thumb_id = get_post_thumbnail_id($child_id);
-                if ($thumb_id) {
-                    $image = wp_get_attachment_image($thumb_id, 'woocommerce_thumbnail', false, ['class' => 'drw-sale-item-image']);
-                    break;
-                }
-            }
-        }
-
         if (empty($image)) {
-            $gallery = $product->get_gallery_image_ids();
+            $gallery = $display->get_gallery_image_ids();
             if (!empty($gallery)) {
                 $image = wp_get_attachment_image($gallery[0], 'woocommerce_thumbnail', false, ['class' => 'drw-sale-item-image']);
             }
@@ -334,23 +332,26 @@ class ShortcodeController
             wc_price($sale_data['sale_price'])
         );
 
-        // Add to Cart button — variable/grouped products link to the product page;
-        // simple products get the AJAX add-to-cart button.
-        if ($product->is_type('variable') || $product->is_type('grouped')) {
-            $button = sprintf(
-                '<a href="%s" class="drw-sale-item-btn button wp-element-button">%s</a>',
-                esc_url(get_permalink($product_id)),
-                esc_html__('View options', 'discount-rules-woo')
-            );
+        // WooCommerce's add_to_cart_text() is already translated by WC language packs
+        // (Spanish: "Añadir al carrito" / "Seleccionar opciones").
+        if ($display->is_type('variable') || $display->is_type('grouped')) {
+            $btn_url   = $product_url;
+            $btn_class = 'drw-sale-item-btn button';
         } else {
-            $button = sprintf(
-                '<a href="%s" data-product_id="%d" data-quantity="1" class="drw-sale-item-btn button add_to_cart_button ajax_add_to_cart wp-element-button" aria-label="%s" rel="nofollow">%s</a>',
-                esc_url($product->add_to_cart_url()),
-                $product_id,
-                esc_attr($product->add_to_cart_text()),
-                esc_html($product->add_to_cart_text())
-            );
+            $btn_url   = $display->add_to_cart_url();
+            $btn_class = 'drw-sale-item-btn button add_to_cart_button ajax_add_to_cart';
         }
+
+        $btn_text = $display->add_to_cart_text();
+
+        $button = sprintf(
+            '<a href="%s" data-product_id="%d" data-quantity="1" class="%s" aria-label="%s" rel="nofollow">%s</a>',
+            esc_url($btn_url),
+            $product_id,
+            esc_attr($btn_class),
+            esc_attr($btn_text),
+            esc_html($btn_text)
+        );
 
         return sprintf(
             '<article class="drw-sale-item">
@@ -361,10 +362,10 @@ class ShortcodeController
             </a>
             <div class="drw-sale-item-footer">%s</div>
         </article>',
-            esc_url(get_permalink($product_id)),
+            esc_url($product_url),
             self::render_sale_percentage_badge($sale_data['percentage']),
             $image,
-            esc_html($product->get_name()),
+            esc_html($display->get_name()),
             $price_html,
             $button
         );
