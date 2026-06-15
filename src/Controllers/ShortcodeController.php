@@ -303,23 +303,70 @@ class ShortcodeController
     private function render_product_card($product, array $sale_data)
     {
         $product_id = (int)$product->get_id();
-        $image = function_exists('get_the_post_thumbnail')
-            ? get_the_post_thumbnail($product_id, 'woocommerce_thumbnail', ['class' => 'drw-sale-item-image'])
-            : '';
+
+        // Image: fallback chain so variable products always show a photo.
+        $image = get_the_post_thumbnail($product_id, 'woocommerce_thumbnail', ['class' => 'drw-sale-item-image']);
+
+        if (empty($image) && $product->is_type('variable')) {
+            foreach ($product->get_children() as $child_id) {
+                $thumb_id = get_post_thumbnail_id($child_id);
+                if ($thumb_id) {
+                    $image = wp_get_attachment_image($thumb_id, 'woocommerce_thumbnail', false, ['class' => 'drw-sale-item-image']);
+                    break;
+                }
+            }
+        }
+
+        if (empty($image)) {
+            $gallery = $product->get_gallery_image_ids();
+            if (!empty($gallery)) {
+                $image = wp_get_attachment_image($gallery[0], 'woocommerce_thumbnail', false, ['class' => 'drw-sale-item-image']);
+            }
+        }
+
+        if (empty($image) && function_exists('wc_placeholder_img')) {
+            $image = wc_placeholder_img('woocommerce_thumbnail', ['class' => 'drw-sale-item-image']);
+        }
 
         $price_html = sprintf(
             '<span class="drw-sale-item-price"><del>%s</del> <ins>%s</ins></span>',
-            function_exists('wc_price') ? wc_price($sale_data['regular_price']) : esc_html($sale_data['regular_price']),
-            function_exists('wc_price') ? wc_price($sale_data['sale_price']) : esc_html($sale_data['sale_price'])
+            wc_price($sale_data['regular_price']),
+            wc_price($sale_data['sale_price'])
         );
 
+        // Add to Cart button — variable/grouped products link to the product page;
+        // simple products get the AJAX add-to-cart button.
+        if ($product->is_type('variable') || $product->is_type('grouped')) {
+            $button = sprintf(
+                '<a href="%s" class="drw-sale-item-btn button wp-element-button">%s</a>',
+                esc_url(get_permalink($product_id)),
+                esc_html__('View options', 'discount-rules-woo')
+            );
+        } else {
+            $button = sprintf(
+                '<a href="%s" data-product_id="%d" data-quantity="1" class="drw-sale-item-btn button add_to_cart_button ajax_add_to_cart wp-element-button" aria-label="%s" rel="nofollow">%s</a>',
+                esc_url($product->add_to_cart_url()),
+                $product_id,
+                esc_attr($product->add_to_cart_text()),
+                esc_html($product->add_to_cart_text())
+            );
+        }
+
         return sprintf(
-            '<article class="drw-sale-item"><a class="drw-sale-item-link" href="%s"><span class="drw-sale-item-media">%s%s</span><span class="drw-sale-item-title">%s</span>%s</a></article>',
+            '<article class="drw-sale-item">
+            <a class="drw-sale-item-link" href="%s">
+                <span class="drw-sale-item-media">%s%s</span>
+                <span class="drw-sale-item-title">%s</span>
+                %s
+            </a>
+            <div class="drw-sale-item-footer">%s</div>
+        </article>',
             esc_url(get_permalink($product_id)),
             self::render_sale_percentage_badge($sale_data['percentage']),
             $image,
             esc_html($product->get_name()),
-            $price_html
+            $price_html,
+            $button
         );
     }
 

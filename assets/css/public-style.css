@@ -109,3 +109,46 @@
 .drw-volume-table th, .drw-volume-table td { padding: 0.5rem 0.75rem; border: 1px solid #ddd; text-align: left; }
 .drw-volume-table thead th { background: #f5f5f5; font-weight: 600; }
 .drw-volume-table tbody tr:nth-child(even) { background: #fafafa; }
+
+/* ===== DRW Sale Item — footer & button ===== */
+.drw-sale-item {
+    display: flex;
+    flex-direction: column;
+}
+
+.drw-sale-item-link {
+    flex: 1;
+}
+
+.drw-sale-item-footer {
+    padding: 10px 0 4px;
+    text-align: center;
+}
+
+.drw-sale-item-btn {
+    display: inline-block;
+    width: 100%;
+    padding: 10px 14px;
+    border-radius: 6px;
+    background: #55b72e;
+    color: #ffffff !important;
+    font-size: 13px;
+    font-weight: 700;
+    text-align: center;
+    text-decoration: none !important;
+    transition: background 0.2s ease, transform 0.1s ease;
+    cursor: pointer;
+    box-sizing: border-box;
+}
+
+.drw-sale-item-btn:hover,
+.drw-sale-item-btn:focus {
+    background: #449e22;
+    color: #ffffff !important;
+    text-decoration: none !important;
+    transform: translateY(-1px);
+}
+
+.drw-sale-item-btn:active {
+    transform: translateY(0);
+}

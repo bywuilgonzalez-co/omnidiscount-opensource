@@ -119,9 +119,9 @@ class AnalyticsController {
 
     public function add_analytics_submenu() {
         add_submenu_page(
-            'woocommerce',
-            __('Discount Rules – Analytics', 'discount-rules-woo'),
-            __('Discount Analytics', 'discount-rules-woo'),
+            'drw-discount-rules',
+            __('Analytics', 'discount-rules-woo'),
+            __('Analytics', 'discount-rules-woo'),
             'manage_woocommerce',
             'drw-analytics',
             [$this, 'render_analytics_page']
@@ -129,7 +129,8 @@ class AnalyticsController {
     }
 
     public function enqueue_analytics_assets($hook) {
-        if ($hook !== 'woocommerce_page_drw-analytics') { return; }
+        $drw_page = isset($_GET['page']) ? sanitize_key($_GET['page']) : '';
+        if ($drw_page !== 'drw-analytics') { return; }
 
         wp_enqueue_script(
             'drw-analytics',

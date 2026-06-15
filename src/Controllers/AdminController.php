@@ -38,19 +38,30 @@ class AdminController
      */
     public function add_admin_menu()
     {
+        add_menu_page(
+            __('Discount Rules', 'discount-rules-woo'),
+            __('Discount Rules', 'discount-rules-woo'),
+            'manage_woocommerce',
+            'drw-discount-rules',
+            [$this, 'render_admin_page'],
+            'dashicons-tag',
+            56
+        );
+
+        // First submenu renames the auto-generated duplicate of the parent.
         add_submenu_page(
-            'woocommerce',
-            __('Discount Rules', 'discount-rules-woo'),
-            __('Discount Rules', 'discount-rules-woo'),
+            'drw-discount-rules',
+            __('All Rules', 'discount-rules-woo'),
+            __('All Rules', 'discount-rules-woo'),
             'manage_woocommerce',
             'drw-discount-rules',
             [$this, 'render_admin_page']
         );
 
         add_submenu_page(
-            'woocommerce',
-            __('Discount Rules – Settings', 'discount-rules-woo'),
-            __('Discount Rules Settings', 'discount-rules-woo'),
+            'drw-discount-rules',
+            __('Settings', 'discount-rules-woo'),
+            __('Settings', 'discount-rules-woo'),
             'manage_woocommerce',
             'drw-discount-settings',
             [$this, 'render_settings_page']
@@ -136,7 +147,8 @@ class AdminController
     public function enqueue_admin_assets($hook)
     {
         // Only load on our custom admin page
-        if ($hook !== 'woocommerce_page_drw-discount-rules') {
+        $drw_page = isset($_GET['page']) ? sanitize_key($_GET['page']) : '';
+        if ($drw_page !== 'drw-discount-rules') {
             return;
         }
 

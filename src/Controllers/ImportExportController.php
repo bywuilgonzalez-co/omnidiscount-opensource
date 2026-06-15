@@ -112,9 +112,9 @@ class ImportExportController {
 
     public function add_import_export_submenu() {
         add_submenu_page(
-            'woocommerce',
-            __('Discount Rules – Import/Export', 'discount-rules-woo'),
-            __('Import/Export Rules', 'discount-rules-woo'),
+            'drw-discount-rules',
+            __('Import / Export', 'discount-rules-woo'),
+            __('Import / Export', 'discount-rules-woo'),
             'manage_woocommerce',
             'drw-import-export',
             [$this, 'render_import_export_page']
