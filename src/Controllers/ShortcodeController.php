@@ -274,7 +274,7 @@ class ShortcodeController
             return '';
         }
 
-        return '<div class="sale-perc">-' . esc_html($percentage) . ' %</div>';
+        return '<div class="drw-sale-badge">-' . esc_html($percentage) . ' %</div>';
     }
 
     /**

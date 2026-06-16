@@ -3,16 +3,18 @@
    ============================================================= */
 
 /* ── Percentage badge ── */
-.sale-perc {
-    position: absolute;
+.drw-sale-badge {
+    display: block !important;
+    visibility: visible !important;
+    position: absolute !important;
     top: 10px;
     left: 10px;
-    z-index: 2;
+    z-index: 10;
     min-width: 48px;
     padding: 5px 10px;
     border-radius: 999px;
     background: #e53935;
-    color: #ffffff;
+    color: #ffffff !important;
     font-size: 12px;
     font-weight: 800;
     line-height: 1;
