@@ -25,6 +25,7 @@ class Database
             enabled TINYINT(1) DEFAULT 1,
             deleted TINYINT(1) DEFAULT 0,
             exclusive TINYINT(1) DEFAULT 0,
+            no_coupon_stacking TINYINT(1) DEFAULT 0,
             title VARCHAR(255) NOT NULL,
             priority INT(11) DEFAULT 10,
             apply_to VARCHAR(100) DEFAULT 'all_products',
@@ -38,7 +39,8 @@ class Database
             created_at DATETIME DEFAULT NULL,
             modified_at DATETIME DEFAULT NULL,
             PRIMARY KEY (id),
-            KEY enabled_deleted_idx (enabled, deleted)
+            KEY enabled_deleted_idx (enabled, deleted),
+            KEY priority_idx (priority)
         ) $charset_collate;";
 
         dbDelta($rules_sql);
@@ -51,6 +53,7 @@ class Database
             discount_amount FLOAT NOT NULL,
             details LONGTEXT NOT NULL,
             free_shipping TINYINT(1) DEFAULT 0,
+            created_at DATETIME DEFAULT NULL,
             PRIMARY KEY (id),
             KEY order_id_idx (order_id)
         ) $charset_collate;";
@@ -69,7 +72,7 @@ class Database
         global $wpdb;
         $rules_table = $wpdb->prefix . 'drw_rules';
 
-        $count = $wpdb->get_var("SELECT COUNT(*) FROM $rules_table");
+        $count = (int)$wpdb->get_var($wpdb->prepare("SELECT COUNT(*) FROM %i", $rules_table));
 
         if ((int)$count === 0) {
             $wpdb->insert(

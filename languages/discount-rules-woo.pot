@@ -1,0 +1,194 @@
+# Copyright (C) 2024 Bywuilgonzalez.com
+# This file is distributed under the GPLv3.
+msgid ""
+msgstr ""
+"Project-Id-Version: Dynamic Pricing & Discount Rules for WooCommerce 1.3.0\n"
+"Report-Msgid-Bugs-To: https://bywuilgonzalez.com\n"
+"POT-Creation-Date: 2026-06-14\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"X-Generator: Claude Code\n"
+"X-Domain: discount-rules-woo\n"
+
+#. src/Controllers/AdminController.php:43
+#: src/Controllers/AdminController.php:44
+msgid "Discount Rules"
+msgstr ""
+
+#: src/Controllers/AdminController.php:52
+msgid "Discount Rules – Settings"
+msgstr ""
+
+#: src/Controllers/AdminController.php:53
+msgid "Discount Rules Settings"
+msgstr ""
+
+#: src/Controllers/AdminController.php:66
+#: src/Controllers/ImportExportController.php:66
+#: src/Controllers/ImportExportController.php:86
+msgid "Permission denied."
+msgstr ""
+
+#: src/Controllers/AdminController.php:88
+#: src/Controllers/AdminController.php:52
+msgctxt "page-title"
+msgid "Discount Rules – Settings"
+msgstr ""
+
+#: src/Controllers/AdminController.php:92
+msgid "Settings saved."
+msgstr ""
+
+#: src/Controllers/AdminController.php:104
+msgid "Coupon Stacking"
+msgstr ""
+
+#: src/Controllers/AdminController.php:117
+msgid "Disable all discount rules when a coupon is applied (globally)"
+msgstr ""
+
+#: src/Controllers/AdminController.php:120
+msgid "When enabled, no discount rule will apply if the customer has entered a coupon code. Individual rules can also be marked non-stackable via the API."
+msgstr ""
+
+#: src/Controllers/AdminController.php:127
+msgid "Save Settings"
+msgstr ""
+
+#: src/Controllers/AdminController.php:203
+msgid "Guest (Not logged in)"
+msgstr ""
+
+#: src/Controllers/AdminController.php:221
+msgid "Discount Rules for WooCommerce"
+msgstr ""
+
+#: src/Controllers/AnalyticsController.php:95
+msgid "Discount Rules – Analytics"
+msgstr ""
+
+#: src/Controllers/AnalyticsController.php:96
+msgid "Discount Analytics"
+msgstr ""
+
+#: src/Controllers/AnalyticsController.php:123
+msgctxt "page-title"
+msgid "Discount Rules – Analytics"
+msgstr ""
+
+#: src/Controllers/AnalyticsController.php:125
+msgid "Loading analytics..."
+msgstr ""
+
+#: src/Controllers/ApiController.php:197
+msgid "Rule not found"
+msgstr ""
+
+#: src/Controllers/ApiController.php:214
+msgid "Title is required"
+msgstr ""
+
+#: src/Controllers/ApiController.php:243
+msgid "Rule deleted"
+msgstr ""
+
+#: src/Controllers/CartController.php:208
+msgid "Discount Rules Saved"
+msgstr ""
+
+#. sprintf placeholder: %s is wc_price() output
+#: src/Controllers/CartController.php:346
+#: src/Controllers/CartController.php:359
+msgid "You Saved: %s"
+msgstr ""
+
+#: src/Controllers/CartController.php:396
+msgid "Total Saved:"
+msgstr ""
+
+#: src/Controllers/ImportExportController.php:52
+msgid "No rules found in import data."
+msgstr ""
+
+#: src/Controllers/ImportExportController.php:97
+msgid "Invalid JSON file."
+msgstr ""
+
+#: src/Controllers/ImportExportController.php:116
+msgid "Discount Rules – Import/Export"
+msgstr ""
+
+#: src/Controllers/ImportExportController.php:117
+msgid "Import/Export Rules"
+msgstr ""
+
+#: src/Controllers/ImportExportController.php:127
+msgctxt "page-title"
+msgid "Discount Rules – Import / Export"
+msgstr ""
+
+#. sprintf placeholder: %d is the count of imported rules
+#: src/Controllers/ImportExportController.php:131
+msgid "%d rule(s) imported successfully."
+msgstr ""
+
+#: src/Controllers/ImportExportController.php:139
+msgid "Export Rules"
+msgstr ""
+
+#: src/Controllers/ImportExportController.php:140
+msgid "Download all discount rules as a JSON file."
+msgstr ""
+
+#: src/Controllers/ImportExportController.php:144
+msgid "Download JSON"
+msgstr ""
+
+#: src/Controllers/ImportExportController.php:148
+msgid "Import Rules"
+msgstr ""
+
+#: src/Controllers/ImportExportController.php:149
+msgid "Upload a JSON file exported from another store. Rules will be appended (existing rules are not deleted)."
+msgstr ""
+
+#: src/Controllers/ImportExportController.php:154
+msgid "Import Rules"
+msgstr ""
+
+#: src/Controllers/ProgressBarController.php:53
+msgid "Spend {remaining} more to get free shipping!"
+msgstr ""
+
+#: src/Controllers/ProgressBarController.php:78
+msgid "You have unlocked free shipping!"
+msgstr ""
+
+#: src/Controllers/ProgressBarController.php:137
+msgid "Volume Pricing"
+msgstr ""
+
+#: src/Controllers/ProgressBarController.php:184
+msgid "Quantity"
+msgstr ""
+
+#: src/Controllers/ProgressBarController.php:185
+msgid "Price per Unit"
+msgstr ""
+
+#: src/Controllers/ProgressBarController.php:186
+msgid "Savings"
+msgstr ""
+
+#: src/Controllers/ProgressBarController.php:207
+msgid "off"
+msgstr ""
+
+#: src/Controllers/ShortcodeController.php:103
+msgid "No sale products found."
+msgstr ""
+
+#: src/Models/Database.php:84
+msgid "Sample Storewide 10% Discount"
+msgstr ""

@@ -1,96 +1,426 @@
-.sale-perc {
-    position: absolute;
+/* =============================================================
+   DRW Public Styles — Sale Cards, Progress Bar, Volume Table
+   ============================================================= */
+
+/* ── Percentage badge ── */
+.drw-sale-badge {
+    display: block !important;
+    visibility: visible !important;
+    position: absolute !important;
     top: 10px;
     left: 10px;
-    z-index: 2;
-    min-width: 54px;
-    padding: 6px 12px;
+    z-index: 10;
+    min-width: 48px;
+    padding: 5px 10px;
     border-radius: 999px;
-    background: #df3f46;
-    color: #ffffff;
-    font-size: 13px;
+    background: #e53935;
+    color: #ffffff !important;
+    font-size: 12px;
     font-weight: 800;
     line-height: 1;
     text-align: center;
-    box-shadow: 0 8px 18px rgba(223, 63, 70, 0.28);
+    box-shadow: 0 4px 10px rgba(229, 57, 53, 0.32);
+    pointer-events: none;
 }
 
+/* ── Wrapper — container source for @container queries ── */
+.drw-sale-wrap {
+    container-type: inline-size;
+}
+
+/* ── Grid ── */
 .drw-sale-items-grid {
     --drw-sale-columns: 4;
-    container-type: inline-size;
     display: grid;
     grid-template-columns: repeat(var(--drw-sale-columns), minmax(0, 1fr));
-    gap: 28px;
+    gap: 16px;
     width: 100%;
 }
 
+/* ── Card ── */
 .drw-sale-item {
+    display: flex;
+    flex-direction: column;
     min-width: 0;
+    background: #ffffff;
+    border: 1px solid #ececec;
+    border-radius: 8px;
+    overflow: hidden;
+    box-shadow: 0 1px 4px rgba(0, 0, 0, 0.06);
+    transition: box-shadow 0.22s ease, transform 0.22s ease;
+    isolation: isolate; /* scope z-index so badge never bleeds over fixed headers */
 }
 
+.drw-sale-item:hover {
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.11);
+    transform: translateY(-3px);
+}
+
+/* ── Link wrapper ── */
 .drw-sale-item-link {
-    display: grid;
-    gap: 10px;
+    display: flex;
+    flex-direction: column;
+    flex: 1;
     color: inherit;
-    text-align: center;
     text-decoration: none;
 }
 
+.drw-sale-item-link:hover {
+    text-decoration: none;
+    color: inherit;
+}
+
+/* ── Image — 1:1 square ── */
 .drw-sale-item-media {
     position: relative;
     display: block;
     overflow: hidden;
-    background: #f6f7f4;
+    aspect-ratio: 1 / 1;
+    background: #f5f5f5;
 }
 
 .drw-sale-item-media img,
 .drw-sale-item-image {
     display: block;
     width: 100%;
-    height: auto;
+    height: 100%;
+    object-fit: cover;
+    object-position: center;
+    transition: transform 0.30s ease;
 }
 
-.drw-sale-item-title {
-    color: #55b72e;
-    font-size: 14px;
-    font-weight: 800;
-    line-height: 1.25;
-    text-transform: uppercase;
+.drw-sale-item:hover .drw-sale-item-media img,
+.drw-sale-item:hover .drw-sale-item-image {
+    transform: scale(1.05);
 }
 
-.drw-sale-item-price {
-    color: #1f2933;
-    font-size: 16px;
-    font-weight: 800;
-}
-
-.drw-sale-item-price del {
-    margin-right: 6px;
-    color: #1f2933;
-    opacity: 0.85;
-}
-
-.drw-sale-item-price ins {
-    color: #1f2933;
-    text-decoration: none;
-}
-
-.drw-sale-items-empty {
-    padding: 18px;
-    border: 1px solid #e5e7eb;
-    color: #4b5563;
+/* ── Body (category + title + price) ── */
+.drw-sale-item-body {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 3px;
+    padding: 10px 10px 6px;
+    flex: 1;
     text-align: center;
 }
 
-@container (max-width: 760px) {
+/* ── Category label ── */
+.drw-sale-item-cat {
+    display: block;
+    color: #6daa38;
+    font-size: 9px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.07em;
+    line-height: 1.2;
+}
+
+/* ── Product title ── */
+.drw-sale-item-title {
+    display: block;
+    color: #1a1a1a;
+    font-size: 11px;
+    font-weight: 700;
+    line-height: 1.3;
+    text-transform: uppercase;
+    letter-spacing: 0.02em;
+}
+
+/* ── Price ── */
+.drw-sale-item-price {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-wrap: wrap;
+    gap: 5px;
+    margin-top: 4px;
+}
+
+.drw-sale-item-price del {
+    color: #b0b0b0;
+    font-size: 11px;
+    font-weight: 400;
+    opacity: 1;
+}
+
+.drw-sale-item-price ins {
+    color: #1a1a1a;
+    font-size: 14px;
+    font-weight: 800;
+    text-decoration: none;
+}
+
+/* ── Footer ── */
+.drw-sale-item-footer {
+    padding: 6px 10px 12px;
+}
+
+/* ── Button — own class only, no WC .button conflict ── */
+.drw-sale-item-btn {
+    display: block !important;
+    width: 100% !important;
+    padding: 11px 14px !important;
+    border-radius: 6px !important;
+    border: none !important;
+    outline: none !important;
+    background: #2a2a2a !important;
+    color: #ffffff !important;
+    font-size: 12px !important;
+    font-weight: 700 !important;
+    line-height: 1.4 !important;
+    text-align: center !important;
+    text-decoration: none !important;
+    text-transform: uppercase !important;
+    letter-spacing: 0.04em !important;
+    cursor: pointer !important;
+    box-sizing: border-box !important;
+    transition: background 0.15s ease !important;
+}
+
+.drw-sale-item-btn:hover,
+.drw-sale-item-btn:focus {
+    background: #444444 !important;
+    color: #ffffff !important;
+    text-decoration: none !important;
+    outline: none !important;
+}
+
+.drw-sale-item-btn:active {
+    background: #111111 !important;
+    color: #ffffff !important;
+}
+
+/* ── Sort bar ── */
+.drw-sort-bar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-bottom: 16px;
+    padding: 10px 0;
+    border-bottom: 1px solid #ececec;
+}
+
+.drw-results-count {
+    font-size: 13px;
+    color: #6b7280;
+}
+
+/* ── Controls group (category + sort + clear) ── */
+.drw-sort-controls {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 8px;
+}
+
+.drw-clear-filters {
+    display: none; /* shown via JS when a category filter is active */
+    align-items: center;
+    gap: 5px;
+    padding: 7px 12px;
+    border: 1px solid #fca5a5;
+    border-radius: 6px;
+    background: #fff5f5;
+    color: #dc2626;
+    font-size: 12px;
+    font-weight: 600;
+    line-height: 1;
+    white-space: nowrap;
+    cursor: pointer;
+    transition: background 0.15s ease, border-color 0.15s ease;
+}
+
+.drw-clear-filters:hover {
+    background: #fee2e2;
+    border-color: #f87171;
+}
+
+.drw-clear-filters:active {
+    background: #fecaca;
+}
+
+.drw-cat-select,
+.drw-sort-select {
+    appearance: none;
+    -webkit-appearance: none;
+    padding: 7px 32px 7px 12px;
+    border: 1px solid #d1d5db;
+    border-radius: 6px;
+    background: #ffffff url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath d='M1 1l5 5 5-5' stroke='%236b7280' stroke-width='1.5' fill='none' stroke-linecap='round'/%3E%3C/svg%3E") no-repeat right 10px center;
+    font-size: 13px;
+    color: #374151;
+    cursor: pointer;
+    outline: none;
+    transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+.drw-cat-select {
+    min-width: 180px;
+}
+
+.drw-sort-select {
+    min-width: 220px;
+}
+
+.drw-cat-select:hover,
+.drw-sort-select:hover {
+    border-color: #9ca3af;
+}
+
+.drw-cat-select:focus,
+.drw-sort-select:focus {
+    border-color: #2a2a2a;
+    box-shadow: 0 0 0 2px rgba(42, 42, 42, 0.12);
+}
+
+/* ── Loading state ── */
+.drw-sale-loading {
+    display: none;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    padding: 24px 0;
+    width: 100%;
+}
+
+.drw-sale-spinner {
+    display: inline-block;
+    width: 22px;
+    height: 22px;
+    border: 3px solid #ececec;
+    border-top-color: #2a2a2a;
+    border-radius: 50%;
+    animation: drw-spin 0.7s linear infinite;
+}
+
+.drw-sale-spinner-text {
+    font-size: 13px;
+    color: #6b7280;
+}
+
+@keyframes drw-spin {
+    to { transform: rotate(360deg); }
+}
+
+/* ── Sentinel (scroll trigger) ── */
+.drw-sale-sentinel {
+    height: 1px;
+    width: 100%;
+}
+
+/* ── Empty state ── */
+.drw-sale-items-empty {
+    padding: 24px;
+    border: 1px dashed #d1d5db;
+    border-radius: 8px;
+    color: #6b7280;
+    text-align: center;
+    font-size: 14px;
+}
+
+/* ── Responsive — grid via @container (uses .drw-sale-wrap as the container) ── */
+@container (max-width: 767px) {
     .drw-sale-items-grid {
-        grid-template-columns: repeat(2, minmax(0, 1fr));
-        gap: 20px;
+        grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+        gap: 12px;
+    }
+
+    .drw-sale-item-title {
+        font-size: 10px;
     }
 }
 
-@container (max-width: 420px) {
+/* ── Responsive — grid via @media (fallback for browsers without @container) ── */
+@media (max-width: 767px) {
     .drw-sale-items-grid {
-        grid-template-columns: 1fr;
+        grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+        gap: 12px;
+    }
+
+    .drw-sale-item-title {
+        font-size: 10px;
+    }
+
+    .drw-sale-item-body {
+        padding: 8px 8px 4px;
+        gap: 2px;
+    }
+
+    .drw-sale-item-footer {
+        padding: 5px 8px 10px;
+    }
+
+    .drw-sale-item-btn {
+        padding: 9px 10px !important;
+        font-size: 11px !important;
     }
 }
+
+/* ── Responsive — sort bar on mobile ── */
+@media (max-width: 639px) {
+    .drw-sort-bar {
+        flex-direction: column;
+        align-items: flex-start;
+    }
+
+    .drw-sort-controls {
+        width: 100%;
+        flex-direction: column;
+    }
+
+    .drw-cat-select,
+    .drw-sort-select {
+        width: 100%;
+        min-width: 0;
+    }
+
+    .drw-clear-filters {
+        width: 100%;
+        justify-content: center;
+    }
+}
+
+/* ── Catalog / Shop page — badge positioning context ── */
+/* WooCommerce's product thumbnail link needs position:relative so the badge
+   (position:absolute) anchors to the image, not to a distant ancestor. */
+.woocommerce ul.products li.product a.woocommerce-loop-product__link,
+.woocommerce-page ul.products li.product a.woocommerce-loop-product__link,
+.products li.product .woocommerce-loop-product__link {
+    position: relative;
+}
+
+/* ── Reduced motion ── */
+@media (prefers-reduced-motion: reduce) {
+    .drw-sale-item,
+    .drw-sale-item-media img,
+    .drw-sale-item-image,
+    .drw-sale-item-btn,
+    .drw-sale-spinner {
+        transition: none !important;
+        transform: none !important;
+        animation: none !important;
+    }
+
+    .drw-cat-select,
+    .drw-sort-select {
+        transition: none !important;
+    }
+}
+
+/* ===== DRW Progress Bar ===== */
+.drw-progress-wrap { margin: 1rem 0; }
+.drw-progress-bar-outer { width: 100%; background: #e0e0e0; border-radius: 4px; height: 12px; overflow: hidden; margin-bottom: 0.5rem; }
+.drw-progress-bar-inner { height: 100%; background: #4caf50; border-radius: 4px; transform-origin: left center; transition: transform 0.4s ease; }
+.drw-progress-label { margin: 0; font-size: 0.9em; color: #555; }
+.drw-progress-complete .drw-progress-label { color: #2e7d32; font-weight: 600; }
+
+/* ===== DRW Volume Pricing Table ===== */
+.drw-volume-pricing { margin: 1.5rem 0; }
+.drw-volume-title { margin-bottom: 0.5rem; font-size: 1rem; }
+.drw-volume-table { width: 100%; border-collapse: collapse; font-size: 0.9em; }
+.drw-volume-table th, .drw-volume-table td { padding: 0.5rem 0.75rem; border: 1px solid #ddd; text-align: left; }
+.drw-volume-table thead th { background: #f5f5f5; font-weight: 600; }
+.drw-volume-table tbody tr:nth-child(even) { background: #fafafa; }

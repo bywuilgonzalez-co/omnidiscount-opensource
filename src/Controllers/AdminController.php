@@ -30,6 +30,7 @@ class AdminController
     {
         add_action('admin_menu', [$this, 'add_admin_menu']);
         add_action('admin_enqueue_scripts', [$this, 'enqueue_admin_assets']);
+        add_action('admin_post_drw_save_settings', [$this, 'save_settings']);
     }
 
     /**
@@ -37,14 +38,107 @@ class AdminController
      */
     public function add_admin_menu()
     {
-        add_submenu_page(
-            'woocommerce',
+        add_menu_page(
             __('Discount Rules', 'discount-rules-woo'),
             __('Discount Rules', 'discount-rules-woo'),
             'manage_woocommerce',
             'drw-discount-rules',
+            [$this, 'render_admin_page'],
+            'dashicons-tag',
+            56
+        );
+
+        // First submenu renames the auto-generated duplicate of the parent.
+        add_submenu_page(
+            'drw-discount-rules',
+            __('All Rules', 'discount-rules-woo'),
+            __('All Rules', 'discount-rules-woo'),
+            'manage_woocommerce',
+            'drw-discount-rules',
             [$this, 'render_admin_page']
         );
+
+        add_submenu_page(
+            'drw-discount-rules',
+            __('Settings', 'discount-rules-woo'),
+            __('Settings', 'discount-rules-woo'),
+            'manage_woocommerce',
+            'drw-discount-settings',
+            [$this, 'render_settings_page']
+        );
+    }
+
+    /**
+     * Handle settings form submission.
+     */
+    public function save_settings()
+    {
+        if (!current_user_can('manage_woocommerce')) {
+            wp_die(esc_html__('Permission denied.', 'discount-rules-woo'));
+        }
+
+        check_admin_referer('drw_save_settings');
+
+        update_option('drw_global_no_coupon_stacking', !empty($_POST['drw_global_no_coupon_stacking']) ? 1 : 0);
+
+        wp_safe_redirect(add_query_arg([
+            'page'    => 'drw-discount-settings',
+            'updated' => '1',
+        ], admin_url('admin.php')));
+        exit;
+    }
+
+    /**
+     * Render the global settings page.
+     */
+    public function render_settings_page()
+    {
+        $no_coupon_stacking = (bool)get_option('drw_global_no_coupon_stacking', false);
+        ?>
+        <div class="wrap">
+            <h1><?php esc_html_e('Discount Rules – Settings', 'discount-rules-woo'); ?></h1>
+
+            <?php if (!empty($_GET['updated'])) : ?>
+                <div class="notice notice-success is-dismissible">
+                    <p><?php esc_html_e('Settings saved.', 'discount-rules-woo'); ?></p>
+                </div>
+            <?php endif; ?>
+
+            <form method="post" action="<?php echo esc_url(admin_url('admin-post.php')); ?>">
+                <?php wp_nonce_field('drw_save_settings'); ?>
+                <input type="hidden" name="action" value="drw_save_settings">
+
+                <table class="form-table" role="presentation">
+                    <tr>
+                        <th scope="row">
+                            <label for="drw_global_no_coupon_stacking">
+                                <?php esc_html_e('Coupon Stacking', 'discount-rules-woo'); ?>
+                            </label>
+                        </th>
+                        <td>
+                            <fieldset>
+                                <label for="drw_global_no_coupon_stacking">
+                                    <input
+                                        type="checkbox"
+                                        id="drw_global_no_coupon_stacking"
+                                        name="drw_global_no_coupon_stacking"
+                                        value="1"
+                                        <?php checked($no_coupon_stacking, true); ?>
+                                    >
+                                    <?php esc_html_e('Disable all discount rules when a coupon is applied (globally)', 'discount-rules-woo'); ?>
+                                </label>
+                                <p class="description">
+                                    <?php esc_html_e('When enabled, no discount rule will apply if the customer has entered a coupon code. Individual rules can also be marked non-stackable via the API.', 'discount-rules-woo'); ?>
+                                </p>
+                            </fieldset>
+                        </td>
+                    </tr>
+                </table>
+
+                <?php submit_button(__('Save Settings', 'discount-rules-woo')); ?>
+            </form>
+        </div>
+        <?php
     }
 
     /**
@@ -53,7 +147,8 @@ class AdminController
     public function enqueue_admin_assets($hook)
     {
         // Only load on our custom admin page
-        if ($hook !== 'woocommerce_page_drw-discount-rules') {
+        $drw_page = isset($_GET['page']) ? sanitize_key($_GET['page']) : '';
+        if ($drw_page !== 'drw-discount-rules') {
             return;
         }
 

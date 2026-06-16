@@ -481,8 +481,11 @@ class CartController
         }
         
         if (!empty($category_ids)) {
-            $cats = array_map('intval', $category_ids);
+            $cats         = array_map('intval', $category_ids);
             $product_cats = wc_get_product_term_ids($product_id, 'product_cat');
+            if (empty($product_cats) && $parent_id) {
+                $product_cats = wc_get_product_term_ids($parent_id, 'product_cat');
+            }
             if (!empty(array_intersect($product_cats, $cats))) {
                 return true;
             }
