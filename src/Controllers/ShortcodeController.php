@@ -36,6 +36,8 @@ class ShortcodeController
 
         if (function_exists('add_action')) {
             add_action('wp_enqueue_scripts', [$this, 'enqueue_public_assets']);
+            add_action('wp_ajax_drw_sale_items', [$this, 'ajax_load_sale_items']);
+            add_action('wp_ajax_nopriv_drw_sale_items', [$this, 'ajax_load_sale_items']);
         }
     }
 
@@ -50,6 +52,14 @@ class ShortcodeController
             [],
             DRW_VERSION
         );
+
+        wp_enqueue_script(
+            'drw-shortcode',
+            DRW_PLUGIN_URL . 'assets/js/drw-shortcode.js',
+            [],
+            DRW_VERSION,
+            true
+        );
     }
 
     /**
@@ -62,74 +72,66 @@ class ShortcodeController
     public function render_sale_items_list($atts = [])
     {
         $atts = shortcode_atts([
-            'limit'      => 12,
+            'limit'      => 0,
+            'per_page'   => 12,
             'columns'    => 4,
             'category'   => '',
             'ids'        => '',
-            'scan_limit' => 240,
+            'scan_limit' => 500,
             'class'      => '',
+            'orderby'    => 'date',
+            'show_sort'  => 'yes',
         ], (array)$atts, 'drw_sale_items_list');
 
-        $limit = min(48, max(1, absint($atts['limit'])));
-        $columns = min(6, max(1, absint($atts['columns'])));
-        $scan_limit = min(200, max($limit, absint($atts['scan_limit'])));
-        $category = sanitize_text_field($atts['category']);
-        $ids = $this->parse_id_list($atts['ids']);
-
-        $product_ids = $this->get_sale_candidate_product_ids($ids, $category, $scan_limit);
-
-        // Pre-pass: when individual variations appear in the list, skip their parent variable
-        // product so "FLOR JAMAICA 50g / 500g" shows separately instead of "FLOR JAMAICA" 4x.
-        $covered_parent_ids = [];
-        if (function_exists('wc_get_product')) {
-            foreach ($product_ids as $pid) {
-                $pid = is_object($pid) && isset($pid->ID) ? (int)$pid->ID : (int)$pid;
-                $p   = wc_get_product($pid);
-                if ($p && $p->is_type('variation')) {
-                    $covered_parent_ids[(int)$p->get_parent_id()] = true;
-                }
-            }
-        }
-
-        $cards = [];
-
-        foreach ($product_ids as $product_id) {
-            $product_id = is_object($product_id) && isset($product_id->ID) ? $product_id->ID : $product_id;
-            $product = function_exists('wc_get_product') ? wc_get_product($product_id) : null;
-            if (!$product) {
-                continue;
-            }
-
-            // Skip parent variable product when individual variations are already in the list.
-            if ($product->is_type('variable') && isset($covered_parent_ids[(int)$product->get_id()])) {
-                continue;
-            }
-
-            $sale_data = self::get_sale_data_for_product($product);
-            if (empty($sale_data['percentage'])) {
-                continue;
-            }
-
-            $cards[] = $this->render_product_card($product, $sale_data);
-            if (count($cards) >= $limit) {
-                break;
-            }
-        }
+        // `limit` is a legacy alias for `per_page`
+        $per_page   = $atts['limit'] > 0 ? min(48, absint($atts['limit'])) : min(48, max(4, absint($atts['per_page'])));
+        $columns    = min(6, max(1, absint($atts['columns'])));
+        $scan_limit = min(1000, max($per_page, absint($atts['scan_limit'])));
+        $category   = sanitize_text_field($atts['category']);
+        $ids        = $this->parse_id_list($atts['ids']);
+        $orderby    = sanitize_key($atts['orderby']);
+        $show_sort  = $atts['show_sort'] !== 'no';
 
         $this->enqueue_public_assets();
 
-        if (empty($cards)) {
+        $all_cards = $this->collect_sale_cards($ids, $category, $scan_limit, $orderby);
+        $total     = count($all_cards);
+
+        if ($total === 0) {
             return '<div class="drw-sale-items-empty">' . esc_html__('No sale products found.', 'discount-rules-woo') . '</div>';
         }
 
-        $class = sanitize_text_field($atts['class']);
-        $style = '--drw-sale-columns:' . $columns . ';';
+        $first_page = array_slice($all_cards, 0, $per_page);
+        $has_more   = $total > $per_page;
+
+        $config = wp_json_encode([
+            'ajaxUrl'   => admin_url('admin-ajax.php'),
+            'nonce'     => wp_create_nonce('drw_sale_items'),
+            'page'      => 1,
+            'perPage'   => $per_page,
+            'total'     => $total,
+            'hasMore'   => $has_more,
+            'category'  => $category,
+            'orderby'   => $orderby,
+            'scanLimit' => $scan_limit,
+            'ids'       => implode(',', $ids),
+            'columns'   => $columns,
+        ]);
+
+        $class      = sanitize_text_field($atts['class']);
+        $sort_html  = $show_sort ? $this->render_sort_bar($orderby, $total, min($per_page, $total)) : '';
+        $loader     = '<div class="drw-sale-loading" aria-hidden="true"><span class="drw-sale-spinner"></span><span class="drw-sale-spinner-text">' . esc_html__('Cargando más productos...', 'discount-rules-woo') . '</span></div>';
+        $sentinel   = '<div class="drw-sale-sentinel"></div>';
 
         return sprintf(
-            '<div class="drw-sale-items-grid %s" style="%s">%s</div>',
+            '<div class="drw-sale-wrap %s" data-drw-config="%s">%s<div class="drw-sale-items-grid" style="--drw-sale-columns:%d;">%s</div>%s%s</div>',
             esc_attr($class),
-            esc_attr($style),
-            implode('', $cards)
+            esc_attr($config),
+            $sort_html,
+            $columns,
+            implode('', $first_page),
+            $loader,
+            $sentinel
         );
     }
 
@@ -138,13 +140,13 @@ class ShortcodeController
      * to a generic product scan. This lets dynamic-rule products appear even when
      * they are not in the first page of products.
      */
-    private function get_sale_candidate_product_ids(array $ids, $category, $scan_limit)
+    private function get_sale_candidate_product_ids(array $ids, $category, $scan_limit, $orderby = 'date')
     {
         if (!empty($ids)) {
             return $this->query_product_ids([
                 'post__in' => $ids,
                 'orderby'  => 'post__in',
-            ], $category, min($scan_limit, count($ids)));
+            ], $category, min($scan_limit, count($ids)), $orderby);
         }
 
         $candidate_ids = [];
@@ -167,7 +169,7 @@ class ShortcodeController
                     $this->query_product_ids([
                         'post__in' => array_map('intval', (array)$filters['product_ids']),
                         'orderby'  => 'post__in',
-                    ], $category, $scan_limit)
+                    ], $category, $scan_limit, $orderby)
                 );
             } elseif ($apply_to === 'specific_categories' && !empty($filters['category_ids'])) {
                 $candidate_ids = array_merge(
@@ -180,12 +182,12 @@ class ShortcodeController
                                 'terms'    => array_map('intval', (array)$filters['category_ids']),
                             ],
                         ],
-                    ], $category, $scan_limit)
+                    ], $category, $scan_limit, $orderby)
                 );
             } elseif ($apply_to === 'all_products') {
                 $candidate_ids = array_merge(
                     $candidate_ids,
-                    $this->query_product_ids([], $category, $scan_limit)
+                    $this->query_product_ids([], $category, $scan_limit, $orderby)
                 );
             }
         }
@@ -196,7 +198,7 @@ class ShortcodeController
 
         $candidate_ids = array_values(array_unique(array_filter(array_map('intval', $candidate_ids))));
         if (empty($candidate_ids)) {
-            $candidate_ids = $this->query_product_ids([], $category, $scan_limit);
+            $candidate_ids = $this->query_product_ids([], $category, $scan_limit, $orderby);
         }
 
         return $candidate_ids;
@@ -205,8 +207,10 @@ class ShortcodeController
     /**
      * Query product IDs with optional shortcode category narrowing.
      */
-    private function query_product_ids(array $extra_args, $category, $limit)
+    private function query_product_ids(array $extra_args, $category, $limit, $orderby = 'date')
     {
+        $order_args = $this->get_orderby_args($orderby);
+
         $query_args = array_merge([
             'post_type'              => 'product',
             'post_status'            => 'publish',
@@ -215,7 +219,7 @@ class ShortcodeController
             'no_found_rows'          => true,
             'update_post_meta_cache' => false,
             'update_post_term_cache' => false,
-        ], $extra_args);
+        ], $order_args, $extra_args);
 
         if ($category !== '') {
             $category_filter = [
@@ -408,6 +412,141 @@ class ShortcodeController
             $price_html,
             $button
         );
+    }
+
+    /**
+     * Collect all products with active discounts and return their rendered cards.
+     * Applies deduplication (variations take priority over parent) and optional post-sort.
+     */
+    private function collect_sale_cards(array $ids, $category, $scan_limit, $orderby)
+    {
+        $product_ids = $this->get_sale_candidate_product_ids($ids, $category, $scan_limit, $orderby);
+
+        // Pre-pass: identify parent IDs covered by individual variations
+        $covered_parent_ids = [];
+        if (function_exists('wc_get_product')) {
+            foreach ($product_ids as $pid) {
+                $pid = is_object($pid) && isset($pid->ID) ? (int)$pid->ID : (int)$pid;
+                $p   = wc_get_product($pid);
+                if ($p && $p->is_type('variation')) {
+                    $covered_parent_ids[(int)$p->get_parent_id()] = true;
+                }
+            }
+        }
+
+        $items = [];
+        foreach ($product_ids as $product_id) {
+            $product_id = is_object($product_id) && isset($product_id->ID) ? $product_id->ID : $product_id;
+            $product    = function_exists('wc_get_product') ? wc_get_product($product_id) : null;
+            if (!$product) {
+                continue;
+            }
+            if ($product->is_type('variable') && isset($covered_parent_ids[(int)$product->get_id()])) {
+                continue;
+            }
+
+            $sale_data = self::get_sale_data_for_product($product);
+            if (empty($sale_data['percentage'])) {
+                continue;
+            }
+
+            $items[] = ['product' => $product, 'sale_data' => $sale_data];
+        }
+
+        // Sort by discount percentage after filtering (requires full data set)
+        if ($orderby === 'discount') {
+            usort($items, function ($a, $b) {
+                return $b['sale_data']['percentage'] - $a['sale_data']['percentage'];
+            });
+        }
+
+        return array_map(function ($item) {
+            return $this->render_product_card($item['product'], $item['sale_data']);
+        }, $items);
+    }
+
+    /**
+     * Render the sort toolbar (count text + orderby dropdown).
+     */
+    private function render_sort_bar($orderby, $total, $shown)
+    {
+        $count_text = sprintf(
+            __('Mostrando 1&ndash;%1$d de %2$d resultados', 'discount-rules-woo'),
+            $shown,
+            $total
+        );
+
+        $options = [
+            'date'       => __('Ordenar por las últimas', 'discount-rules-woo'),
+            'popularity' => __('Ordenar por popularidad', 'discount-rules-woo'),
+            'rating'     => __('Ordenar por calificación media', 'discount-rules-woo'),
+            'price'      => __('Ordenar por precio: bajo a alto', 'discount-rules-woo'),
+            'price-desc' => __('Ordenar por precio: alto a bajo', 'discount-rules-woo'),
+            'discount'   => __('Ordenar por mayor descuento', 'discount-rules-woo'),
+        ];
+
+        $opts_html = '';
+        foreach ($options as $value => $label) {
+            $opts_html .= sprintf(
+                '<option value="%s"%s>%s</option>',
+                esc_attr($value),
+                selected($value, $orderby, false),
+                esc_html($label)
+            );
+        }
+
+        return sprintf(
+            '<div class="drw-sort-bar"><span class="drw-results-count">%s</span><select class="drw-sort-select" aria-label="%s">%s</select></div>',
+            $count_text,
+            esc_attr__('Ordenar productos', 'discount-rules-woo'),
+            $opts_html
+        );
+    }
+
+    /**
+     * Map orderby slug to WP_Query order arguments.
+     */
+    private function get_orderby_args($orderby)
+    {
+        switch ($orderby) {
+            case 'popularity':
+                return ['orderby' => 'meta_value_num', 'meta_key' => 'total_sales', 'order' => 'DESC'];
+            case 'rating':
+                return ['orderby' => 'meta_value_num', 'meta_key' => '_wc_average_rating', 'order' => 'DESC'];
+            case 'price':
+                return ['orderby' => 'meta_value_num', 'meta_key' => '_price', 'order' => 'ASC'];
+            case 'price-desc':
+                return ['orderby' => 'meta_value_num', 'meta_key' => '_price', 'order' => 'DESC'];
+            default: // date, discount (discount is sorted post-filter)
+                return ['orderby' => 'date', 'order' => 'DESC'];
+        }
+    }
+
+    /**
+     * AJAX handler for loading more sale items or resorting.
+     */
+    public function ajax_load_sale_items()
+    {
+        check_ajax_referer('drw_sale_items', 'nonce');
+
+        $page       = max(1, absint($_POST['page'] ?? 1));
+        $per_page   = min(48, max(4, absint($_POST['per_page'] ?? 12)));
+        $category   = sanitize_text_field($_POST['category'] ?? '');
+        $orderby    = sanitize_key($_POST['orderby'] ?? 'date');
+        $scan_limit = min(1000, max($per_page, absint($_POST['scan_limit'] ?? 500)));
+        $ids        = $this->parse_id_list($_POST['ids'] ?? '');
+
+        $all_cards = $this->collect_sale_cards($ids, $category, $scan_limit, $orderby);
+        $total     = count($all_cards);
+        $offset    = ($page - 1) * $per_page;
+        $slice     = array_slice($all_cards, $offset, $per_page);
+
+        wp_send_json_success([
+            'html'     => implode('', $slice),
+            'has_more' => ($offset + $per_page) < $total,
+            'total'    => $total,
+            'page'     => $page,
+        ]);
     }
 
     /**

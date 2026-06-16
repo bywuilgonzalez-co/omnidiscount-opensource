@@ -184,6 +184,82 @@
     color: #ffffff !important;
 }
 
+/* ── Sort bar ── */
+.drw-sort-bar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-bottom: 16px;
+    padding: 10px 0;
+    border-bottom: 1px solid #ececec;
+}
+
+.drw-results-count {
+    font-size: 13px;
+    color: #6b7280;
+}
+
+.drw-sort-select {
+    appearance: none;
+    -webkit-appearance: none;
+    padding: 7px 32px 7px 12px;
+    border: 1px solid #d1d5db;
+    border-radius: 6px;
+    background: #ffffff url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath d='M1 1l5 5 5-5' stroke='%236b7280' stroke-width='1.5' fill='none' stroke-linecap='round'/%3E%3C/svg%3E") no-repeat right 10px center;
+    font-size: 13px;
+    color: #374151;
+    cursor: pointer;
+    outline: none;
+    min-width: 220px;
+    transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+.drw-sort-select:hover {
+    border-color: #9ca3af;
+}
+
+.drw-sort-select:focus {
+    border-color: #2a2a2a;
+    box-shadow: 0 0 0 2px rgba(42, 42, 42, 0.12);
+}
+
+/* ── Loading state ── */
+.drw-sale-loading {
+    display: none;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    padding: 24px 0;
+    width: 100%;
+}
+
+.drw-sale-spinner {
+    display: inline-block;
+    width: 22px;
+    height: 22px;
+    border: 3px solid #ececec;
+    border-top-color: #2a2a2a;
+    border-radius: 50%;
+    animation: drw-spin 0.7s linear infinite;
+}
+
+.drw-sale-spinner-text {
+    font-size: 13px;
+    color: #6b7280;
+}
+
+@keyframes drw-spin {
+    to { transform: rotate(360deg); }
+}
+
+/* ── Sentinel (scroll trigger) ── */
+.drw-sale-sentinel {
+    height: 1px;
+    width: 100%;
+}
+
 /* ── Empty state ── */
 .drw-sale-items-empty {
     padding: 24px;
@@ -218,10 +294,15 @@
     .drw-sale-item,
     .drw-sale-item-media img,
     .drw-sale-item-image,
-    .drw-sale-item-btn {
+    .drw-sale-item-btn,
+    .drw-sale-spinner {
         transition: none !important;
         transform: none !important;
         animation: none !important;
+    }
+
+    .drw-sort-select {
+        transition: none !important;
     }
 }
 
