@@ -1,0 +1,76 @@
+name: CI
+
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main]
+
+jobs:
+  php-lint:
+    name: PHP Syntax Check
+    runs-on: ubuntu-latest
+
+    strategy:
+      matrix:
+        php: ['7.4', '8.0', '8.1', '8.2']
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup PHP ${{ matrix.php }}
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: ${{ matrix.php }}
+          tools: none
+
+      - name: Check PHP syntax
+        run: find . -name "*.php" -not -path "./vendor/*" -not -path "./scratch/*" | xargs -I{} php -l {}
+
+  phpcs:
+    name: WordPress Coding Standards
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.1'
+          tools: composer, phpcs
+
+      - name: Install WordPress Coding Standards
+        run: |
+          composer require --dev wp-coding-standards/wpcs dealerdirect/phpcodesniffer-composer-installer --no-interaction --no-progress
+          phpcs --config-set installed_paths vendor/wp-coding-standards/wpcs
+
+      - name: Run PHPCS
+        run: |
+          phpcs --standard=WordPress-Core \
+                --extensions=php \
+                --ignore=vendor/,scratch/,tests/ \
+                --report=full \
+                src/ discount-rules-woo.php
+
+  security-scan:
+    name: Security Scan
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Check for hardcoded secrets
+        run: |
+          # Fail if any suspicious patterns are found in PHP files
+          echo "Checking for hardcoded credentials..."
+          if grep -rn --include="*.php" \
+            -E "(password|secret|api_key|private_key)\s*=\s*['\"][^'\"%\$\{][^'\"]{6,}['\"]" \
+            --exclude-dir=vendor --exclude-dir=scratch .; then
+            echo "FAIL: Potential hardcoded credential found."
+            exit 1
+          fi
+          echo "PASS: No hardcoded credentials detected."
