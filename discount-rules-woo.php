@@ -5,7 +5,7 @@
  * Description: 100% complete and fully featured dynamic pricing and discount rules plugin for WooCommerce.
  * Author: Bywuilgonzalez.com
  * Author URI: https://bywuilgonzalez.com
- * Version: 1.2.1
+ * Version: 1.3.0
  * Text Domain: discount-rules-woo
  * Domain Path: /languages/
  * Requires at least: 5.6
@@ -28,7 +28,7 @@ add_action('before_woocommerce_init', function() {
 });
 
 // Define core constants
-define('DRW_VERSION', '1.2.1');
+define('DRW_VERSION', '1.3.0');
 define('DRW_PLUGIN_PATH', plugin_dir_path(__FILE__));
 define('DRW_PLUGIN_URL', plugin_dir_url(__FILE__));
 define('DRW_PLUGIN_BASENAME', plugin_basename(__FILE__));
