@@ -1,3 +1,4 @@
+/* ── Badge de descuento ────────────────────────────────────────── */
 .sale-perc {
     position: absolute;
     top: 10px;
@@ -15,6 +16,65 @@
     box-shadow: 0 8px 18px rgba(223, 63, 70, 0.28);
 }
 
+/* ── Shortcode wrapper ─────────────────────────────────────────── */
+.drw-sale-shortcode {
+    width: 100%;
+}
+
+/* ── Sort / filter bar ─────────────────────────────────────────── */
+.drw-sort-bar {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 18px;
+    flex-wrap: wrap;
+}
+
+.drw-cat-select,
+.drw-sort-select {
+    flex: 1 1 160px;
+    min-width: 0;
+    padding: 8px 12px;
+    border: 1px solid #d1d5db;
+    border-radius: 6px;
+    background: #fff;
+    color: #1f2933;
+    font-size: 14px;
+    cursor: pointer;
+    appearance: auto;
+}
+
+.drw-clear-filter {
+    flex-shrink: 0;
+    padding: 8px 14px;
+    border: none;
+    border-radius: 6px;
+    background: #df3f46;
+    color: #fff;
+    font-size: 13px;
+    font-weight: 700;
+    cursor: pointer;
+    transition: background 0.2s;
+    white-space: nowrap;
+}
+
+.drw-clear-filter:hover {
+    background: #b91c1c;
+}
+
+/* ── Grid wrapper — container-type va aquí, NO en el grid ──────── */
+.drw-sale-wrap {
+    width: 100%;
+    container-type: inline-size;
+    position: relative;
+}
+
+.drw-sale-wrap.drw-loading {
+    opacity: 0.5;
+    pointer-events: none;
+}
+
+/* ── Grid ──────────────────────────────────────────────────────── */
 .drw-sale-items-grid {
     --drw-sale-columns: 4;
     display: grid;
@@ -23,8 +83,10 @@
     width: 100%;
 }
 
+/* ── Item card — isolation evita que el badge escape al scroll ─── */
 .drw-sale-item {
     min-width: 0;
+    isolation: isolate;
 }
 
 .drw-sale-item-link {
@@ -49,15 +111,6 @@
     width: 100%;
     height: 100%;
     object-fit: cover;
-}
-
-/* placeholder when product has no image */
-.drw-sale-item-media.drw-no-image::after {
-    content: '';
-    display: block;
-    position: absolute;
-    inset: 0;
-    background: #f0f0f0 url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='40' height='40' viewBox='0 0 24 24' fill='%23ccc'%3E%3Cpath d='M21 19V5c0-1.1-.9-2-2-2H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2zm-8.5-5.5l-2.51 3.01L7 14l-4 5h18l-5.5-7-2.5 3.5z'/%3E%3C/svg%3E") center / 40px no-repeat;
 }
 
 .drw-sale-item-title {
@@ -91,17 +144,25 @@
     border: 1px solid #e5e7eb;
     color: #4b5563;
     text-align: center;
+    grid-column: 1 / -1;
 }
 
-/* ── Responsivo — media queries, no container queries ── */
-@media (max-width: 900px) {
+/* ── Badge en catálogo WooCommerce estándar ────────────────────── */
+.woocommerce ul.products li.product .woocommerce-loop-product__link {
+    position: relative;
+    display: block;
+}
+
+/* ── Responsive via @container (padre tiene container-type) ─────── */
+@container (max-width: 767px) {
     .drw-sale-items-grid {
-        --drw-sale-columns: 3;
-        gap: 16px;
+        --drw-sale-columns: 2;
+        gap: 12px;
     }
 }
 
-@media (max-width: 640px) {
+/* ── Fallback @media para browsers sin soporte de container queries */
+@media (max-width: 767px) {
     .drw-sale-items-grid {
         --drw-sale-columns: 2;
         gap: 12px;
@@ -122,9 +183,21 @@
     }
 }
 
-@media (max-width: 360px) {
-    .drw-sale-items-grid {
-        --drw-sale-columns: 2;
-        gap: 8px;
+/* ── Sort bar responsive: apila en columna en móvil ─────────────── */
+@media (max-width: 640px) {
+    .drw-sort-bar {
+        flex-direction: column;
+        align-items: stretch;
+    }
+
+    .drw-cat-select,
+    .drw-sort-select {
+        width: 100%;
+        flex: none;
+    }
+
+    .drw-clear-filter {
+        width: 100%;
+        text-align: center;
     }
 }
