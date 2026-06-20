@@ -1,0 +1,1014 @@
+/* ==========================================================
+   DRW Promos Dashboard — admin-promos.css
+   Loaded alongside admin-style.css on the Promos screen.
+   All custom properties and class names are prefixed with
+   "drw-" / "--drw-" to avoid conflicts with WordPress admin.
+   ========================================================== */
+
+/* ----------------------------------------------------------
+   1. CSS Custom Properties (scoped to the app root)
+   ---------------------------------------------------------- */
+#drw-promos-app {
+    --drw-ink:          #16271d;
+    --drw-ink-soft:     #4a4a4a;
+    --drw-txt:          #3c3c3c;
+    --drw-muted:        #8b8b8b;
+    --drw-paper:        #f7f6f1;
+    --drw-paper-2:      #f5f5f5;
+    --drw-leaf:         #5b7b41;
+    --drw-leaf-deep:    #3a5a2a;
+    --drw-lime:         #a8c871;
+    --drw-line:         #e8e8e8;
+    --drw-line-strong:  #cacaca;
+    --drw-success:      #10b981;
+    --drw-error:        #ef4444;
+    --drw-warning:      #f59e0b;
+    --drw-info:         #3b82f6;
+    --drw-accent:       #5b7b41;
+    --drw-card-r:       18px;
+    --drw-mono:         "SF Mono", ui-monospace, "Cascadia Code", "Fira Code",
+                        Consolas, "Liberation Mono", monospace;
+
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
+                 Oxygen-Sans, Ubuntu, Cantarell, "Helvetica Neue", sans-serif;
+    color: var(--drw-txt);
+    background: var(--drw-paper);
+    box-sizing: border-box;
+}
+
+#drw-promos-app *,
+#drw-promos-app *::before,
+#drw-promos-app *::after {
+    box-sizing: inherit;
+}
+
+/* ----------------------------------------------------------
+   2. Page Shell
+   ---------------------------------------------------------- */
+#drw-promos-app {
+    padding: 24px;
+    max-width: 1280px;
+}
+
+.drw-page-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 24px;
+    flex-wrap: wrap;
+    gap: 12px;
+}
+
+.drw-page-title {
+    font-size: 22px;
+    font-weight: 700;
+    color: var(--drw-ink);
+    margin: 0;
+    line-height: 1.2;
+}
+
+/* ----------------------------------------------------------
+   3. Card Base
+   ---------------------------------------------------------- */
+.drw-card {
+    background: #ffffff;
+    border: 1px solid #ecebe2;
+    border-radius: var(--drw-card-r);
+    padding: 20px 22px;
+    box-shadow: 0 1px 2px rgba(91, 123, 65, 0.05);
+}
+
+/* ----------------------------------------------------------
+   4. KPI Row  (4-column stats strip)
+   ---------------------------------------------------------- */
+.drw-kpi-row {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 18px;
+    margin-bottom: 28px;
+}
+
+.drw-kpi-card {
+    background: #ffffff;
+    border: 1px solid #ecebe2;
+    border-radius: var(--drw-card-r);
+    padding: 18px 20px;
+    box-shadow: 0 1px 2px rgba(91, 123, 65, 0.05);
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    transition: box-shadow 0.18s ease, transform 0.18s ease;
+}
+
+.drw-kpi-card:hover {
+    box-shadow: 0 4px 14px rgba(91, 123, 65, 0.10);
+    transform: translateY(-1px);
+}
+
+.drw-kpi-label {
+    font-size: 11.5px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: var(--drw-muted);
+}
+
+.drw-kpi-value {
+    font-family: var(--drw-mono);
+    font-size: 28px;
+    font-weight: 700;
+    color: var(--drw-ink);
+    line-height: 1;
+}
+
+.drw-kpi-sub {
+    font-size: 12px;
+    color: var(--drw-muted);
+    margin-top: 2px;
+}
+
+/* ----------------------------------------------------------
+   5. Toolbar  (search + filter chips)
+   ---------------------------------------------------------- */
+.drw-toolbar {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex-wrap: wrap;
+    margin-bottom: 20px;
+}
+
+.drw-search-wrap {
+    position: relative;
+    flex: 1 1 200px;
+    max-width: 320px;
+}
+
+.drw-search-wrap input[type="text"],
+.drw-search-wrap input[type="search"] {
+    width: 100%;
+    border: 1px solid var(--drw-line);
+    border-radius: 11px;
+    padding: 8px 12px 8px 34px;
+    font-size: 13px;
+    color: var(--drw-txt);
+    background: #ffffff;
+    outline: none;
+    transition: border-color 0.15s, box-shadow 0.15s;
+}
+
+.drw-search-wrap input:focus {
+    border-color: var(--drw-accent);
+    box-shadow: 0 0 0 3px rgba(168, 200, 113, 0.25);
+}
+
+.drw-search-icon {
+    position: absolute;
+    left: 10px;
+    top: 50%;
+    transform: translateY(-50%);
+    color: var(--drw-muted);
+    pointer-events: none;
+    width: 16px;
+    height: 16px;
+}
+
+/* Filter Chips */
+.drw-chips {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    flex-wrap: wrap;
+}
+
+.drw-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    padding: 7px 13px;
+    border-radius: 999px;
+    border: 1px solid var(--drw-line);
+    background: #ffffff;
+    font-size: 12px;
+    font-weight: 500;
+    color: var(--drw-txt);
+    cursor: pointer;
+    transition: background 0.15s, border-color 0.15s, color 0.15s,
+                box-shadow 0.15s;
+    user-select: none;
+    line-height: 1;
+}
+
+.drw-chip:hover {
+    border-color: var(--drw-line-strong);
+    background: var(--drw-paper-2);
+}
+
+.drw-chip.active {
+    background: var(--drw-ink);
+    color: #ffffff;
+    border-color: var(--drw-ink);
+}
+
+.drw-chip.active:hover {
+    background: var(--drw-leaf-deep);
+    border-color: var(--drw-leaf-deep);
+}
+
+/* ----------------------------------------------------------
+   6. Promo Grid
+   ---------------------------------------------------------- */
+.drw-promo-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(330px, 1fr));
+    gap: 16px;
+}
+
+/* ----------------------------------------------------------
+   7. Promo Card
+   ---------------------------------------------------------- */
+.drw-promo-card {
+    background: #ffffff;
+    border: 1px solid #ecebe2;
+    border-radius: var(--drw-card-r);
+    padding: 18px 20px 16px;
+    box-shadow: 0 1px 2px rgba(91, 123, 65, 0.05);
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+    transition: box-shadow 0.18s ease, transform 0.18s ease;
+}
+
+.drw-promo-card:hover {
+    box-shadow: 0 6px 20px rgba(91, 123, 65, 0.10);
+    transform: translateY(-2px);
+}
+
+/* Card Header */
+.drw-promo-header {
+    display: flex;
+    align-items: flex-start;
+    gap: 12px;
+}
+
+/* Icon Tile */
+.drw-icon-tile {
+    width: 42px;
+    height: 42px;
+    border-radius: 12px;
+    flex-shrink: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    /* Dynamic coloring via color-mix() — caller sets --drw-tile-hue */
+    background: color-mix(in srgb, var(--drw-tile-color, var(--drw-leaf)) 14%, #ffffff);
+    color: var(--drw-tile-color, var(--drw-leaf));
+}
+
+.drw-icon-tile svg,
+.drw-icon-tile .dashicons {
+    width: 20px;
+    height: 20px;
+    font-size: 20px;
+    color: inherit;
+}
+
+/* Card Title Block */
+.drw-promo-title-wrap {
+    flex: 1 1 0;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+}
+
+.drw-promo-name {
+    font-size: 14px;
+    font-weight: 700;
+    color: var(--drw-ink);
+    line-height: 1.25;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    margin: 0;
+}
+
+.drw-promo-type-label {
+    font-size: 11.5px;
+    color: var(--drw-muted);
+    font-weight: 500;
+}
+
+/* Toggle switch aligned to header */
+.drw-promo-header .drw-sw {
+    margin-top: 2px;
+    flex-shrink: 0;
+    cursor: pointer;
+}
+
+/* Value Badge */
+.drw-value-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    padding: 5px 11px;
+    border-radius: 999px;
+    font-family: var(--drw-mono);
+    font-size: 13px;
+    font-weight: 700;
+    /* Caller overrides --drw-badge-bg and --drw-badge-fg per promo type */
+    background: var(--drw-badge-bg, color-mix(in srgb, var(--drw-accent) 14%, #ffffff));
+    color: var(--drw-badge-fg, var(--drw-accent));
+    align-self: flex-start;
+}
+
+/* Code Display */
+.drw-code-block {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 9px 12px;
+    border: 1.5px dashed var(--drw-line-strong);
+    border-radius: 10px;
+    background: var(--drw-paper);
+    cursor: pointer;
+    transition: border-color 0.15s, background 0.15s;
+}
+
+.drw-code-block:hover {
+    border-color: var(--drw-accent);
+    background: color-mix(in srgb, var(--drw-accent) 6%, #ffffff);
+}
+
+.drw-code-text {
+    font-family: var(--drw-mono);
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--drw-ink);
+    letter-spacing: 0.04em;
+    flex: 1 1 0;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.drw-copy-icon {
+    color: var(--drw-muted);
+    flex-shrink: 0;
+    width: 15px;
+    height: 15px;
+    transition: color 0.15s;
+}
+
+.drw-code-block:hover .drw-copy-icon {
+    color: var(--drw-accent);
+}
+
+/* Meta Stats (3-column grid) */
+.drw-promo-meta {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 8px;
+}
+
+.drw-meta-item {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+
+.drw-meta-label {
+    font-size: 10.5px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: var(--drw-muted);
+}
+
+.drw-meta-value {
+    font-family: var(--drw-mono);
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--drw-txt);
+}
+
+/* Progress Bar */
+.drw-meter {
+    height: 6px;
+    border-radius: 999px;
+    background: var(--drw-paper-2);
+    overflow: hidden;
+}
+
+.drw-meter > div {
+    height: 100%;
+    border-radius: 999px;
+    background: var(--drw-meter-color, var(--drw-accent));
+    width: 100%;
+    transform-origin: left center;
+    /* Use transform:scaleX() to avoid layout thrash from animating width */
+    transition: transform 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.drw-meter-wrap {
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+}
+
+.drw-meter-legend {
+    display: flex;
+    justify-content: space-between;
+    font-size: 11px;
+    color: var(--drw-muted);
+    font-family: var(--drw-mono);
+}
+
+/* Action Buttons */
+.drw-promo-actions {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding-top: 2px;
+    border-top: 1px solid var(--drw-line);
+}
+
+.drw-promo-actions .drw-btn {
+    flex: 1;
+}
+
+/* ----------------------------------------------------------
+   8. Toggle Switch
+   ---------------------------------------------------------- */
+.drw-sw {
+    display: block;
+    width: 38px;
+    height: 22px;
+    border-radius: 999px;
+    background: var(--drw-line-strong);
+    position: relative;
+    transition: background 0.2s ease;
+    flex-shrink: 0;
+}
+
+.drw-sw::after {
+    content: "";
+    position: absolute;
+    top: 3px;
+    left: 3px;
+    width: 16px;
+    height: 16px;
+    background: #ffffff;
+    border-radius: 50%;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.18);
+    transition: left 0.2s ease;
+}
+
+.drw-sw.on {
+    background: var(--drw-accent);
+}
+
+.drw-sw.on::after {
+    left: 19px;
+}
+
+/* ----------------------------------------------------------
+   9. Buttons
+   ---------------------------------------------------------- */
+.drw-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    border-radius: 11px;
+    padding: 9px 16px;
+    font-size: 13px;
+    font-weight: 600;
+    line-height: 1;
+    cursor: pointer;
+    border: none;
+    text-decoration: none;
+    white-space: nowrap;
+    transition: background 0.15s, color 0.15s, border-color 0.15s,
+                box-shadow 0.15s, transform 0.12s;
+    user-select: none;
+}
+
+.drw-btn:active {
+    transform: scale(0.97);
+}
+
+/* Primary */
+.drw-btn-primary {
+    background: var(--drw-accent);
+    color: #ffffff;
+    border: 1.5px solid transparent;
+}
+
+.drw-btn-primary:hover {
+    background: var(--drw-leaf-deep);
+    box-shadow: 0 3px 10px rgba(91, 123, 65, 0.28);
+}
+
+/* Ghost / outlined */
+.drw-btn-ghost {
+    background: #ffffff;
+    color: var(--drw-txt);
+    border: 1px solid var(--drw-line);
+}
+
+.drw-btn-ghost:hover {
+    background: var(--drw-paper-2);
+    border-color: var(--drw-line-strong);
+}
+
+/* Danger */
+.drw-btn-danger {
+    background: color-mix(in srgb, var(--drw-error) 10%, #ffffff);
+    color: var(--drw-error);
+    border: 1px solid color-mix(in srgb, var(--drw-error) 25%, #ffffff);
+}
+
+.drw-btn-danger:hover {
+    background: color-mix(in srgb, var(--drw-error) 18%, #ffffff);
+    border-color: var(--drw-error);
+}
+
+/* Small variant */
+.drw-btn-sm {
+    padding: 6px 11px;
+    font-size: 12px;
+    border-radius: 8px;
+}
+
+/* Icon-only */
+.drw-btn-icon {
+    padding: 8px;
+    border-radius: 9px;
+    min-width: 34px;
+}
+
+/* ----------------------------------------------------------
+   10. Modal / Overlay
+   ---------------------------------------------------------- */
+.drw-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(22, 39, 29, 0.45);
+    z-index: 100000;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+    backdrop-filter: blur(2px);
+    animation: drwOverlayIn 0.18s ease;
+}
+
+@keyframes drwOverlayIn {
+    from { opacity: 0; }
+    to   { opacity: 1; }
+}
+
+.drw-modal {
+    background: #ffffff;
+    border-radius: var(--drw-card-r);
+    padding: 22px;
+    width: min(680px, 95vw);
+    max-height: calc(100dvh - 40px);
+    overflow-y: auto;
+    position: relative;
+    box-shadow: 0 20px 60px rgba(22, 39, 29, 0.22);
+    animation: drwModalIn 0.22s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+@keyframes drwModalIn {
+    from { opacity: 0; transform: scale(0.95) translateY(8px); }
+    to   { opacity: 1; transform: scale(1) translateY(0); }
+}
+
+.drw-modal-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 20px;
+    padding-bottom: 16px;
+    border-bottom: 1px solid var(--drw-line);
+    gap: 12px;
+}
+
+.drw-modal-title {
+    font-size: 16px;
+    font-weight: 700;
+    color: var(--drw-ink);
+    margin: 0;
+}
+
+.drw-modal-close {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 30px;
+    height: 30px;
+    border-radius: 8px;
+    border: none;
+    background: transparent;
+    color: var(--drw-muted);
+    cursor: pointer;
+    flex-shrink: 0;
+    transition: background 0.15s, color 0.15s;
+}
+
+.drw-modal-close:hover {
+    background: var(--drw-paper-2);
+    color: var(--drw-ink);
+}
+
+.drw-modal-footer {
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 8px;
+    margin-top: 22px;
+    padding-top: 16px;
+    border-top: 1px solid var(--drw-line);
+}
+
+/* ----------------------------------------------------------
+   11. Promo Type Selector Grid
+   ---------------------------------------------------------- */
+.drw-promo-type-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 8px;
+    margin-bottom: 20px;
+}
+
+.drw-promo-type {
+    display: flex;
+    align-items: center;
+    gap: 9px;
+    padding: 10px 11px;
+    border: 1.5px solid var(--drw-line);
+    border-radius: 12px;
+    background: #ffffff;
+    cursor: pointer;
+    font-size: 12.5px;
+    font-weight: 500;
+    color: var(--drw-txt);
+    transition: border-color 0.15s, background 0.15s, box-shadow 0.15s;
+    user-select: none;
+}
+
+.drw-promo-type:hover {
+    border-color: var(--drw-line-strong);
+    background: var(--drw-paper);
+}
+
+.drw-promo-type.active {
+    border-color: var(--drw-accent);
+    background: color-mix(in srgb, var(--drw-accent) 8%, #ffffff);
+    font-weight: 600;
+    color: var(--drw-leaf-deep);
+    box-shadow: 0 0 0 3px rgba(168, 200, 113, 0.20);
+}
+
+.drw-promo-type .drw-type-icon {
+    width: 28px;
+    height: 28px;
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: color-mix(in srgb, var(--drw-accent) 14%, #ffffff);
+    color: var(--drw-accent);
+    flex-shrink: 0;
+}
+
+.drw-promo-type .drw-type-icon svg,
+.drw-promo-type .drw-type-icon .dashicons {
+    width: 15px;
+    height: 15px;
+    font-size: 15px;
+}
+
+.drw-type-name {
+    line-height: 1.25;
+}
+
+/* ----------------------------------------------------------
+   12. Form Fields
+   ---------------------------------------------------------- */
+.drw-fields {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+}
+
+.drw-fields-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 14px;
+}
+
+.drw-field {
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+}
+
+.drw-field label,
+.drw-field .drw-label {
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--drw-ink-soft);
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+}
+
+.drw-field input,
+.drw-field textarea,
+.drw-field select {
+    border: 1px solid var(--drw-line);
+    border-radius: 11px;
+    padding: 10px 13px;
+    font-size: 13.5px;
+    background: #ffffff;
+    color: var(--drw-txt);
+    outline: none;
+    width: 100%;
+    font-family: inherit;
+    transition: border-color 0.15s, box-shadow 0.15s;
+    -webkit-appearance: none;
+    appearance: none;
+}
+
+.drw-field input:focus,
+.drw-field textarea:focus,
+.drw-field select:focus {
+    border-color: var(--drw-accent);
+    box-shadow: 0 0 0 3px rgba(168, 200, 113, 0.25);
+}
+
+.drw-field input::placeholder,
+.drw-field textarea::placeholder {
+    color: var(--drw-muted);
+    font-size: 13px;
+}
+
+.drw-field textarea {
+    min-height: 80px;
+    resize: vertical;
+}
+
+/* Select arrow */
+.drw-field select {
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath d='M1 1l5 5 5-5' stroke='%238b8b8b' stroke-width='1.5' fill='none' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 13px center;
+    padding-right: 34px;
+}
+
+.drw-field-hint {
+    font-size: 11.5px;
+    color: var(--drw-muted);
+    margin-top: 1px;
+}
+
+/* Section divider inside modal */
+.drw-section-label {
+    font-size: 11px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: var(--drw-muted);
+    margin-bottom: 8px;
+}
+
+/* ----------------------------------------------------------
+   13. Empty State
+   ---------------------------------------------------------- */
+.drw-empty {
+    display: grid;
+    place-items: center;
+    padding: 70px 20px;
+    text-align: center;
+}
+
+.drw-empty-icon {
+    width: 64px;
+    height: 64px;
+    border-radius: 20px;
+    background: var(--drw-paper-2);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin: 0 auto 18px;
+    color: var(--drw-muted);
+}
+
+.drw-empty-title {
+    font-size: 17px;
+    font-weight: 700;
+    color: var(--drw-ink);
+    margin: 0 0 8px;
+}
+
+.drw-empty-text {
+    font-size: 13.5px;
+    color: var(--drw-muted);
+    max-width: 340px;
+    line-height: 1.55;
+    margin: 0 0 22px;
+}
+
+/* ----------------------------------------------------------
+   14. Toast Notifications
+   ---------------------------------------------------------- */
+.drw-toasts {
+    position: fixed;
+    bottom: 22px;
+    right: 22px;
+    z-index: 100001;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    pointer-events: none;
+}
+
+.drw-toast {
+    background: var(--drw-ink);
+    color: #ffffff;
+    border-radius: 12px;
+    padding: 11px 16px;
+    font-size: 13px;
+    font-weight: 500;
+    line-height: 1.4;
+    display: flex;
+    align-items: center;
+    gap: 9px;
+    min-width: 240px;
+    max-width: 340px;
+    box-shadow: 0 8px 24px rgba(22, 39, 29, 0.25);
+    pointer-events: auto;
+    animation: drwToastIn 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+@keyframes drwToastIn {
+    from { opacity: 0; transform: translateY(12px) scale(0.95); }
+    to   { opacity: 1; transform: translateY(0)   scale(1);    }
+}
+
+.drw-toast.drw-toast-success {
+    background: var(--drw-success);
+}
+
+.drw-toast.drw-toast-error {
+    background: var(--drw-error);
+}
+
+.drw-toast.drw-toast-warning {
+    background: var(--drw-warning);
+    color: var(--drw-ink);
+}
+
+.drw-toast.drw-toast-info {
+    background: var(--drw-info);
+}
+
+/* ----------------------------------------------------------
+   15. Status Badges (active / expired / draft)
+   ---------------------------------------------------------- */
+.drw-status-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    font-size: 11px;
+    font-weight: 600;
+    padding: 3px 9px;
+    border-radius: 999px;
+}
+
+.drw-status-badge.active {
+    background: color-mix(in srgb, var(--drw-success) 14%, #ffffff);
+    color: var(--drw-success);
+}
+
+.drw-status-badge.expired {
+    background: color-mix(in srgb, var(--drw-error) 10%, #ffffff);
+    color: var(--drw-error);
+}
+
+.drw-status-badge.draft {
+    background: color-mix(in srgb, var(--drw-muted) 12%, #ffffff);
+    color: var(--drw-muted);
+}
+
+.drw-status-badge.scheduled {
+    background: color-mix(in srgb, var(--drw-warning) 14%, #ffffff);
+    color: var(--drw-warning);
+}
+
+/* ----------------------------------------------------------
+   16. Divider / Section header inside cards
+   ---------------------------------------------------------- */
+.drw-divider {
+    border: none;
+    border-top: 1px solid var(--drw-line);
+    margin: 0;
+}
+
+/* ----------------------------------------------------------
+   17. Loading Skeleton (shimmer placeholders)
+   ---------------------------------------------------------- */
+.drw-skeleton {
+    background: linear-gradient(
+        90deg,
+        var(--drw-paper-2) 25%,
+        #eaeaea 50%,
+        var(--drw-paper-2) 75%
+    );
+    background-size: 400% 100%;
+    border-radius: 8px;
+    animation: drwShimmer 1.4s ease infinite;
+}
+
+@keyframes drwShimmer {
+    0%   { background-position: 100% 50%; }
+    100% { background-position:   0% 50%; }
+}
+
+/* ----------------------------------------------------------
+   18. Utility helpers used by the promos UI
+   ---------------------------------------------------------- */
+.drw-flex         { display: flex; }
+.drw-flex-center  { display: flex; align-items: center; }
+.drw-gap-8        { gap: 8px; }
+.drw-gap-12       { gap: 12px; }
+.drw-mt-16        { margin-top: 16px; }
+.drw-mb-16        { margin-bottom: 16px; }
+.drw-text-muted   { color: var(--drw-muted); }
+.drw-text-mono    { font-family: var(--drw-mono); }
+.drw-truncate     { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+/* ----------------------------------------------------------
+   19. Responsive Breakpoints
+   ---------------------------------------------------------- */
+
+/* ≤ 920px  — 3-col grid to 2 on wider medium screens handled by auto-fill */
+
+/* ≤ 720px  — promo-type-grid: 3 → 2 columns */
+@media (max-width: 720px) {
+    .drw-promo-type-grid {
+        grid-template-columns: repeat(2, 1fr);
+    }
+}
+
+/* ≤ 600px  — kpi-row: 4 → 2 columns, fields-row stacks */
+@media (max-width: 600px) {
+    .drw-kpi-row {
+        grid-template-columns: repeat(2, 1fr);
+    }
+
+    .drw-fields-row {
+        grid-template-columns: 1fr;
+    }
+
+    .drw-page-header {
+        flex-direction: column;
+        align-items: flex-start;
+    }
+
+    .drw-toolbar {
+        flex-direction: column;
+        align-items: stretch;
+    }
+
+    .drw-search-wrap {
+        max-width: 100%;
+    }
+
+    .drw-modal {
+        padding: 16px;
+        border-radius: 14px;
+    }
+
+    .drw-modal-footer {
+        flex-direction: column;
+    }
+
+    .drw-modal-footer .drw-btn {
+        width: 100%;
+    }
+}
+
+/* ≤ 480px  — single-column KPI strip */
+@media (max-width: 480px) {
+    .drw-kpi-row {
+        grid-template-columns: 1fr;
+    }
+
+    .drw-promo-type-grid {
+        grid-template-columns: 1fr;
+    }
+}

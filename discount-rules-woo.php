@@ -1,11 +1,11 @@
 <?php
 /**
- * Plugin Name: Dynamic Pricing & Discount Rules for WooCommerce
+ * Plugin Name: OmniDiscount — Dynamic Pricing & Discount Rules for WooCommerce
  * Plugin URI: https://bywuilgonzalez.com
- * Description: 100% complete and fully featured dynamic pricing and discount rules plugin for WooCommerce.
+ * Description: Premium dynamic pricing, discount rules, and promotional coupon engine for WooCommerce.
  * Author: Bywuilgonzalez.com
  * Author URI: https://bywuilgonzalez.com
- * Version: 1.3.11
+ * Version: 1.4.0
  * Text Domain: discount-rules-woo
  * Domain Path: /languages/
  * Requires at least: 5.6
@@ -28,7 +28,7 @@ add_action('before_woocommerce_init', function() {
 });
 
 // Define core constants
-define('DRW_VERSION', '1.3.11');
+define('DRW_VERSION', '1.4.0');
 define('DRW_PLUGIN_PATH', plugin_dir_path(__FILE__));
 define('DRW_PLUGIN_URL', plugin_dir_url(__FILE__));
 define('DRW_PLUGIN_BASENAME', plugin_basename(__FILE__));
@@ -75,7 +75,7 @@ add_action('plugins_loaded', function () {
     } else {
         // Display admin notice if WooCommerce is missing
         add_action('admin_notices', function () {
-            echo '<div class="error"><p>' . esc_html__('Dynamic Pricing & Discount Rules for WooCommerce requires WooCommerce to be active.', 'discount-rules-woo') . '</p></div>';
+            echo '<div class="error"><p>' . esc_html__('OmniDiscount requires WooCommerce to be active.', 'discount-rules-woo') . '</p></div>';
         });
     }
 }, 10);

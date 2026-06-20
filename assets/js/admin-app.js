@@ -167,7 +167,7 @@
      * Main App Component
      */
     function DrwApp() {
-        const [screen, setScreen] = useState('list'); // 'list' or 'edit'
+        const [screen, setScreen] = useState('list'); // 'list', 'edit', 'settings', 'promos'
         const [rules, setRules] = useState([]);
         const [editingRule, setEditingRule] = useState(null);
         const [loading, setLoading] = useState(true);
@@ -299,10 +299,12 @@
             el('div', { className: 'drw-header' },
                 el('h2', { className: 'drw-title' },
                     screen === 'settings' ? 'Configuración Global' :
-                    screen === 'list'     ? 'Active Rules Dashboard' :
+                    screen === 'promos'   ? 'Cupones y Promociones' :
+                    screen === 'list'     ? 'OmniDiscount Dashboard' :
                     (editingRule && editingRule.id ? 'Edit Discount Rule' : 'Create New Discount Rule')
                 ),
                 screen === 'list' && el('div', { style: { display: 'flex', gap: '8px' } },
+                    el(Button, { className: 'drw-secondary-btn', onClick: () => setScreen('promos') }, '🎟 Cupones'),
                     el(Button, { className: 'drw-secondary-btn', onClick: () => setScreen('settings') }, '⚙ Configuración'),
                     el(Button, { className: 'drw-primary-btn', onClick: handleAddRule }, '+ Create Rule')
                 )
@@ -311,9 +313,11 @@
             // Screens
             screen === 'settings'
                 ? el(GlobalSettings, { onBack: () => setScreen('list') })
-                : screen === 'list'
-                    ? el(RulesList, { rules, onEdit: handleEditRule, onDelete: handleDeleteRule, onToggle: handleToggleStatus })
-                    : el(RuleEditor, { rule: editingRule, setRule: setEditingRule, onSave: handleSaveRule, onCancel: () => setScreen('list') })
+                : screen === 'promos'
+                    ? (window.DrwPromosPage ? el(window.DrwPromosPage, { onBack: () => setScreen('list') }) : el('p', null, 'Loading promos...'))
+                    : screen === 'list'
+                        ? el(RulesList, { rules, onEdit: handleEditRule, onDelete: handleDeleteRule, onToggle: handleToggleStatus })
+                        : el(RuleEditor, { rule: editingRule, setRule: setEditingRule, onSave: handleSaveRule, onCancel: () => setScreen('list') })
         );
     }
 
