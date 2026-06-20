@@ -40,6 +40,9 @@ class Router {
 		$shortcode_controller = \Drw\App\Controllers\ShortcodeController::instance();
 		$updater              = \Drw\App\Controllers\Updater::instance();
 		$settings_controller  = \Drw\App\Controllers\SettingsController::instance();
+		$analytics_controller = \Drw\App\Controllers\AnalyticsController::instance();
+		$import_export        = \Drw\App\Controllers\ImportExportController::instance();
+		$progress_bar         = \Drw\App\Controllers\ProgressBarController::instance();
 
 		$catalog_controller->register_hooks();
 		$cart_controller->register_hooks();
@@ -48,6 +51,11 @@ class Router {
 		$shortcode_controller->register_hooks();
 		$updater->register_hooks();
 		$settings_controller->register_hooks();
+		$analytics_controller->register_hooks();
+		$import_export->register_hooks();
+		$progress_bar->register_hooks();
+
+		\Drw\App\Controllers\StoreApiController::instance()->register_hooks();
 	}
 
 	/**
