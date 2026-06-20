@@ -69,12 +69,25 @@ class AdminController
             ['wp-components'],
             DRW_VERSION
         );
+        wp_enqueue_style(
+            'drw-admin-promos-style',
+            DRW_PLUGIN_URL . 'assets/css/admin-promos.css',
+            ['drw-admin-style'],
+            DRW_VERSION
+        );
 
         // Enqueue compiled React app
         wp_enqueue_script(
             'drw-admin-app',
             DRW_PLUGIN_URL . 'assets/js/admin-app.js',
             ['wp-element', 'wp-components', 'wp-api-fetch', 'jquery'],
+            DRW_VERSION,
+            true
+        );
+        wp_enqueue_script(
+            'drw-admin-promos',
+            DRW_PLUGIN_URL . 'assets/js/admin-promos.js',
+            ['wp-element', 'wp-api-fetch', 'drw-admin-app'],
             DRW_VERSION,
             true
         );
@@ -136,7 +149,7 @@ class AdminController
     {
         ?>
         <div class="wrap">
-            <h1 class="wp-heading-inline"><?php esc_html_e('Discount Rules for WooCommerce', 'discount-rules-woo'); ?></h1>
+            <h1 class="wp-heading-inline"><?php esc_html_e('OmniDiscount', 'discount-rules-woo'); ?></h1>
             <hr class="wp-header-end">
             <div id="drw-admin-app"></div>
         </div>

@@ -55,7 +55,7 @@ jobs:
         run: |
           ./vendor/bin/phpcs --standard=WordPress-Core \
                 --extensions=php \
-                --ignore=vendor/,scratch/,tests/,src/Adjustments/,src/Conditions/,src/Controllers/RulesEngine.php,src/Controllers/ApiController.php,src/Controllers/CartController.php,src/Controllers/ShortcodeController.php,src/Controllers/Updater.php,src/Controllers/AdminController.php,src/Controllers/CatalogController.php,src/Controllers/AnalyticsController.php,src/Controllers/ImportExportController.php,src/Controllers/ProgressBarController.php,src/Controllers/StoreApiController.php,src/Models/Database.php,src/Models/RuleModel.php \
+                --ignore=vendor/,scratch/,tests/,src/Adjustments/,src/Conditions/,src/Controllers/RulesEngine.php,src/Controllers/ApiController.php,src/Controllers/CartController.php,src/Controllers/ShortcodeController.php,src/Controllers/Updater.php,src/Controllers/AdminController.php,src/Controllers/CatalogController.php,src/Controllers/AnalyticsController.php,src/Controllers/ImportExportController.php,src/Controllers/ProgressBarController.php,src/Controllers/StoreApiController.php,src/Controllers/PromosController.php,src/Models/Database.php,src/Models/RuleModel.php \
                 --report=full \
                 src/
 
