@@ -11,8 +11,8 @@ if ( ! defined( 'ABSPATH' ) ) {
  */
 class SettingsModel {
 	const OPTION_KEY = 'drw_settings';
-	const CACHE_KEY = 'drw_settings_cache';
-	const CACHE_TTL = 43200;
+	const CACHE_KEY  = 'drw_settings_cache';
+	const CACHE_TTL  = 43200;
 
 	/**
 	 * Return the complete default settings structure.
@@ -22,7 +22,10 @@ class SettingsModel {
 			'discount_types' => array(
 				'percentage'    => array( 'enabled' => true ),
 				'fixed'         => array( 'enabled' => true ),
-				'bulk'          => array( 'enabled' => true, 'max_tiers' => 10 ),
+				'bulk'          => array(
+					'enabled'   => true,
+					'max_tiers' => 10,
+				),
 				'bogo'          => array( 'enabled' => true ),
 				'bundle_set'    => array( 'enabled' => true ),
 				'free_shipping' => array( 'enabled' => true ),
@@ -114,10 +117,10 @@ class SettingsModel {
 	/**
 	 * Get a single setting by dot-path key.
 	 */
-	public static function get_setting( $key, $default = null ) {
+	public static function get_setting( $key, $fallback = null ) {
 		$key = (string) $key;
 		if ( '' === $key ) {
-			return $default;
+			return $fallback;
 		}
 
 		$value = self::get_all_settings();
@@ -126,7 +129,7 @@ class SettingsModel {
 			if ( is_array( $value ) && array_key_exists( $segment, $value ) ) {
 				$value = $value[ $segment ];
 			} else {
-				return $default;
+				return $fallback;
 			}
 		}
 
@@ -294,9 +297,9 @@ class SettingsModel {
 	/**
 	 * Set value in array using dot-path key.
 	 */
-	private static function set_by_path( $array, $key, $value ) {
+	private static function set_by_path( $arr, $key, $value ) {
 		$segments = explode( '.', (string) $key );
-		$ref      = &$array;
+		$ref      = &$arr;
 
 		while ( count( $segments ) > 1 ) {
 			$segment = array_shift( $segments );
@@ -308,17 +311,17 @@ class SettingsModel {
 
 		$ref[ array_shift( $segments ) ] = $value;
 
-		return $array;
+		return $arr;
 	}
 
 	/**
 	 * Sanitize value against default structure.
 	 */
-	private static function sanitize_against_default( $value, $default ) {
-		if ( is_array( $default ) && self::is_assoc( $default ) ) {
+	private static function sanitize_against_default( $value, $fallback ) {
+		if ( is_array( $fallback ) && self::is_assoc( $fallback ) ) {
 			$value = is_array( $value ) ? $value : array();
 			$clean = array();
-			foreach ( $default as $sub_key => $sub_default ) {
+			foreach ( $fallback as $sub_key => $sub_default ) {
 				if ( array_key_exists( $sub_key, $value ) ) {
 					$clean[ $sub_key ] = self::sanitize_against_default( $value[ $sub_key ], $sub_default );
 				} else {
@@ -328,24 +331,24 @@ class SettingsModel {
 			return $clean;
 		}
 
-		if ( is_bool( $default ) ) {
+		if ( is_bool( $fallback ) ) {
 			return self::to_bool( $value );
 		}
 
-		if ( is_int( $default ) ) {
+		if ( is_int( $fallback ) ) {
 			$int = (int) $value;
 			return max( 0, $int );
 		}
 
-		if ( is_float( $default ) ) {
+		if ( is_float( $fallback ) ) {
 			return (float) $value;
 		}
 
-		if ( is_string( $default ) && self::is_hex_color( $default ) ) {
+		if ( is_string( $fallback ) && self::is_hex_color( $fallback ) ) {
 			$color = function_exists( 'sanitize_hex_color' )
 				? sanitize_hex_color( (string) $value )
 				: ( ( preg_match( '/^#([A-Fa-f0-9]{3}|[A-Fa-f0-9]{6})$/', (string) $value ) ) ? (string) $value : null );
-			return $color ? $color : $default;
+			return $color ? $color : $fallback;
 		}
 
 		return sanitize_text_field( (string) $value );
@@ -379,11 +382,11 @@ class SettingsModel {
 	/**
 	 * Check if array is associative.
 	 */
-	private static function is_assoc( $array ) {
-		if ( ! is_array( $array ) || array() === $array ) {
+	private static function is_assoc( $arr ) {
+		if ( ! is_array( $arr ) || array() === $arr ) {
 			return false;
 		}
-		return array_keys( $array ) !== range( 0, count( $array ) - 1 );
+		return array_keys( $arr ) !== range( 0, count( $arr ) - 1 );
 	}
 
 	/**

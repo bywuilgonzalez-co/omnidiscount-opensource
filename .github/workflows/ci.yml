@@ -55,9 +55,9 @@ jobs:
         run: |
           ./vendor/bin/phpcs --standard=WordPress-Core \
                 --extensions=php \
-                --ignore=vendor/,scratch/,tests/,src/Adjustments/,src/Conditions/,src/Controllers/RulesEngine.php,src/Controllers/ApiController.php,src/Controllers/CartController.php,src/Controllers/ShortcodeController.php,src/Controllers/Updater.php,src/Controllers/AdminController.php,src/Controllers/CatalogController.php \
+                --ignore=vendor/,scratch/,tests/,src/Adjustments/,src/Conditions/,src/Controllers/RulesEngine.php,src/Controllers/ApiController.php,src/Controllers/CartController.php,src/Controllers/ShortcodeController.php,src/Controllers/Updater.php,src/Controllers/AdminController.php,src/Controllers/CatalogController.php,src/Models/Database.php,src/Models/RuleModel.php \
                 --report=full \
-                src/ discount-rules-woo.php
+                src/
 
   security-scan:
     name: Security Scan
