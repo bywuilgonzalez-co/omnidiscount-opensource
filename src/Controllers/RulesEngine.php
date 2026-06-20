@@ -162,6 +162,9 @@ class RulesEngine
 
         if (!empty($excluded_cats)) {
             $product_cats = wc_get_product_term_ids($product_id, 'product_cat');
+            if (empty($product_cats) && $parent_id) {
+                $product_cats = wc_get_product_term_ids($parent_id, 'product_cat');
+            }
             if (!empty(array_intersect($product_cats, $excluded_cats))) {
                 return false;
             }
@@ -177,8 +180,11 @@ class RulesEngine
         }
 
         if ($apply_to === 'specific_categories') {
-            $target_cats = !empty($filters['category_ids']) ? array_map('intval', (array)$filters['category_ids']) : [];
+            $target_cats  = !empty($filters['category_ids']) ? array_map('intval', (array)$filters['category_ids']) : [];
             $product_cats = wc_get_product_term_ids($product_id, 'product_cat');
+            if (empty($product_cats) && $parent_id) {
+                $product_cats = wc_get_product_term_ids($parent_id, 'product_cat');
+            }
             return !empty(array_intersect($product_cats, $target_cats));
         }
 
@@ -209,13 +215,37 @@ class RulesEngine
             $conditions = !empty($rule['conditions']) ? (array)$rule['conditions'] : [];
             foreach ($conditions as $cond) {
                 $cond_type = !empty($cond['type']) ? $cond['type'] : '';
-                if (in_array($cond_type, ['subtotal', 'items_count', 'cart_coupon', 'cart_items_count'])) {
+                if (in_array($cond_type, ['subtotal', 'cart_subtotal', 'items_count', 'cart_line_items_count', 'cart_coupon', 'coupon'])) {
                     return true;
                 }
             }
         }
 
         return false;
+    }
+
+    /**
+     * Whether a rule should be skipped because coupons are applied and stacking is disabled.
+     *
+     * @param array         $rule Rule array with optional no_coupon_stacking key.
+     * @param \WC_Cart|null $cart Cart object when available.
+     * @return bool
+     */
+    private function should_skip_due_to_coupons(array $rule, $cart = null)
+    {
+        $global_no_stack = (bool)get_option('drw_global_no_coupon_stacking', false);
+        $rule_no_stack   = !empty($rule['no_coupon_stacking']);
+
+        if (!$global_no_stack && !$rule_no_stack) {
+            return false;
+        }
+
+        if ($cart !== null) {
+            return !empty($cart->get_applied_coupons());
+        }
+
+        $wc = function_exists('WC') ? WC() : null;
+        return $wc && !empty($wc->session) && !empty($wc->session->get('applied_coupons'));
     }
 
     /**
@@ -252,6 +282,10 @@ class RulesEngine
                 }
 
                 if (!$this->is_product_targeted_by_rule($rule, $product)) {
+                    continue;
+                }
+
+                if ($this->should_skip_due_to_coupons($rule)) {
                     continue;
                 }
 
@@ -306,6 +340,10 @@ class RulesEngine
                 }
 
                 if (!$this->is_product_targeted_by_rule($rule, $product)) {
+                    continue;
+                }
+
+                if ($this->should_skip_due_to_coupons($rule)) {
                     continue;
                 }
 
@@ -401,11 +439,31 @@ class RulesEngine
     }
 
     /**
+     * Return the cached per-item discounted prices keyed by cart item key.
+     *
+     * @return array|null
+     */
+    public function get_cached_cart_item_prices()
+    {
+        return $this->cached_cart_item_prices;
+    }
+
+    /**
+     * Return the cached cart-level discount data (fees + free_shipping flag).
+     *
+     * @return array|null
+     */
+    public function get_cached_cart_level_discounts()
+    {
+        return $this->cached_cart_level_discounts;
+    }
+
+    /**
      * Calculate all discounts for the cart in a single pass.
      *
      * @param \WC_Cart $cart
      */
-    private function calculate_all_cart_discounts($cart)
+    public function calculate_all_cart_discounts($cart)
     {
         if (!$cart || $cart->is_empty()) {
             $this->cached_cart_item_prices = [];
@@ -505,6 +563,10 @@ class RulesEngine
                     continue;
                 }
 
+                if ($this->should_skip_due_to_coupons($rule, $cart)) {
+                    continue;
+                }
+
                 $temp_prices = $item_regular_prices;
                 $temp_fees = [];
                 $temp_free_shipping = false;
@@ -536,6 +598,10 @@ class RulesEngine
                 $apply_current_prices($item_prices);
 
                 if (!$this->is_rule_matched($rule, $cart)) {
+                    continue;
+                }
+
+                if ($this->should_skip_due_to_coupons($rule, $cart)) {
                     continue;
                 }
 
