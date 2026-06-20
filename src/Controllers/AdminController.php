@@ -37,13 +37,14 @@ class AdminController
      */
     public function add_admin_menu()
     {
-        add_submenu_page(
-            'woocommerce',
-            __('Discount Rules', 'discount-rules-woo'),
-            __('Discount Rules', 'discount-rules-woo'),
+        add_menu_page(
+            __('OmniDiscount', 'discount-rules-woo'),
+            __('OmniDiscount', 'discount-rules-woo'),
             'manage_woocommerce',
             'drw-discount-rules',
-            [$this, 'render_admin_page']
+            [$this, 'render_admin_page'],
+            'dashicons-tag',
+            56
         );
     }
 
@@ -53,7 +54,7 @@ class AdminController
     public function enqueue_admin_assets($hook)
     {
         // Only load on our custom admin page
-        if ($hook !== 'woocommerce_page_drw-discount-rules') {
+        if ($hook !== 'toplevel_page_drw-discount-rules') {
             return;
         }
 

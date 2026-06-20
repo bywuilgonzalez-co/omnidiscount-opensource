@@ -61,7 +61,6 @@
 		return t.short;
 	}
 
-	// ── SVG Icon helper ─────────────────────────────────────────────────────
 	function Icon(props) {
 		return el('span', {
 			className: 'dashicons dashicons-' + props.name,
@@ -69,9 +68,7 @@
 		});
 	}
 
-	// ── Toast system ────────────────────────────────────────────────────────
 	var toastContainer = null;
-	var toastCount = 0;
 
 	function showToast(msg) {
 		if (!toastContainer) {
@@ -87,7 +84,6 @@
 		toast.appendChild(ico);
 		toast.appendChild(document.createTextNode(' ' + msg));
 		toastContainer.appendChild(toast);
-		toastCount++;
 		setTimeout(function () {
 			toast.style.opacity = '0';
 			toast.style.transform = 'translateY(8px)';
@@ -97,7 +93,7 @@
 		}, 3000);
 	}
 
-	// ── Promo Card ──────────────────────────────────────────────────────────
+	// -- Promo Card -------------------------------------------------------
 	function PromoCard(props) {
 		var p = props.promo;
 		var onEdit = props.onEdit;
@@ -106,32 +102,17 @@
 		var t = getType(p.type);
 		var pct = p.limitGlobal ? Math.min(100, Math.round((p.uses / p.limitGlobal) * 100)) : 0;
 
-		var tileStyle = {
-			width: 42, height: 42, borderRadius: 11, flexShrink: 0,
-			display: 'grid', placeItems: 'center',
-			background: 'color-mix(in srgb, ' + t.color + ' 16%, white)',
-			color: t.color
-		};
-
-		var valueStyle = {
-			fontSize: 17, fontWeight: 700, padding: '4px 12px', borderRadius: 9,
-			letterSpacing: '-0.01em',
-			background: 'color-mix(in srgb, ' + t.color + ' 12%, white)',
-			color: t.color
-		};
-
 		return el('div', { className: 'drw-promo-card', style: { opacity: p.active ? 1 : 0.62 } },
-			// Header: icon + name + toggle
-			el('div', { style: { display: 'flex', alignItems: 'flex-start', gap: 12 } },
-				el('span', { className: 'drw-tile', style: tileStyle },
+			el('div', { className: 'drw-promo-header' },
+				el('span', { className: 'drw-icon-tile', style: { '--drw-tile-color': t.color } },
 					el(Icon, { name: t.icon, size: 19 })
 				),
-				el('div', { style: { flex: 1, minWidth: 0 } },
+				el('div', { className: 'drw-promo-title-wrap' },
 					el('div', { style: { display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' } },
-						el('span', { className: 'drw-it-name', style: { fontSize: 14 } }, p.name),
-						p.home && el('span', { className: 'drw-pill-home' }, 'En portada')
+						el('span', { className: 'drw-promo-name' }, p.name),
+						p.home && el('span', { className: 'drw-status-badge active' }, 'En portada')
 					),
-					el('div', { className: 'drw-it-sub' }, t.label + (p.scope ? ' · ' + p.scope : ''))
+					el('div', { className: 'drw-promo-type-label' }, t.label + (p.scope ? ' · ' + p.scope : ''))
 				),
 				el('button', {
 					className: 'drw-sw' + (p.active ? ' on' : ''),
@@ -140,52 +121,54 @@
 				})
 			),
 
-			// Value + code
-			el('div', { style: { display: 'flex', alignItems: 'center', gap: 10, margin: '13px 0 12px' } },
-				el('span', { className: 'drw-promo-value', style: valueStyle }, promoValueLabel(p)),
+			el('div', { style: { display: 'flex', alignItems: 'center', gap: 10 } },
+				el('span', {
+					className: 'drw-value-badge',
+					style: {
+						'--drw-badge-bg': 'color-mix(in srgb, ' + t.color + ' 12%, white)',
+						'--drw-badge-fg': t.color
+					}
+				}, promoValueLabel(p)),
 				p.code
 					? el('button', {
-						className: 'drw-promo-code',
+						className: 'drw-code-block',
 						title: 'Copiar código',
 						onClick: function () {
 							if (navigator.clipboard) { navigator.clipboard.writeText(p.code).catch(function () {}); }
 							showToast('Código copiado: ' + p.code);
 						}
 					},
-						el('span', { className: 'drw-mono' }, p.code),
-						el(Icon, { name: 'clipboard', size: 12 })
+						el('span', { className: 'drw-code-text' }, p.code),
+						el(Icon, { name: 'clipboard', size: 13, style: { color: '#8b8b8b' } })
 					)
-					: el('span', { className: 'drw-it-sub', style: { fontStyle: 'italic' } }, 'Automática (sin código)')
+					: el('span', { className: 'drw-promo-type-label', style: { fontStyle: 'italic' } }, 'Automática (sin código)')
 			),
 
-			// Meta stats
 			el('div', { className: 'drw-promo-meta' },
-				el('div', null,
-					el('span', { className: 'drw-it-sub' }, 'Usos'),
-					el('span', { className: 'drw-mono' }, fmtN(p.uses) + (p.limitGlobal ? ' / ' + fmtN(p.limitGlobal) : ''))
+				el('div', { className: 'drw-meta-item' },
+					el('span', { className: 'drw-meta-label' }, 'Usos'),
+					el('span', { className: 'drw-meta-value' }, fmtN(p.uses) + (p.limitGlobal ? ' / ' + fmtN(p.limitGlobal) : ''))
 				),
-				el('div', null,
-					el('span', { className: 'drw-it-sub' }, 'Vigencia'),
-					el('span', { className: 'drw-mono' }, p.end ? p.start.slice(5) + ' → ' + p.end.slice(5) : 'Permanente')
+				el('div', { className: 'drw-meta-item' },
+					el('span', { className: 'drw-meta-label' }, 'Vigencia'),
+					el('span', { className: 'drw-meta-value' }, p.end ? p.start.slice(5) + ' → ' + p.end.slice(5) : 'Permanente')
 				),
-				el('div', null,
-					el('span', { className: 'drw-it-sub' }, 'Por cliente'),
-					el('span', { className: 'drw-mono' }, p.limitUser ? p.limitUser + '×' : '∞')
+				el('div', { className: 'drw-meta-item' },
+					el('span', { className: 'drw-meta-label' }, 'Por cliente'),
+					el('span', { className: 'drw-meta-value' }, p.limitUser ? p.limitUser + '×' : '∞')
 				)
 			),
 
-			// Progress bar
-			p.limitGlobal > 0 && el('div', { className: 'drw-meter', style: { marginTop: 10 } },
+			p.limitGlobal > 0 && el('div', { className: 'drw-meter' },
 				el('div', { style: { width: pct + '%', background: pct > 85 ? '#f59e0b' : t.color } })
 			),
 
-			// Actions
-			el('div', { style: { display: 'flex', gap: 8, marginTop: 14 } },
+			el('div', { className: 'drw-promo-actions' },
 				el('button', { className: 'drw-btn drw-btn-ghost', style: { flex: 1 }, onClick: function () { onEdit(p); } },
 					el(Icon, { name: 'edit', size: 14 }), ' Editar'
 				),
 				el('button', {
-					className: 'drw-icon-pill drw-icon-danger',
+					className: 'drw-btn drw-btn-icon drw-btn-danger',
 					'aria-label': 'Eliminar ' + p.name,
 					onClick: function () { onDelete(p.id); }
 				},
@@ -195,7 +178,7 @@
 		);
 	}
 
-	// ── Promo Editor Modal ──────────────────────────────────────────────────
+	// -- Promo Editor Modal ------------------------------------------------
 	function PromoEditor(props) {
 		var promo = props.promo;
 		var onClose = props.onClose;
@@ -247,18 +230,16 @@
 
 		return el('div', { className: 'drw-overlay', onClick: onClose },
 			el('div', { className: 'drw-modal', onClick: function (e) { e.stopPropagation(); } },
-				// Header
-				el('div', { className: 'drw-modal-head' },
-					el('div', { className: 'drw-modal-title' }, isNew ? 'Nueva promoción' : 'Editar promoción'),
-					el('button', { className: 'drw-icon-pill drw-icon-close', onClick: onClose, 'aria-label': 'Cerrar' },
+				el('div', { className: 'drw-modal-header' },
+					el('h3', { className: 'drw-modal-title' }, isNew ? 'Nueva promoción' : 'Editar promoción'),
+					el('button', { className: 'drw-modal-close', onClick: onClose, 'aria-label': 'Cerrar' },
 						el(Icon, { name: 'no-alt', size: 15 })
 					)
 				),
 
-				el('div', { style: { display: 'grid', gap: 16 } },
-					// Type selector
+				el('div', { className: 'drw-fields' },
 					el('div', null,
-						el('label', { className: 'drw-field-label' }, 'Tipo de oferta'),
+						el('label', { className: 'drw-section-label' }, 'Tipo de oferta'),
 						el('div', { className: 'drw-promo-type-grid' },
 							PROMO_TYPES.map(function (tt) {
 								var isActive = f.type === tt.id;
@@ -272,37 +253,35 @@
 									style: btnStyle
 								},
 									el('span', {
-										className: 'drw-tile-sm',
+										className: 'drw-type-icon',
 										style: {
 											background: 'color-mix(in srgb, ' + tt.color + ' 16%, white)',
 											color: tt.color
 										}
 									}, el(Icon, { name: tt.icon, size: 15 })),
-									el('span', { className: 'drw-type-label' }, tt.label)
+									el('span', { className: 'drw-type-name' }, tt.label)
 								);
 							})
 						)
 					),
 
-					// Name + Code
-					el('div', { className: 'drw-form-row', style: { gridTemplateColumns: t.needsCode ? '1.4fr 1fr' : '1fr' } },
+					el('div', { className: 'drw-fields-row', style: { gridTemplateColumns: t.needsCode ? '1.4fr 1fr' : '1fr' } },
 						el('div', { className: 'drw-field' },
 							el('label', null, 'Nombre interno'),
 							el('input', { value: f.name, onChange: function (e) { set('name', e.target.value); }, placeholder: 'Ej. Madrugón marca propia' })
 						),
 						t.needsCode && el('div', { className: 'drw-field' },
 							el('label', null, 'Código'),
-							el('input', { className: 'drw-mono', value: f.code, onChange: function (e) { set('code', e.target.value.toUpperCase()); }, placeholder: 'MADRUGON15' })
+							el('input', { className: 'drw-text-mono', value: f.code, onChange: function (e) { set('code', e.target.value.toUpperCase()); }, placeholder: 'MADRUGON15' })
 						)
 					),
 
-					// Value + Scope
-					el('div', { className: 'drw-form-row' },
+					el('div', { className: 'drw-fields-row' },
 						t.value === 'percent' && el('div', { className: 'drw-field' },
 							el('label', null, 'Porcentaje de descuento'),
 							el('div', { style: { display: 'flex', alignItems: 'center', gap: 8 } },
 								el('input', { type: 'number', value: f.value, onChange: function (e) { set('value', e.target.value); }, style: { flex: 1 } }),
-								el('span', { className: 'drw-it-sub' }, '%')
+								el('span', { className: 'drw-field-hint' }, '%')
 							)
 						),
 						t.value === 'money' && el('div', { className: 'drw-field' },
@@ -319,14 +298,13 @@
 						),
 						el('div', { className: 'drw-field' },
 							el('label', null, 'Aplica a'),
-							el('select', { className: 'drw-select', value: f.scope, onChange: function (e) { set('scope', e.target.value); } },
+							el('select', { value: f.scope, onChange: function (e) { set('scope', e.target.value); } },
 								SCOPE_OPTIONS.map(function (s) { return el('option', { key: s, value: s }, s); })
 							)
 						)
 					),
 
-					// Limits
-					el('div', { className: 'drw-form-row drw-form-row-3' },
+					el('div', { className: 'drw-fields-row', style: { gridTemplateColumns: '1fr 1fr 1fr' } },
 						el('div', { className: 'drw-field' },
 							el('label', null, 'Compra mínima (COP)'),
 							el('input', { type: 'number', value: f.minAmount, onChange: function (e) { set('minAmount', e.target.value); }, placeholder: '0 = sin mínimo' })
@@ -341,26 +319,23 @@
 						)
 					),
 
-					// Dates
-					el('div', { className: 'drw-form-row' },
+					el('div', { className: 'drw-fields-row' },
 						el('div', { className: 'drw-field' },
 							el('label', null, 'Inicia'),
 							el('input', { type: 'date', value: f.start, onChange: function (e) { set('start', e.target.value); } })
 						),
 						el('div', { className: 'drw-field' },
 							el('label', null, 'Termina'),
-							el('span', { className: 'drw-it-sub', style: { marginTop: -4, marginBottom: 2 } }, 'vacío = permanente'),
+							el('span', { className: 'drw-field-hint' }, 'vacío = permanente'),
 							el('input', { type: 'date', value: f.end, onChange: function (e) { set('end', e.target.value); } })
 						)
 					),
 
-					// Cart message
 					el('div', { className: 'drw-field' },
 						el('label', null, 'Mensaje en el carrito'),
 						el('input', { value: f.cartMessage, onChange: function (e) { set('cartMessage', e.target.value); }, placeholder: 'Ej. ¡Descuento aplicado!' })
 					),
 
-					// Toggles
 					el('div', { style: { display: 'flex', gap: 18, padding: '4px 2px' } },
 						el('label', { className: 'drw-toggle-label' },
 							el('button', { className: 'drw-sw' + (f.active ? ' on' : ''), onClick: function () { set('active', !f.active); } }),
@@ -372,8 +347,7 @@
 						)
 					),
 
-					// Actions
-					el('div', { className: 'drw-modal-actions' },
+					el('div', { className: 'drw-modal-footer' },
 						el('button', { className: 'drw-btn drw-btn-ghost', onClick: onClose }, 'Cancelar'),
 						el('button', {
 							className: 'drw-btn drw-btn-primary',
@@ -387,7 +361,7 @@
 		);
 	}
 
-	// ── Main Promos Page ────────────────────────────────────────────────────
+	// -- Main Promos Page --------------------------------------------------
 	function PromosPage(props) {
 		var onBack = props.onBack;
 		var promosState = useState([]);
@@ -479,45 +453,42 @@
 		if (loading) {
 			return el('div', { id: 'drw-promos-app', style: { textAlign: 'center', padding: '60px 20px' } },
 				el(wp.components.Spinner),
-				el('p', { style: { color: '#8b8b8b', marginTop: 12 } }, 'Cargando promociones...')
+				el('p', { className: 'drw-text-muted', style: { marginTop: 12 } }, 'Cargando promociones...')
 			);
 		}
 
-		return el('div', { id: 'drw-promos-app', style: { display: 'grid', gap: 18 } },
-			// Back button
-			el('div', { style: { marginBottom: -8 } },
-				el('button', { className: 'drw-btn drw-btn-ghost', onClick: onBack, style: { fontSize: 12 } },
+		return el('div', { id: 'drw-promos-app' },
+			el('div', { style: { marginBottom: 10 } },
+				el('button', { className: 'drw-btn drw-btn-ghost drw-btn-sm', onClick: onBack },
 					'← Volver a Reglas'
 				)
 			),
 
-			// KPI Row
 			el('div', { className: 'drw-kpi-row' },
-				el('div', { className: 'drw-card' },
-					el('div', { className: 'drw-it-sub', style: { fontSize: 12.5 } }, 'Promociones activas'),
-					el('div', { className: 'drw-big-num drw-mono' }, String(active)),
-					el('div', { className: 'drw-it-sub', style: { marginTop: 3 } }, 'de ' + promos.length + ' configuradas')
+				el('div', { className: 'drw-kpi-card' },
+					el('div', { className: 'drw-kpi-label' }, 'Promociones activas'),
+					el('div', { className: 'drw-kpi-value' }, String(active)),
+					el('div', { className: 'drw-kpi-sub' }, 'de ' + promos.length + ' configuradas')
 				),
-				el('div', { className: 'drw-card' },
-					el('div', { className: 'drw-it-sub', style: { fontSize: 12.5 } }, 'Canjes totales'),
-					el('div', { className: 'drw-big-num drw-mono' }, fmtN(totalUses)),
-					el('div', { className: 'drw-it-sub', style: { marginTop: 3 } }, 'en todos los cupones')
+				el('div', { className: 'drw-kpi-card' },
+					el('div', { className: 'drw-kpi-label' }, 'Canjes totales'),
+					el('div', { className: 'drw-kpi-value' }, fmtN(totalUses)),
+					el('div', { className: 'drw-kpi-sub' }, 'en todos los cupones')
 				),
-				el('div', { className: 'drw-card' },
-					el('div', { className: 'drw-it-sub', style: { fontSize: 12.5 } }, 'Visibles en portada'),
-					el('div', { className: 'drw-big-num drw-mono' }, String(onHome)),
-					el('div', { className: 'drw-it-sub', style: { marginTop: 3 } }, 'banners y destacados')
+				el('div', { className: 'drw-kpi-card' },
+					el('div', { className: 'drw-kpi-label' }, 'Visibles en portada'),
+					el('div', { className: 'drw-kpi-value' }, String(onHome)),
+					el('div', { className: 'drw-kpi-sub' }, 'banners y destacados')
 				),
-				el('div', { className: 'drw-card', style: { display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'flex-start', gap: 8 } },
-					el('div', { className: 'drw-it-sub', style: { fontSize: 12.5 } }, 'Crear nueva'),
+				el('div', { className: 'drw-kpi-card', style: { display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'flex-start', gap: 8 } },
+					el('div', { className: 'drw-kpi-label' }, 'Crear nueva'),
 					el('button', { className: 'drw-btn drw-btn-primary', onClick: function () { setEditing('new'); } },
 						el(Icon, { name: 'plus', size: 15 }), ' Nueva promoción'
 					)
 				)
 			),
 
-			// Filter chips
-			el('div', { style: { display: 'flex', gap: 6, flexWrap: 'wrap' } },
+			el('div', { className: 'drw-chips' },
 				FILTERS.map(function (f) {
 					return el('button', {
 						key: f,
@@ -527,7 +498,6 @@
 				})
 			),
 
-			// Promo grid
 			el('div', { className: 'drw-promo-grid' },
 				filtered.map(function (p) {
 					return el(PromoCard, {
@@ -540,18 +510,16 @@
 				})
 			),
 
-			// Empty state
 			filtered.length === 0 && el('div', { className: 'drw-empty' },
 				el('div', null,
-					el('div', { className: 'drw-empty-ico' },
+					el('div', { className: 'drw-empty-icon' },
 						el(Icon, { name: 'tag', size: 22 })
 					),
-					el('h3', null, 'Sin promociones'),
-					el('p', null, 'No hay promociones en este filtro. Crea una nueva con el botón de arriba.')
+					el('h3', { className: 'drw-empty-title' }, 'Sin promociones'),
+					el('p', { className: 'drw-empty-text' }, 'No hay promociones en este filtro. Crea una nueva con el botón de arriba.')
 				)
 			),
 
-			// Editor modal
 			editing && el(PromoEditor, {
 				promo: editing === 'new' ? null : editing,
 				onClose: function () { setEditing(null); },
@@ -560,7 +528,6 @@
 		);
 	}
 
-	// Export globally for DrwApp to use
 	window.DrwPromosPage = PromosPage;
 
 })();

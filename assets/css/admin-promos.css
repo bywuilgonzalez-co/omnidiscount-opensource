@@ -786,6 +786,20 @@
 }
 
 /* ----------------------------------------------------------
+   12b. Toggle Label
+   ---------------------------------------------------------- */
+.drw-toggle-label {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 13px;
+    font-weight: 500;
+    color: var(--drw-txt);
+    cursor: pointer;
+    user-select: none;
+}
+
+/* ----------------------------------------------------------
    13. Empty State
    ---------------------------------------------------------- */
 .drw-empty {
