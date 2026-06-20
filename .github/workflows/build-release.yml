@@ -1,0 +1,43 @@
+name: Build Release
+
+on:
+  release:
+    types: [published]
+
+jobs:
+  build:
+    name: Build & Attach Plugin ZIP
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Build distributable ZIP
+        run: |
+          SLUG="discount-rules-woo"
+          VERSION="${{ github.event.release.tag_name }}"
+          STAGE="/tmp/${SLUG}"
+
+          mkdir -p "${STAGE}"
+          rsync -a \
+            --exclude='.git/' \
+            --exclude='.github/' \
+            --exclude='.claude/' \
+            --exclude='.serena/' \
+            --exclude='scratch/' \
+            --exclude='tests/' \
+            --exclude='node_modules/' \
+            --exclude='vendor/' \
+            ./ "${STAGE}/"
+
+          cd /tmp
+          zip -r "${SLUG}-${VERSION}.zip" "${SLUG}/"
+          echo "ZIP=/tmp/${SLUG}-${VERSION}.zip" >> "$GITHUB_ENV"
+
+      - name: Attach ZIP to GitHub Release
+        run: gh release upload "${{ github.event.release.tag_name }}" "${{ env.ZIP }}"
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}

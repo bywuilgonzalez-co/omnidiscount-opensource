@@ -5,7 +5,7 @@
  * Description: 100% complete and fully featured dynamic pricing and discount rules plugin for WooCommerce.
  * Author: Bywuilgonzalez.com
  * Author URI: https://bywuilgonzalez.com
- * Version: 1.3.6
+ * Version: 1.3.7
  * Text Domain: discount-rules-woo
  * Domain Path: /languages/
  * Requires at least: 5.6
@@ -28,7 +28,7 @@ add_action('before_woocommerce_init', function() {
 });
 
 // Define core constants
-define('DRW_VERSION', '1.3.6');
+define('DRW_VERSION', '1.3.7');
 define('DRW_PLUGIN_PATH', plugin_dir_path(__FILE__));
 define('DRW_PLUGIN_URL', plugin_dir_url(__FILE__));
 define('DRW_PLUGIN_BASENAME', plugin_basename(__FILE__));
@@ -40,15 +40,27 @@ $autoload_file = DRW_PLUGIN_PATH . 'vendor/autoload.php';
 if (file_exists($autoload_file)) {
     require_once $autoload_file;
 } else {
-    // Fallback simple autoloader if composer autoload is not built yet
+    // Fallback autoloader: supports class-name.php (PHPCS) and ClassName.php (legacy)
     spl_autoload_register(function ($class) {
         $prefix = 'Drw\\App\\';
-        $len = strlen($prefix);
-        if (strncmp($prefix, $class, $len) !== 0) {
+        $len    = strlen($prefix);
+        if ( strncmp( $prefix, $class, $len ) !== 0 ) {
             return;
         }
         $relative_class = substr($class, $len);
-        $file = DRW_PLUGIN_PATH . 'src/' . str_replace('\\', '/', $relative_class) . '.php';
+        $parts          = explode('\\', $relative_class);
+        $class_name     = array_pop($parts);
+        $dir            = DRW_PLUGIN_PATH . 'src/' . (empty($parts) ? '' : implode('/', $parts) . '/');
+
+        // PHPCS convention: class-{lowercased}.php
+        $file = $dir . 'class-' . strtolower($class_name) . '.php';
+        if (file_exists($file)) {
+            require_once $file;
+            return;
+        }
+
+        // Legacy convention: ClassName.php
+        $file = $dir . $class_name . '.php';
         if (file_exists($file)) {
             require_once $file;
         }
