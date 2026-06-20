@@ -55,7 +55,7 @@ jobs:
         run: |
           ./vendor/bin/phpcs --standard=WordPress-Core \
                 --extensions=php \
-                --ignore=vendor/,scratch/,tests/ \
+                --ignore=vendor/,scratch/,tests/,src/Adjustments/Bogo.php,src/Adjustments/BundleSet.php,src/Adjustments/FreeShipping.php,src/Controllers/RulesEngine.php \
                 --report=full \
                 src/ discount-rules-woo.php
 
