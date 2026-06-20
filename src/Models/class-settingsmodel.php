@@ -10,9 +10,9 @@ if ( ! defined( 'ABSPATH' ) ) {
  * SettingsModel - Centralized settings store.
  */
 class SettingsModel {
-	const OPTION_KEY  = 'drw_settings';
-	const CACHE_KEY   = 'drw_settings_cache';
-	const CACHE_TTL   = 43200;
+	const OPTION_KEY = 'drw_settings';
+	const CACHE_KEY = 'drw_settings_cache';
+	const CACHE_TTL = 43200;
 
 	/**
 	 * Return the complete default settings structure.
