@@ -78,6 +78,14 @@ class AdminController
             ['drw-admin-style'],
             DRW_VERSION
         );
+        // Material Symbols icon font — used by the promo wizard's template
+        // gallery (drw-material-icon.js / drw-template-gallery.js).
+        wp_enqueue_style(
+            'drw-material-icons',
+            DRW_PLUGIN_URL . 'assets/css/drw-material-icons.css',
+            [],
+            DRW_VERSION
+        );
 
         // Enqueue compiled React app
         wp_enqueue_script(
@@ -87,10 +95,69 @@ class AdminController
             DRW_VERSION,
             true
         );
+
+        // ------------------------------------------------------------------
+        // Promo wizard component library. Each script exposes a window.Drw*
+        // component and is loaded AFTER drw-admin-app so window.drwAdminData
+        // (promoTypes, categories) is already defined when they run.
+        // ------------------------------------------------------------------
+        wp_enqueue_script(
+            'drw-material-icon',
+            DRW_PLUGIN_URL . 'assets/js/drw-material-icon.js',
+            ['wp-element'],
+            DRW_VERSION,
+            true
+        );
+        wp_enqueue_script(
+            'drw-template-gallery',
+            DRW_PLUGIN_URL . 'assets/js/drw-template-gallery.js',
+            ['wp-element', 'drw-admin-app', 'drw-material-icon'],
+            DRW_VERSION,
+            true
+        );
+        wp_enqueue_script(
+            'drw-product-category-picker',
+            DRW_PLUGIN_URL . 'assets/js/drw-product-category-picker.js',
+            ['wp-element', 'wp-components', 'wp-api-fetch'],
+            DRW_VERSION,
+            true
+        );
+        wp_enqueue_script(
+            'drw-tiered-bundle-editors',
+            DRW_PLUGIN_URL . 'assets/js/drw-tiered-bundle-editors.js',
+            ['wp-element', 'drw-product-category-picker'],
+            DRW_VERSION,
+            true
+        );
+        wp_enqueue_script(
+            'drw-code-input',
+            DRW_PLUGIN_URL . 'assets/js/drw-code-input.js',
+            ['wp-element', 'wp-api-fetch'],
+            DRW_VERSION,
+            true
+        );
+        wp_enqueue_script(
+            'drw-promo-wizard',
+            DRW_PLUGIN_URL . 'assets/js/drw-promo-wizard.js',
+            [
+                'wp-element',
+                'wp-components',
+                'wp-api-fetch',
+                'drw-admin-app',
+                'drw-material-icon',
+                'drw-template-gallery',
+                'drw-product-category-picker',
+                'drw-tiered-bundle-editors',
+                'drw-code-input',
+            ],
+            DRW_VERSION,
+            true
+        );
+
         wp_enqueue_script(
             'drw-admin-promos',
             DRW_PLUGIN_URL . 'assets/js/admin-promos.js',
-            ['wp-element', 'wp-api-fetch', 'drw-admin-app'],
+            ['wp-element', 'wp-api-fetch', 'drw-admin-app', 'drw-promo-wizard'],
             DRW_VERSION,
             true
         );

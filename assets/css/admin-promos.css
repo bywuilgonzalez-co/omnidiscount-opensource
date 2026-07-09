@@ -1026,3 +1026,229 @@
         grid-template-columns: 1fr;
     }
 }
+
+/* ----------------------------------------------------------
+   20. Promo Wizard (4-step) — stepper, scope tabs, summary
+   Consumed by drw-promo-wizard.js (window.DrwPromoWizard).
+   ---------------------------------------------------------- */
+.drw-wizard-modal {
+    width: min(920px, 96vw);
+}
+
+.drw-wizard-head {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    min-width: 0;
+}
+
+.drw-wizard-head-actions {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    flex-shrink: 0;
+}
+
+/* Stepper -------------------------------------------------- */
+.drw-stepper {
+    display: flex;
+    align-items: center;
+    margin: 4px 0 22px;
+    flex-wrap: wrap;
+    gap: 4px 0;
+}
+
+.drw-stepper-step {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    background: none;
+    border: none;
+    padding: 0;
+    cursor: pointer;
+    font-family: inherit;
+    font-size: 12.5px;
+    font-weight: 600;
+    color: var(--drw-muted);
+}
+
+.drw-stepper-step[disabled] {
+    cursor: default;
+}
+
+.drw-stepper-step.active {
+    color: var(--drw-ink);
+}
+
+.drw-stepper-num {
+    width: 26px;
+    height: 26px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 12.5px;
+    font-weight: 700;
+    background: #ffffff;
+    border: 1.5px solid var(--drw-line-strong);
+    color: var(--drw-muted);
+    flex-shrink: 0;
+    transition: background 0.15s, border-color 0.15s, color 0.15s;
+}
+
+.drw-stepper-step.active .drw-stepper-num {
+    background: var(--drw-accent);
+    border-color: var(--drw-accent);
+    color: #ffffff;
+}
+
+.drw-stepper-step.completed .drw-stepper-num {
+    background: color-mix(in srgb, var(--drw-accent) 14%, #ffffff);
+    border-color: var(--drw-accent);
+    color: var(--drw-leaf-deep);
+}
+
+.drw-stepper-label {
+    white-space: nowrap;
+}
+
+.drw-stepper-line {
+    flex: 1;
+    height: 1.5px;
+    background: var(--drw-line);
+    margin: 0 12px;
+    min-width: 16px;
+}
+
+.drw-stepper-line.done {
+    background: var(--drw-accent);
+}
+
+/* Wizard body / footer ------------------------------------- */
+.drw-wizard-body {
+    min-height: 260px;
+}
+
+.drw-wizard-foot {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-top: 22px;
+    padding-top: 16px;
+    border-top: 1px solid var(--drw-line);
+}
+
+.drw-wizard-foot-right {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-left: auto;
+}
+
+/* Scope tabs (Paso 1) -------------------------------------- */
+.drw-scope-tabs {
+    display: inline-flex;
+    gap: 4px;
+    padding: 4px;
+    margin-bottom: 16px;
+    background: var(--drw-paper-2);
+    border: 1px solid var(--drw-line);
+    border-radius: 12px;
+    flex-wrap: wrap;
+}
+
+.drw-scope-tab {
+    border: none;
+    background: transparent;
+    cursor: pointer;
+    font-family: inherit;
+    font-size: 12.5px;
+    font-weight: 600;
+    color: var(--drw-muted);
+    padding: 8px 14px;
+    border-radius: 9px;
+    transition: background 0.15s, color 0.15s;
+}
+
+.drw-scope-tab:hover {
+    color: var(--drw-ink);
+}
+
+.drw-scope-tab.active {
+    background: #ffffff;
+    color: var(--drw-leaf-deep);
+    box-shadow: 0 1px 3px rgba(22, 39, 29, 0.10);
+}
+
+.drw-scope-note {
+    padding: 14px 16px;
+    border: 1px dashed var(--drw-line-strong);
+    border-radius: 12px;
+    background: var(--drw-paper-2);
+    color: var(--drw-ink-soft);
+    font-size: 13px;
+}
+
+/* Summary (Paso 3) ----------------------------------------- */
+.drw-summary-card {
+    border: 1px solid var(--drw-line);
+    border-radius: 14px;
+    background: #ffffff;
+    overflow: hidden;
+}
+
+.drw-summary-row {
+    display: flex;
+    gap: 12px;
+    padding: 11px 16px;
+    border-bottom: 1px solid var(--drw-line);
+    font-size: 13.5px;
+}
+
+.drw-summary-row:last-child {
+    border-bottom: none;
+}
+
+.drw-summary-key {
+    flex: 0 0 150px;
+    color: var(--drw-muted);
+    font-weight: 600;
+    font-size: 11.5px;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    display: flex;
+    align-items: center;
+}
+
+.drw-summary-val {
+    flex: 1;
+    color: var(--drw-ink);
+    font-weight: 500;
+    min-width: 0;
+    word-break: break-word;
+}
+
+@media (max-width: 600px) {
+    .drw-wizard-foot {
+        flex-direction: column-reverse;
+        align-items: stretch;
+    }
+
+    .drw-wizard-foot-right {
+        margin-left: 0;
+        flex-direction: column;
+    }
+
+    .drw-wizard-foot .drw-btn {
+        width: 100%;
+    }
+
+    .drw-summary-row {
+        flex-direction: column;
+        gap: 4px;
+    }
+
+    .drw-summary-key {
+        flex-basis: auto;
+    }
+}

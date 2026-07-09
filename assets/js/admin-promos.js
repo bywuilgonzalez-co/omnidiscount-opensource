@@ -54,6 +54,22 @@
 		});
 	}
 
+	// Human-readable label for a promo's `scope`, which may be either the
+	// legacy free-form string or the new { target, ids } object produced by
+	// the wizard's Paso 1.
+	function scopeSummary(scope) {
+		if (!scope) { return ''; }
+		if (typeof scope === 'string') { return scope; }
+		if (typeof scope === 'object') {
+			var target = scope.target || 'all';
+			var n = Array.isArray(scope.ids) ? scope.ids.length : 0;
+			if (target === 'products') { return n === 1 ? '1 producto' : n + ' productos'; }
+			if (target === 'category') { return n === 1 ? '1 categoría' : n + ' categorías'; }
+			return 'Toda la tienda';
+		}
+		return '';
+	}
+
 	var toastContainer = null;
 
 	function showToast(msg) {
@@ -98,7 +114,7 @@
 						el('span', { className: 'drw-promo-name' }, p.name),
 						p.home && el('span', { className: 'drw-status-badge active' }, 'En portada')
 					),
-					el('div', { className: 'drw-promo-type-label' }, t.label + (p.scope ? ' · ' + p.scope : ''))
+					el('div', { className: 'drw-promo-type-label' }, t.label + (scopeSummary(p.scope) ? ' · ' + scopeSummary(p.scope) : ''))
 				),
 				el('button', {
 					className: 'drw-sw' + (p.active ? ' on' : ''),
@@ -284,9 +300,16 @@
 						),
 						el('div', { className: 'drw-field' },
 							el('label', null, 'Aplica a'),
-							el('select', { value: f.scope, onChange: function (e) { set('scope', e.target.value); } },
-								SCOPE_OPTIONS.map(function (s) { return el('option', { key: s, value: s }, s); })
-							)
+							// If this promo was created in the wizard, `scope` is a
+							// { target, ids } object; keep it intact in state (so a
+							// save round-trips it untouched) and only show a plain
+							// read-out here. Legacy string scopes use the select.
+							(f.scope && typeof f.scope === 'object')
+								? el('div', { className: 'drw-field-hint', style: { padding: '10px 0' } },
+									scopeSummary(f.scope) + ' — usa el asistente para cambiar el alcance.')
+								: el('select', { value: f.scope, onChange: function (e) { set('scope', e.target.value); } },
+									SCOPE_OPTIONS.map(function (s) { return el('option', { key: s, value: s }, s); })
+								)
 						)
 					),
 
@@ -356,6 +379,10 @@
 		var editingState = useState(null);
 		var editing = editingState[0];
 		var setEditing = editingState[1];
+		// 'wizard' (default 4-step flow) | 'expert' (classic single-step editor).
+		var editorModeState = useState('wizard');
+		var editorMode = editorModeState[0];
+		var setEditorMode = editorModeState[1];
 		var filterState = useState('Todas');
 		var filter = filterState[0];
 		var setFilter = filterState[1];
@@ -404,15 +431,26 @@
 				.catch(function () { showToast('Error al eliminar'); });
 		}
 
+		function closeEditor() {
+			setEditing(null);
+			setEditorMode('wizard');
+		}
+
+		// Returns the apiFetch promise so the wizard can track its own saving
+		// state. On success the editor is closed (unmounted); on error the
+		// promise still resolves (the .catch handles it) so callers that ignore
+		// the return value — e.g. the classic PromoEditor — never produce an
+		// unhandled rejection. The wizard stays open on error because
+		// closeEditor() only runs in the success branch.
 		function handleSave(payload) {
 			var isNew = !payload.id;
 			var method = isNew ? 'POST' : 'PUT';
 			var path = isNew ? '/drw/v1/promos' : '/drw/v1/promos/' + payload.id;
 
-			apiFetch({ path: path, method: method, data: payload })
+			return apiFetch({ path: path, method: method, data: payload })
 				.then(function () {
 					fetchPromos();
-					setEditing(null);
+					closeEditor();
 					showToast(isNew ? 'Promoción creada' : 'Promoción actualizada');
 				})
 				.catch(function (err) {
@@ -506,11 +544,21 @@
 				)
 			),
 
-			editing && el(PromoEditor, {
-				promo: editing === 'new' ? null : editing,
-				onClose: function () { setEditing(null); },
-				onSave: handleSave
-			})
+			editing && (
+				(editorMode !== 'expert' && typeof window.DrwPromoWizard === 'function')
+					? el(window.DrwPromoWizard, {
+						promo: editing === 'new' ? null : editing,
+						onClose: closeEditor,
+						onSave: handleSave,
+						// "Modo experto": switch to the classic single-step editor.
+						onExpertMode: function () { setEditorMode('expert'); }
+					})
+					: el(PromoEditor, {
+						promo: editing === 'new' ? null : editing,
+						onClose: closeEditor,
+						onSave: handleSave
+					})
+			)
 		);
 	}
 

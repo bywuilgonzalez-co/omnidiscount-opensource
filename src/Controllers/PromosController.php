@@ -149,6 +149,31 @@ class PromosController {
 				),
 			)
 		);
+
+		// GET /promos/check-code – live code-uniqueness check (admin UI helper).
+		// Registered as a static path, so it never collides with the numeric
+		// /promos/(?P<id>\d+) route above regardless of registration order.
+		register_rest_route(
+			$namespace,
+			'/promos/check-code',
+			array(
+				array(
+					'methods'             => \WP_REST_Server::READABLE,
+					'callback'            => array( $this, 'check_code_availability' ),
+					'permission_callback' => array( $this, 'check_permission' ),
+					'args'                => array(
+						'code'    => array(
+							'required' => true,
+						),
+						'exclude' => array(
+							'validate_callback' => function ( $param ) {
+								return '' === $param || null === $param || is_numeric( $param );
+							},
+						),
+					),
+				),
+			)
+		);
 	}
 
 	// ------------------------------------------------------------------
@@ -340,6 +365,70 @@ class PromosController {
 		return new \WP_REST_Response( PromoTypeRegistry::all(), 200 );
 	}
 
+	/**
+	 * GET /drw/v1/promos/check-code
+	 *
+	 * Live code-uniqueness check for the admin UI's CodeInput component.
+	 * Deliberately read-only: it reuses find_duplicate_code() — the exact
+	 * same check performed inside validate_promo() during create/update —
+	 * so a "available" response here is guaranteed to match what a real
+	 * save would accept, without creating/mutating any promo or coupon.
+	 *
+	 * Query args:
+	 * - code    (string, required) Candidate code, any case/format.
+	 * - exclude (int, optional)    Promo id to exclude (editing an existing promo).
+	 *
+	 * @param \WP_REST_Request $request Request object.
+	 * @return \WP_REST_Response Always 200; availability is signalled via body.
+	 */
+	public function check_code_availability( $request ) {
+		$code = isset( $request['code'] ) ? strtoupper( sanitize_text_field( $request['code'] ) ) : '';
+
+		$exclude_param = $request['exclude'];
+		$exclude_id    = ( null !== $exclude_param && '' !== $exclude_param && is_numeric( $exclude_param ) )
+			? (int) $exclude_param
+			: null;
+
+		if ( '' === $code ) {
+			return new \WP_REST_Response(
+				array(
+					'available' => false,
+					'message'   => __( 'Enter a code to check.', 'discount-rules-woo' ),
+				),
+				200
+			);
+		}
+
+		if ( ! preg_match( '/^[A-Z0-9_]+$/', $code ) ) {
+			return new \WP_REST_Response(
+				array(
+					'available' => false,
+					'message'   => __( 'Code must be uppercase alphanumeric with underscores only.', 'discount-rules-woo' ),
+				),
+				200
+			);
+		}
+
+		$duplicate = $this->find_duplicate_code( $code, $exclude_id );
+		if ( $duplicate ) {
+			return new \WP_REST_Response(
+				array(
+					'available' => false,
+					'message'   => $duplicate,
+				),
+				200
+			);
+		}
+
+		return new \WP_REST_Response(
+			array(
+				'available' => true,
+				'message'   => __( 'Code is available.', 'discount-rules-woo' ),
+			),
+			200
+		);
+	}
+
 	// ------------------------------------------------------------------
 	// Discount engine bridge
 	// ------------------------------------------------------------------
@@ -407,7 +496,7 @@ class PromosController {
 			'code'         => '' !== $data['code'] ? $data['code'] : null,
 			'type'         => $data['type'],
 			'value'        => $data['value'],
-			'scope'        => array( 'raw' => $data['scope'] ),
+			'scope'        => $this->scope_to_storage( $data['scope'] ),
 			'min_amount'   => $data['minAmount'],
 			'limit_global' => $data['limitGlobal'] ? (int) $data['limitGlobal'] : null,
 			'limit_user'   => $data['limitUser'] ? (int) $data['limitUser'] : null,
@@ -437,7 +526,40 @@ class PromosController {
 	private function to_rest( $row ) {
 		$scope = isset( $row['scope'] ) ? $row['scope'] : null;
 		if ( is_array( $scope ) ) {
-			$scope = isset( $scope['raw'] ) ? (string) $scope['raw'] : '';
+			if ( array_key_exists( 'product_ids', $scope ) || array_key_exists( 'category_ids', $scope ) || array_key_exists( 'ids', $scope ) ) {
+				// Structured scope. Collapse the engine-native
+				// { target, product_ids, category_ids } envelope (and tolerate a
+				// bare { target, ids }) back into the compact { target, ids }
+				// object the wizard's Paso 1 picker expects. The bridge's plural
+				// 'categories' target maps to the wizard's singular 'category'.
+				$stored_target = isset( $scope['target'] ) ? (string) $scope['target'] : 'all';
+
+				if ( 'products' === $stored_target ) {
+					$target = 'products';
+					$ids    = ( isset( $scope['product_ids'] ) && is_array( $scope['product_ids'] ) )
+						? $scope['product_ids']
+						: ( ( isset( $scope['ids'] ) && is_array( $scope['ids'] ) ) ? $scope['ids'] : array() );
+				} elseif ( 'categories' === $stored_target || 'category' === $stored_target ) {
+					$target = 'category';
+					$ids    = ( isset( $scope['category_ids'] ) && is_array( $scope['category_ids'] ) )
+						? $scope['category_ids']
+						: ( ( isset( $scope['ids'] ) && is_array( $scope['ids'] ) ) ? $scope['ids'] : array() );
+				} else {
+					$target = 'all';
+					$ids    = array();
+				}
+
+				$scope = array(
+					'target' => $target,
+					'ids'    => array_values( array_map( 'intval', $ids ) ),
+				);
+			} elseif ( isset( $scope['raw'] ) ) {
+				// Legacy / migration envelope { raw } or { target, raw } — the
+				// original free-form string lives under `raw`.
+				$scope = (string) $scope['raw'];
+			} else {
+				$scope = '';
+			}
 		} elseif ( ! is_string( $scope ) ) {
 			$scope = '';
 		}
@@ -464,6 +586,92 @@ class PromosController {
 			'cartMessage' => ( isset( $row['cart_message'] ) && null !== $row['cart_message'] ) ? (string) $row['cart_message'] : '',
 			'giftText'    => $gift_text,
 		);
+	}
+
+	/**
+	 * Normalise the `scope` field, accepting BOTH shapes the front-end may send:
+	 *
+	 *   - New structured object: { target: 'all'|'products'|'category', ids: int[] }
+	 *     produced by the wizard's Paso 1 (DrwProductCategoryPicker). Unknown
+	 *     targets fall back to 'all'; ids are cast to unique positive ints and
+	 *     cleared entirely when target is 'all'.
+	 *   - Legacy free-form string (older clients / classic "Modo experto" editor),
+	 *     kept as a sanitised string so pre-wizard promos keep round-tripping.
+	 *
+	 * @param mixed $raw Raw scope value from the request.
+	 * @return array|string { target, ids } array, or a sanitised legacy string.
+	 */
+	private function sanitize_scope( $raw ) {
+		if ( is_array( $raw ) && ( isset( $raw['target'] ) || isset( $raw['ids'] ) ) ) {
+			$target = isset( $raw['target'] ) ? sanitize_key( $raw['target'] ) : 'all';
+			if ( ! in_array( $target, array( 'all', 'products', 'category' ), true ) ) {
+				$target = 'all';
+			}
+
+			$ids = array();
+			if ( 'all' !== $target && isset( $raw['ids'] ) && is_array( $raw['ids'] ) ) {
+				foreach ( $raw['ids'] as $id ) {
+					$id = absint( $id );
+					if ( $id > 0 && ! in_array( $id, $ids, true ) ) {
+						$ids[] = $id;
+					}
+				}
+			}
+
+			return array(
+				'target' => $target,
+				'ids'    => $ids,
+			);
+		}
+
+		return sanitize_text_field( is_scalar( $raw ) ? (string) $raw : '' );
+	}
+
+	/**
+	 * Wrap a validated scope value for JSON storage via PromoModel.
+	 *
+	 * The public REST contract is the compact { target, ids } object, but the
+	 * discount engine (PromoBridgeController::derive_target()) reads the richer
+	 * { target, product_ids, category_ids } envelope with the plural
+	 * 'categories' target. We translate to that engine-native shape here so a
+	 * scoped promo actually filters the discount (real scope, not decorative);
+	 * to_rest() translates back to { target, ids } for the client. Legacy
+	 * strings keep the historical { raw: "<text>" } envelope untouched.
+	 *
+	 * @param array|string $scope Validated scope (from sanitize_scope()).
+	 * @return array Column value for the JSON `scope` field.
+	 */
+	private function scope_to_storage( $scope ) {
+		if ( is_array( $scope ) ) {
+			$target = isset( $scope['target'] ) ? (string) $scope['target'] : 'all';
+			$ids    = ( isset( $scope['ids'] ) && is_array( $scope['ids'] ) )
+				? array_values( array_map( 'absint', $scope['ids'] ) )
+				: array();
+
+			if ( 'products' === $target ) {
+				return array(
+					'target'       => 'products',
+					'product_ids'  => $ids,
+					'category_ids' => array(),
+				);
+			}
+
+			if ( 'category' === $target || 'categories' === $target ) {
+				return array(
+					'target'       => 'categories',
+					'product_ids'  => array(),
+					'category_ids' => $ids,
+				);
+			}
+
+			return array(
+				'target'       => 'all',
+				'product_ids'  => array(),
+				'category_ids' => array(),
+			);
+		}
+
+		return array( 'raw' => (string) $scope );
 	}
 
 	// ------------------------------------------------------------------
@@ -606,8 +814,13 @@ class PromosController {
 		$active = isset( $data['active'] ) ? (bool) $data['active'] : true;
 		$home   = isset( $data['home'] ) ? (bool) $data['home'] : false;
 
+		// --- scope ----------------------------------------------------------
+		// Accepts BOTH the new structured { target, ids } object (produced by
+		// the wizard's Paso 1 / DrwProductCategoryPicker) and the legacy
+		// free-form string, so promos saved before the wizard keep working.
+		$scope = $this->sanitize_scope( isset( $data['scope'] ) ? $data['scope'] : '' );
+
 		// --- text fields ----------------------------------------------------
-		$scope        = isset( $data['scope'] ) ? sanitize_text_field( $data['scope'] ) : '';
 		$cart_message = isset( $data['cartMessage'] ) ? sanitize_text_field( $data['cartMessage'] ) : '';
 		$gift_text    = isset( $data['giftText'] ) ? sanitize_text_field( $data['giftText'] ) : '';
 
