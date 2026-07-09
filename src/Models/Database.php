@@ -57,6 +57,42 @@ class Database
 
         dbDelta($discounts_sql);
 
+        // Promos table
+        $promos_table = $wpdb->prefix . 'drw_promos';
+        $promos_sql = "CREATE TABLE $promos_table (
+            id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+            name VARCHAR(191) NOT NULL,
+            code VARCHAR(64) NULL,
+            type VARCHAR(32) NOT NULL,
+            value DECIMAL(10,4) NOT NULL DEFAULT 0,
+            scope LONGTEXT NULL,
+            min_amount DECIMAL(10,4) NULL,
+            limit_global INT NULL,
+            limit_user INT NULL,
+            uses INT NOT NULL DEFAULT 0,
+            date_from DATETIME NULL,
+            date_to DATETIME NULL,
+            active TINYINT(1) NOT NULL DEFAULT 1,
+            home TINYINT(1) NOT NULL DEFAULT 0,
+            status VARCHAR(16) NOT NULL DEFAULT 'draft',
+            cart_message VARCHAR(255) NULL,
+            gift_config LONGTEXT NULL,
+            tier_config LONGTEXT NULL,
+            wc_coupon_id BIGINT UNSIGNED NULL,
+            rule_id BIGINT UNSIGNED NULL,
+            template_origin VARCHAR(64) NULL,
+            created_at DATETIME NOT NULL,
+            modified_at DATETIME NOT NULL,
+            deleted_at DATETIME NULL,
+            PRIMARY KEY  (id),
+            UNIQUE KEY code_unique (code),
+            KEY active_idx (active, deleted_at),
+            KEY dates_idx (date_from, date_to),
+            KEY type_idx (type)
+        ) $charset_collate;";
+
+        dbDelta($promos_sql);
+
         // Add sample rules if empty
         self::add_sample_rules();
     }
