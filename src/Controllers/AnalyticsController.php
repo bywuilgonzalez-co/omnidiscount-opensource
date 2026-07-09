@@ -108,13 +108,27 @@ class AnalyticsController {
             return;
         }
 
-        $wpdb->insert($table, [
+        $row = [
             'order_id'        => $order->get_id(),
             'discount_amount' => $discount_amount,
             'details'         => wp_json_encode([]),
             'free_shipping'   => $free_shipping ? 1 : 0,
-            'created_at'      => current_time('mysql'),
-        ]);
+        ];
+
+        // The created_at column is absent from the baseline schema and is only
+        // added by the dbDelta migration, which runs on admin_init/activation.
+        // On an in-place file update a front-end checkout can fire before that
+        // migration runs, so probe for the column and omit it when missing to
+        // avoid a fatal "unknown column" error that would silently drop the row.
+        // Mirrors the defensive read in PromosController::get_promo_stats().
+        $has_created_at = (bool) $wpdb->get_var(
+            $wpdb->prepare( "SHOW COLUMNS FROM {$table} LIKE %s", 'created_at' )
+        );
+        if ( $has_created_at ) {
+            $row['created_at'] = current_time('mysql');
+        }
+
+        $wpdb->insert($table, $row);
     }
 
     public function add_analytics_submenu() {

@@ -116,14 +116,17 @@ class PromoMigrationController {
 			// only one ''). Mirrors PromosController::to_columns() normalisation.
 			'code'         => ( isset( $legacy['code'] ) && '' !== (string) $legacy['code'] ) ? (string) $legacy['code'] : null,
 			'type'         => isset( $legacy['type'] ) ? (string) $legacy['type'] : '',
-			'value'        => isset( $legacy['value'] ) ? $legacy['value'] : 0,
+			// Coerce numerics to the real column types (mirrors the REST path in
+			// PromosController::to_columns()); a blank legacy field ('') must not
+			// reach a DECIMAL/INT column, or a strict-mode INSERT fails (error 1366).
+			'value'        => isset( $legacy['value'] ) ? (float) $legacy['value'] : 0,
 			'scope'        => array(
 				'target' => 'legacy',
 				'raw'    => $scope_raw,
 			),
-			'min_amount'   => isset( $legacy['minAmount'] ) ? $legacy['minAmount'] : null,
-			'limit_global' => isset( $legacy['limitGlobal'] ) ? $legacy['limitGlobal'] : null,
-			'limit_user'   => isset( $legacy['limitUser'] ) ? $legacy['limitUser'] : null,
+			'min_amount'   => ( isset( $legacy['minAmount'] ) && '' !== (string) $legacy['minAmount'] ) ? (float) $legacy['minAmount'] : null,
+			'limit_global' => ! empty( $legacy['limitGlobal'] ) ? (int) $legacy['limitGlobal'] : null,
+			'limit_user'   => ! empty( $legacy['limitUser'] ) ? (int) $legacy['limitUser'] : null,
 			'uses'         => isset( $legacy['uses'] ) ? (int) $legacy['uses'] : 0,
 			'date_from'    => ( isset( $legacy['start'] ) && '' !== $legacy['start'] ) ? (string) $legacy['start'] : null,
 			'date_to'      => ( isset( $legacy['end'] ) && '' !== $legacy['end'] ) ? (string) $legacy['end'] : null,
