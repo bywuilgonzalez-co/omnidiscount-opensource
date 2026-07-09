@@ -66,7 +66,10 @@ class PromoModel
         $table = $wpdb->prefix . 'drw_promos';
 
         $data = self::encode_json_fields(is_array($data) ? $data : []);
-        $data['uses']        = 0;
+        // Preserve a caller-supplied historical counter (e.g. the legacy
+        // migration passes the promo's prior `uses`); default to 0 for the
+        // REST create path, which deliberately omits it.
+        $data['uses']        = isset($data['uses']) ? (int) $data['uses'] : 0;
         $data['created_at']  = current_time('mysql');
         $data['modified_at'] = current_time('mysql');
         $data['deleted_at']  = null;

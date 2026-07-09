@@ -39,7 +39,7 @@ class Database
             promo_id BIGINT UNSIGNED DEFAULT NULL,
             created_at DATETIME DEFAULT NULL,
             modified_at DATETIME DEFAULT NULL,
-            PRIMARY KEY (id),
+            PRIMARY KEY  (id),
             KEY enabled_deleted_idx (enabled, deleted),
             KEY source_idx (source)
         ) $charset_collate;";

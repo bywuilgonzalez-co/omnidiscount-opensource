@@ -4,6 +4,7 @@ namespace Drw\App\Controllers;
 
 use Drw\App\Models\PromoModel;
 use Drw\App\Models\PromoTypeRegistry;
+use Drw\App\Models\RuleModel;
 
 if (!defined('ABSPATH')) {
     exit;
@@ -43,6 +44,177 @@ if (!defined('ABSPATH')) {
  */
 class PromoBridgeController
 {
+    // ------------------------------------------------------------------
+    // Sandbox mode (admin-only promo preview)
+    // ------------------------------------------------------------------
+    //
+    // WHERE THIS LIVES AND WHY: the cookie is issued by
+    // PromosController::activate_sandbox() (POST /drw/v1/promos/<id>/sandbox).
+    // Reading/validating it, and resolving it to an engine-visible rule, is
+    // implemented HERE (PromoBridgeController) rather than in CartController
+    // because this class already owns the ONLY translation from a stored
+    // promo row to something the discount engine understands
+    // (compile()/build_rule_payload() above). Keeping the cookie parsing next
+    // to that translation means CartController only ever calls one small,
+    // self-contained, testable method and never touches raw cookie/crypto
+    // code itself.
+    //
+    // CartController calls get_sandboxed_rule_for_current_user() at the top
+    // of its pricing hooks and, ONLY when it returns non-null, applies that
+    // one extra rule as an additional layer on top of the normal engine
+    // output for the current cart. It intentionally does NOT feed the result
+    // back into RulesEngine's own active-rules cache (that cache is private
+    // with no public mutator) — see CartController for the full note on why
+    // that boundary was kept intact.
+
+    /** Name of the cookie carrying the signed sandbox token. */
+    const SANDBOX_COOKIE_NAME = 'drw_promo_sandbox';
+
+    /** Sandbox override lifetime in seconds (30 minutes), enforced server-side. */
+    const SANDBOX_TTL = 1800;
+
+    /**
+     * Build the signed sandbox cookie payload.
+     *
+     * Format: "{promo_id}:{user_id}:{expires_at}:{signature}" where
+     * signature = wp_hash("{promo_id}:{user_id}:{expires_at}"). wp_hash()
+     * derives the HMAC key from the site's own AUTH_KEY/AUTH_SALT, so the
+     * token cannot be forged or replayed for a different promo/user/expiry
+     * without knowing the site's secret keys.
+     *
+     * @param int $promo_id  Promo primary key.
+     * @param int $user_id   WP user id the override is scoped to.
+     * @param int $expires_at Unix timestamp the override stops being valid.
+     * @return string
+     */
+    public static function build_sandbox_cookie_value($promo_id, $user_id, $expires_at)
+    {
+        $payload = self::sandbox_payload($promo_id, $user_id, $expires_at);
+        return $payload . ':' . wp_hash($payload);
+    }
+
+    /**
+     * Resolve the sandboxed rule (if any) for the CURRENT request/user.
+     *
+     * Returns a formatted wp_drw_rules row (same shape RuleModel::get_rule()
+     * returns) that CartController can pass straight into RulesEngine's
+     * existing PUBLIC matching helpers (is_rule_matched(),
+     * is_product_targeted_by_rule(), is_cart_level_rule()), or null when
+     * there is no valid override to apply.
+     *
+     * This is a strict allow-list of checks — ANY failure returns null, i.e.
+     * "behave exactly as if sandbox mode did not exist":
+     *   1. Cookie present.
+     *   2. Current visitor is logged in AND current_user_can('manage_woocommerce')
+     *      — re-checked on every call, not just at issuance, so revoking the
+     *      capability (or logging out) immediately kills the override.
+     *   3. Cookie parses into exactly 4 numeric/hex segments.
+     *   4. Signature re-derived from the embedded promo_id/user_id/expires_at
+     *      matches the stored one via hash_equals() (timing-safe compare) —
+     *      an attacker cannot forge or extend a token without the site's
+     *      secret keys.
+     *   5. embedded user_id === get_current_user_id() — a stolen/shared
+     *      cookie is inert for anyone but the admin who generated it.
+     *   6. Server-side expiry (from the SIGNED timestamp, not the cookie's
+     *      own Expires attribute, which a client could tamper with) has not
+     *      passed.
+     *   7. The promo still exists, is NOT already genuinely `active` (if it
+     *      was published for real in the meantime, the normal engine already
+     *      covers it — returning it again here would double-apply it), and
+     *      has a compiled wp_drw_rules row.
+     *
+     * @return array|null
+     */
+    public static function get_sandboxed_rule_for_current_user()
+    {
+        if (empty($_COOKIE[self::SANDBOX_COOKIE_NAME]) || !is_string($_COOKIE[self::SANDBOX_COOKIE_NAME])) {
+            return null;
+        }
+
+        if (!function_exists('is_user_logged_in') || !is_user_logged_in()) {
+            return null;
+        }
+
+        if (!function_exists('current_user_can') || !current_user_can('manage_woocommerce')) {
+            return null;
+        }
+
+        $parts = explode(':', wp_unslash($_COOKIE[self::SANDBOX_COOKIE_NAME]));
+        if (count($parts) !== 4) {
+            return null;
+        }
+
+        list($promo_id, $user_id, $expires_at, $signature) = $parts;
+
+        if (!ctype_digit($promo_id) || !ctype_digit($user_id) || !ctype_digit($expires_at) || '' === $signature) {
+            return null;
+        }
+
+        $promo_id   = (int) $promo_id;
+        $user_id    = (int) $user_id;
+        $expires_at = (int) $expires_at;
+
+        if ($promo_id <= 0 || $user_id <= 0) {
+            return null;
+        }
+
+        // A sandbox cookie only ever belongs to the user who generated it.
+        if ($user_id !== get_current_user_id()) {
+            return null;
+        }
+
+        if (time() > $expires_at) {
+            return null;
+        }
+
+        $expected = wp_hash(self::sandbox_payload($promo_id, $user_id, $expires_at));
+        if (!hash_equals($expected, (string) $signature)) {
+            return null;
+        }
+
+        $promo = PromoModel::get_promo($promo_id);
+        if (null === $promo) {
+            return null;
+        }
+
+        // Already genuinely published: the real engine already includes it,
+        // nothing to force here (also avoids double-applying the discount).
+        if (!empty($promo['active'])) {
+            return null;
+        }
+
+        if (PromoTypeRegistry::needs_code($promo['type'])) {
+            return null;
+        }
+
+        if (empty($promo['rule_id'])) {
+            return null;
+        }
+
+        $rule = RuleModel::get_rule((int) $promo['rule_id']);
+        if (null === $rule) {
+            return null;
+        }
+
+        return $rule;
+    }
+
+    /**
+     * Build the unsigned "{promo_id}:{user_id}:{expires_at}" payload shared
+     * by build_sandbox_cookie_value() (issuance) and
+     * get_sandboxed_rule_for_current_user() (verification), so the exact
+     * string being signed can never drift between the two.
+     *
+     * @param int $promo_id
+     * @param int $user_id
+     * @param int $expires_at
+     * @return string
+     */
+    private static function sandbox_payload($promo_id, $user_id, $expires_at)
+    {
+        return (int) $promo_id . ':' . (int) $user_id . ':' . (int) $expires_at;
+    }
+
     /**
      * Compile a stored promo into a real, engine-visible discount.
      *

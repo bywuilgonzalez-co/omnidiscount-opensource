@@ -111,7 +111,10 @@ class PromoMigrationController {
 
 		return array(
 			'name'         => isset( $legacy['name'] ) ? (string) $legacy['name'] : '',
-			'code'         => isset( $legacy['code'] ) ? (string) $legacy['code'] : '',
+			// Empty/missing code becomes NULL so multiple codeless legacy promos
+			// don't collide on the UNIQUE(code) index (MySQL allows many NULLs but
+			// only one ''). Mirrors PromosController::to_columns() normalisation.
+			'code'         => ( isset( $legacy['code'] ) && '' !== (string) $legacy['code'] ) ? (string) $legacy['code'] : null,
 			'type'         => isset( $legacy['type'] ) ? (string) $legacy['type'] : '',
 			'value'        => isset( $legacy['value'] ) ? $legacy['value'] : 0,
 			'scope'        => array(
