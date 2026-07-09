@@ -51,9 +51,10 @@ class Database
         $discounts_sql = "CREATE TABLE $order_discounts_table (
             id INT(11) NOT NULL AUTO_INCREMENT,
             order_id INT(11) NOT NULL,
-            discount_amount FLOAT NOT NULL,
+            discount_amount DECIMAL(20,4) NOT NULL,
             details LONGTEXT NOT NULL,
             free_shipping TINYINT(1) DEFAULT 0,
+            created_at DATETIME DEFAULT NULL,
             PRIMARY KEY  (id),
             KEY order_id_idx (order_id)
         ) $charset_collate;";
