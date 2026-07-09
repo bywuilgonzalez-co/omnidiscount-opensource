@@ -291,7 +291,7 @@ class AdminController
             return;
         }
 
-        $promo_id = get_post_meta($post_id, '_drw_promo_id', true);
+        $promo_id = (new \WC_Coupon($post_id))->get_meta('_drw_promo_id');
         if (empty($promo_id)) {
             echo '&#8212;';
             return;
@@ -327,7 +327,7 @@ class AdminController
             return;
         }
 
-        $promo_id = get_post_meta($post_id, '_drw_promo_id', true);
+        $promo_id = (new \WC_Coupon($post_id))->get_meta('_drw_promo_id');
         if (empty($promo_id)) {
             return;
         }

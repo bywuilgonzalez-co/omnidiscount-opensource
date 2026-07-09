@@ -38,23 +38,36 @@ class AnalyticsController {
         $table = esc_sql($wpdb->prefix . 'drw_order_discounts');
         $since = gmdate('Y-m-d H:i:s', strtotime("-{$days} days"));
 
+        // The created_at column is absent from the baseline schema and is only
+        // added by the dbDelta migration (admin_init/activation). This REST
+        // endpoint runs on rest_api_init and never triggers that migration, so
+        // on an in-place file update it can execute before the column exists.
+        // Probe for it and drop the date filter when missing to avoid a fatal
+        // "unknown column" error. Mirrors the defensive reads in
+        // record_order_discounts() and PromosController::get_promo_stats().
+        $has_created_at = (bool) $wpdb->get_var(
+            $wpdb->prepare( "SHOW COLUMNS FROM {$table} LIKE %s", 'created_at' )
+        );
+        $date_where = $has_created_at ? ' WHERE created_at >= %s' : '';
+
         // Total discount amount
-        $total_discount = (float)$wpdb->get_var($wpdb->prepare(
-            "SELECT COALESCE(SUM(discount_amount), 0) FROM {$table} WHERE created_at >= %s",
-            $since
-        ));
+        $sql = "SELECT COALESCE(SUM(discount_amount), 0) FROM {$table}{$date_where}";
+        $total_discount = (float)$wpdb->get_var(
+            $has_created_at ? $wpdb->prepare($sql, $since) : $sql
+        );
 
         // Number of orders with discounts
-        $orders_count = (int)$wpdb->get_var($wpdb->prepare(
-            "SELECT COUNT(DISTINCT order_id) FROM {$table} WHERE created_at >= %s",
-            $since
-        ));
+        $sql = "SELECT COUNT(DISTINCT order_id) FROM {$table}{$date_where}";
+        $orders_count = (int)$wpdb->get_var(
+            $has_created_at ? $wpdb->prepare($sql, $since) : $sql
+        );
 
         // Free shipping orders
-        $free_shipping_count = (int)$wpdb->get_var($wpdb->prepare(
-            "SELECT COUNT(DISTINCT order_id) FROM {$table} WHERE free_shipping = 1 AND created_at >= %s",
-            $since
-        ));
+        $sql = "SELECT COUNT(DISTINCT order_id) FROM {$table} WHERE free_shipping = 1"
+            . ($has_created_at ? ' AND created_at >= %s' : '');
+        $free_shipping_count = (int)$wpdb->get_var(
+            $has_created_at ? $wpdb->prepare($sql, $since) : $sql
+        );
 
         $avg_discount = $orders_count > 0 ? round($total_discount / $orders_count, 2) : 0;
 
