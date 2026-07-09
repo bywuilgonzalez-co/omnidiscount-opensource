@@ -67,6 +67,14 @@ if (file_exists($autoload_file)) {
     });
 }
 
+// Register WP-CLI commands. Guarded so this file has zero effect on normal
+// web requests — the command class itself (src/CLI/BenchmarkCommand.php) is
+// wrapped in the same defined('WP_CLI') && WP_CLI condition as a second,
+// independent safety net.
+if (defined('WP_CLI') && WP_CLI) {
+    \WP_CLI::add_command('drw', 'Drw\\App\\CLI\\BenchmarkCommand');
+}
+
 // Bootstrap the plugin on plugins_loaded
 add_action('plugins_loaded', function () {
     if (class_exists('WooCommerce')) {

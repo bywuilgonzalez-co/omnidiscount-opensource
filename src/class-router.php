@@ -45,6 +45,7 @@ class Router {
 		$import_export        = \Drw\App\Controllers\ImportExportController::instance();
 		$progress_bar         = \Drw\App\Controllers\ProgressBarController::instance();
 		$promos_controller    = \Drw\App\Controllers\PromosController::instance();
+		$diagnostics_controller = \Drw\App\Controllers\DiagnosticsController::instance();
 
 		$catalog_controller->register_hooks();
 		$cart_controller->register_hooks();
@@ -57,6 +58,7 @@ class Router {
 		$import_export->register_hooks();
 		$progress_bar->register_hooks();
 		$promos_controller->register_hooks();
+		$diagnostics_controller->register_hooks();
 
 		\Drw\App\Controllers\StoreApiController::instance()->register_hooks();
 	}

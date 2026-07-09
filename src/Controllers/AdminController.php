@@ -32,6 +32,15 @@ class AdminController
     {
         add_action('admin_menu', [$this, 'add_admin_menu']);
         add_action('admin_enqueue_scripts', [$this, 'enqueue_admin_assets']);
+
+        // "Managed by OmniDiscount" badge on the native coupon list
+        // (Marketing > Cupones) + a non-blocking heads-up when editing one
+        // of those coupons directly. Both read the '_drw_promo_id' post meta
+        // that PromoBridgeController::compile_coupon() stamps on Vía A
+        // coupons — see src/Controllers/PromoBridgeController.php.
+        add_filter('manage_edit-shop_coupon_columns', [$this, 'add_coupon_managed_column']);
+        add_action('manage_shop_coupon_posts_custom_column', [$this, 'render_coupon_managed_column'], 10, 2);
+        add_action('admin_notices', [$this, 'render_coupon_lock_notice']);
     }
 
     /**
@@ -137,6 +146,20 @@ class AdminController
             true
         );
         wp_enqueue_script(
+            'drw-conflict-checker',
+            DRW_PLUGIN_URL . 'assets/js/drw-conflict-checker.js',
+            ['wp-element', 'wp-api-fetch'],
+            DRW_VERSION,
+            true
+        );
+        wp_enqueue_script(
+            'drw-live-preview-panel',
+            DRW_PLUGIN_URL . 'assets/js/drw-live-preview-panel.js',
+            ['wp-element', 'wp-api-fetch'],
+            DRW_VERSION,
+            true
+        );
+        wp_enqueue_script(
             'drw-promo-wizard',
             DRW_PLUGIN_URL . 'assets/js/drw-promo-wizard.js',
             [
@@ -149,6 +172,8 @@ class AdminController
                 'drw-product-category-picker',
                 'drw-tiered-bundle-editors',
                 'drw-code-input',
+                'drw-conflict-checker',
+                'drw-live-preview-panel',
             ],
             DRW_VERSION,
             true
@@ -226,5 +251,98 @@ class AdminController
             <div id="drw-admin-app"></div>
         </div>
         <?php
+    }
+
+    /**
+     * Insert a "Managed by OmniDiscount" column into the native coupon list
+     * (edit.php?post_type=shop_coupon), right after the coupon code column.
+     *
+     * @param array $columns
+     * @return array
+     */
+    public function add_coupon_managed_column($columns)
+    {
+        $new = [];
+        foreach ($columns as $key => $label) {
+            $new[$key] = $label;
+            if ('name' === $key) {
+                $new['drw_managed'] = __('Origen', 'discount-rules-woo');
+            }
+        }
+        // Defensive fallback in case the 'name' column is ever renamed/removed.
+        if (!isset($new['drw_managed'])) {
+            $new['drw_managed'] = __('Origen', 'discount-rules-woo');
+        }
+
+        return $new;
+    }
+
+    /**
+     * Render the "Gestionado por OmniDiscount" badge for coupons that were
+     * compiled from a promo (Vía A — carry '_drw_promo_id' post meta).
+     * Plain coupons created by hand render an em dash and stay untouched.
+     *
+     * @param string $column
+     * @param int    $post_id
+     */
+    public function render_coupon_managed_column($column, $post_id)
+    {
+        if ('drw_managed' !== $column) {
+            return;
+        }
+
+        $promo_id = get_post_meta($post_id, '_drw_promo_id', true);
+        if (empty($promo_id)) {
+            echo '&#8212;';
+            return;
+        }
+
+        printf(
+            '<span style="display:inline-block;padding:2px 8px;border-radius:10px;background:#eef2ff;color:#4338ca;font-size:11px;font-weight:600;white-space:nowrap;" title="%1$s">%2$s</span>',
+            esc_attr__('Este cupón fue generado automáticamente por una promoción de OmniDiscount.', 'discount-rules-woo'),
+            esc_html__('Gestionado por OmniDiscount', 'discount-rules-woo')
+        );
+    }
+
+    /**
+     * Non-blocking, informational notice shown when editing a coupon that
+     * OmniDiscount owns, nudging merchants toward the Promotions panel
+     * instead of hand-editing the auto-generated coupon.
+     *
+     * Intentionally NOT a lock: it never disables fields or blocks saving.
+     * PromoBridgeController::compile_coupon() overwrites code/amount/etc. on
+     * the coupon it owns every time the source promo is saved, so a manual
+     * edit here would silently get clobbered later — this notice exists
+     * purely to prevent that surprise, not to enforce anything server-side.
+     */
+    public function render_coupon_lock_notice()
+    {
+        $screen = function_exists('get_current_screen') ? get_current_screen() : null;
+        if (!$screen || 'shop_coupon' !== $screen->id || 'post' !== $screen->base) {
+            return;
+        }
+
+        $post_id = isset($_GET['post']) ? absint($_GET['post']) : 0;
+        if ($post_id <= 0) {
+            return;
+        }
+
+        $promo_id = get_post_meta($post_id, '_drw_promo_id', true);
+        if (empty($promo_id)) {
+            return;
+        }
+
+        $promos_url = admin_url('admin.php?page=drw-discount-rules');
+
+        /* translators: %s: URL to the OmniDiscount Promotions panel. */
+        $message = sprintf(
+            wp_kses(
+                __('Este cupón está gestionado por OmniDiscount. Se recomienda editarlo desde el <a href="%s">panel de Promociones</a> para mantener la sincronización.', 'discount-rules-woo'),
+                ['a' => ['href' => []]]
+            ),
+            esc_url($promos_url)
+        );
+
+        echo '<div class="notice notice-info is-dismissible"><p>&#128274; ' . $message . '</p></div>';
     }
 }
