@@ -187,10 +187,7 @@ class PromosController {
 
 		$validated = $this->validate_promo( $data );
 		if ( is_wp_error( $validated ) ) {
-			return new \WP_REST_Response(
-				array( 'message' => $validated->get_error_message() ),
-				400
-			);
+			return $this->validation_error_response( $validated );
 		}
 
 		$promos = $this->load_promos();
@@ -224,12 +221,9 @@ class PromosController {
 		}
 
 		$data      = $this->get_request_data( $request );
-		$validated = $this->validate_promo( $data, true );
+		$validated = $this->validate_promo( $data, true, $id );
 		if ( is_wp_error( $validated ) ) {
-			return new \WP_REST_Response(
-				array( 'message' => $validated->get_error_message() ),
-				400
-			);
+			return $this->validation_error_response( $validated );
 		}
 
 		// Preserve immutable fields.
@@ -386,18 +380,20 @@ class PromosController {
 	/**
 	 * Validate and sanitise promo payload.
 	 *
-	 * @param array $data      Raw input data.
-	 * @param bool  $is_update Whether this is an update (relaxed required checks).
+	 * @param array    $data       Raw input data.
+	 * @param bool     $is_update  Whether this is an update (relaxed required checks).
+	 * @param int|null $exclude_id Promo id to exclude from code-uniqueness checks (the promo being updated).
 	 * @return array|\WP_Error Sanitised promo array or error.
 	 */
-	private function validate_promo( $data, $is_update = false ) {
+	private function validate_promo( $data, $is_update = false, $exclude_id = null ) {
 
 		// --- name -----------------------------------------------------------
 		$name = isset( $data['name'] ) ? sanitize_text_field( $data['name'] ) : '';
 		if ( strlen( $name ) < 3 ) {
 			return new \WP_Error(
 				'invalid_name',
-				__( 'Name is required and must be at least 3 characters.', 'discount-rules-woo' )
+				__( 'Name is required and must be at least 3 characters.', 'discount-rules-woo' ),
+				array( 'field' => 'name', 'status' => 400 )
 			);
 		}
 
@@ -407,17 +403,38 @@ class PromosController {
 			return new \WP_Error(
 				'invalid_type',
 				/* translators: %s: comma-separated list of valid types */
-				sprintf( __( 'Invalid type. Allowed: %s', 'discount-rules-woo' ), implode( ', ', PromoTypeRegistry::ids() ) )
+				sprintf( __( 'Invalid type. Allowed: %s', 'discount-rules-woo' ), implode( ', ', PromoTypeRegistry::ids() ) ),
+				array( 'field' => 'type', 'status' => 400 )
 			);
 		}
 
-		// --- code -----------------------------------------------------------
+		// --- code -------------------------------------------------------------
 		$code = isset( $data['code'] ) ? strtoupper( sanitize_text_field( $data['code'] ) ) : '';
 		if ( '' !== $code && ! preg_match( '/^[A-Z0-9_]+$/', $code ) ) {
 			return new \WP_Error(
 				'invalid_code',
-				__( 'Code must be uppercase alphanumeric with underscores only.', 'discount-rules-woo' )
+				__( 'Code must be uppercase alphanumeric with underscores only.', 'discount-rules-woo' ),
+				array( 'field' => 'code', 'status' => 400 )
 			);
+		}
+
+		if ( PromoTypeRegistry::needs_code( $type ) && '' === $code ) {
+			return new \WP_Error(
+				'code_required',
+				__( 'This promo type requires a redeemable code.', 'discount-rules-woo' ),
+				array( 'field' => 'code', 'status' => 400 )
+			);
+		}
+
+		if ( '' !== $code ) {
+			$duplicate = $this->find_duplicate_code( $code, $exclude_id );
+			if ( $duplicate ) {
+				return new \WP_Error(
+					'duplicate_code',
+					$duplicate,
+					array( 'field' => 'code', 'status' => 400 )
+				);
+			}
 		}
 
 		// --- value ----------------------------------------------------------
@@ -425,19 +442,22 @@ class PromosController {
 		if ( $value < 0 ) {
 			return new \WP_Error(
 				'invalid_value',
-				__( 'Value must be zero or positive.', 'discount-rules-woo' )
+				__( 'Value must be zero or positive.', 'discount-rules-woo' ),
+				array( 'field' => 'value', 'status' => 400 )
 			);
 		}
 		if ( 'percent' === $type && $value > 100 ) {
 			return new \WP_Error(
 				'invalid_percent',
-				__( 'Percentage value cannot exceed 100.', 'discount-rules-woo' )
+				__( 'Percentage value cannot exceed 100.', 'discount-rules-woo' ),
+				array( 'field' => 'value', 'status' => 400 )
 			);
 		}
 		if ( 'cashback' === $type && $value > 100 ) {
 			return new \WP_Error(
 				'invalid_cashback',
-				__( 'Cashback percentage cannot exceed 100.', 'discount-rules-woo' )
+				__( 'Cashback percentage cannot exceed 100.', 'discount-rules-woo' ),
+				array( 'field' => 'value', 'status' => 400 )
 			);
 		}
 
@@ -446,7 +466,8 @@ class PromosController {
 		if ( '' !== $start && ! $this->is_valid_date( $start ) ) {
 			return new \WP_Error(
 				'invalid_start_date',
-				__( 'Start date must be in Y-m-d format.', 'discount-rules-woo' )
+				__( 'Start date must be in Y-m-d format.', 'discount-rules-woo' ),
+				array( 'field' => 'start', 'status' => 400 )
 			);
 		}
 
@@ -454,7 +475,16 @@ class PromosController {
 		if ( '' !== $end && ! $this->is_valid_date( $end ) ) {
 			return new \WP_Error(
 				'invalid_end_date',
-				__( 'End date must be in Y-m-d format.', 'discount-rules-woo' )
+				__( 'End date must be in Y-m-d format.', 'discount-rules-woo' ),
+				array( 'field' => 'end', 'status' => 400 )
+			);
+		}
+
+		if ( '' !== $start && '' !== $end && $end < $start ) {
+			return new \WP_Error(
+				'invalid_date_range',
+				__( 'End date must be on or after the start date.', 'discount-rules-woo' ),
+				array( 'field' => 'end', 'status' => 400 )
 			);
 		}
 
@@ -503,6 +533,50 @@ class PromosController {
 	private function is_valid_date( $date ) {
 		$d = \DateTime::createFromFormat( 'Y-m-d', $date );
 		return $d && $d->format( 'Y-m-d' ) === $date;
+	}
+
+	/**
+	 * Check a code against other promos and against native WooCommerce coupons.
+	 *
+	 * @param string   $code       Uppercase, already-sanitised code.
+	 * @param int|null $exclude_id Promo id to exclude (the promo being updated).
+	 * @return string|false Error message if the code collides, false if it's free.
+	 */
+	private function find_duplicate_code( $code, $exclude_id ) {
+		foreach ( $this->load_promos() as $promo ) {
+			if ( null !== $exclude_id && isset( $promo['id'] ) && (int) $promo['id'] === (int) $exclude_id ) {
+				continue;
+			}
+			if ( isset( $promo['code'] ) && $promo['code'] === $code ) {
+				return __( 'This code is already used by another promo.', 'discount-rules-woo' );
+			}
+		}
+
+		if ( function_exists( 'wc_get_coupon_id_by_code' ) && wc_get_coupon_id_by_code( $code ) ) {
+			return __( 'This code is already used by an existing WooCommerce coupon.', 'discount-rules-woo' );
+		}
+
+		return false;
+	}
+
+	/**
+	 * Build a structured 400 (or error-specified) response from a validation WP_Error.
+	 *
+	 * @param \WP_Error $error Validation error.
+	 * @return \WP_REST_Response
+	 */
+	private function validation_error_response( \WP_Error $error ) {
+		$data   = $error->get_error_data();
+		$status = isset( $data['status'] ) ? (int) $data['status'] : 400;
+
+		return new \WP_REST_Response(
+			array(
+				'message' => $error->get_error_message(),
+				'code'    => $error->get_error_code(),
+				'field'   => isset( $data['field'] ) ? $data['field'] : null,
+			),
+			$status
+		);
 	}
 
 }
