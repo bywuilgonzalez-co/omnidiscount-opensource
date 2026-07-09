@@ -3,6 +3,7 @@
 namespace Drw\App\Controllers;
 
 use Drw\App\Models\PromoTypeRegistry;
+use Drw\App\Models\PromoModel;
 
 if ( ! defined( 'ABSPATH' ) ) {
 	exit;
@@ -11,7 +12,15 @@ if ( ! defined( 'ABSPATH' ) ) {
 /**
  * REST API controller for managing promotional offers / coupons.
  *
- * Storage: wp_options key `drw_promos` (JSON array).
+ * Storage: the per-row `{prefix}drw_promos` table, accessed exclusively through
+ * Drw\App\Models\PromoModel (atomic row operations, no read-modify-write blob).
+ *
+ * The REST contract is camelCase with Y-m-d dates (name, code, type, value,
+ * scope, minAmount, limitGlobal, limitUser, uses, start, end, active, home,
+ * priority, cartMessage, giftText). PromoModel speaks snake_case columns with
+ * DATETIME dates and JSON envelopes for scope / gift_config. The two private
+ * mappers to_columns()/to_rest() translate between the two shapes so the public
+ * contract stays identical to the previous wp_options-backed implementation.
  */
 class PromosController {
 
@@ -21,13 +30,6 @@ class PromosController {
 	 * @var self|null
 	 */
 	private static $instance = null;
-
-	/**
-	 * WordPress options key used to persist promos.
-	 *
-	 * @var string
-	 */
-	const OPTION_KEY = 'drw_promos';
 
 	/**
 	 * Get the singleton instance.
@@ -172,7 +174,11 @@ class PromosController {
 	 * @return \WP_REST_Response
 	 */
 	public function get_promos() {
-		$promos = $this->load_promos();
+		$rows   = PromoModel::get_all_promos();
+		$promos = array();
+		foreach ( $rows as $row ) {
+			$promos[] = $this->to_rest( $row );
+		}
 		return new \WP_REST_Response( $promos, 200 );
 	}
 
@@ -190,16 +196,23 @@ class PromosController {
 			return $this->validation_error_response( $validated );
 		}
 
-		$promos = $this->load_promos();
+		$new_id = PromoModel::insert( $this->to_columns( $validated ) );
+		if ( ! $new_id ) {
+			return new \WP_REST_Response(
+				array( 'message' => __( 'Could not create the promo.', 'discount-rules-woo' ) ),
+				500
+			);
+		}
 
-		$new_id           = $this->next_id( $promos );
-		$validated['id']  = $new_id;
-		$validated['uses'] = 0;
+		$promo = PromoModel::get_promo( $new_id );
+		if ( null === $promo ) {
+			return new \WP_REST_Response(
+				array( 'message' => __( 'Could not create the promo.', 'discount-rules-woo' ) ),
+				500
+			);
+		}
 
-		$promos[] = $validated;
-		$this->save_promos( $promos );
-
-		return new \WP_REST_Response( $validated, 201 );
+		return new \WP_REST_Response( $this->to_rest( $promo ), 201 );
 	}
 
 	/**
@@ -209,11 +222,10 @@ class PromosController {
 	 * @return \WP_REST_Response
 	 */
 	public function update_promo( $request ) {
-		$id     = (int) $request['id'];
-		$promos = $this->load_promos();
-		$index  = $this->find_index( $promos, $id );
+		$id       = (int) $request['id'];
+		$existing = PromoModel::get_promo( $id );
 
-		if ( false === $index ) {
+		if ( null === $existing ) {
 			return new \WP_REST_Response(
 				array( 'message' => __( 'Promo not found', 'discount-rules-woo' ) ),
 				404
@@ -226,14 +238,19 @@ class PromosController {
 			return $this->validation_error_response( $validated );
 		}
 
-		// Preserve immutable fields.
-		$validated['id']  = $id;
-		$validated['uses'] = isset( $promos[ $index ]['uses'] ) ? (int) $promos[ $index ]['uses'] : 0;
+		// to_columns() intentionally omits uses / id, so the existing usage
+		// counter and primary key are preserved by the row update.
+		PromoModel::update( $id, $this->to_columns( $validated ) );
 
-		$promos[ $index ] = $validated;
-		$this->save_promos( $promos );
+		$promo = PromoModel::get_promo( $id );
+		if ( null === $promo ) {
+			return new \WP_REST_Response(
+				array( 'message' => __( 'Promo not found', 'discount-rules-woo' ) ),
+				404
+			);
+		}
 
-		return new \WP_REST_Response( $validated, 200 );
+		return new \WP_REST_Response( $this->to_rest( $promo ), 200 );
 	}
 
 	/**
@@ -243,19 +260,17 @@ class PromosController {
 	 * @return \WP_REST_Response
 	 */
 	public function delete_promo( $request ) {
-		$id     = (int) $request['id'];
-		$promos = $this->load_promos();
-		$index  = $this->find_index( $promos, $id );
+		$id       = (int) $request['id'];
+		$existing = PromoModel::get_promo( $id );
 
-		if ( false === $index ) {
+		if ( null === $existing ) {
 			return new \WP_REST_Response(
 				array( 'message' => __( 'Promo not found', 'discount-rules-woo' ) ),
 				404
 			);
 		}
 
-		array_splice( $promos, $index, 1 );
-		$this->save_promos( $promos );
+		PromoModel::delete( $id );
 
 		return new \WP_REST_Response(
 			array(
@@ -273,21 +288,28 @@ class PromosController {
 	 * @return \WP_REST_Response
 	 */
 	public function toggle_promo( $request ) {
-		$id     = (int) $request['id'];
-		$promos = $this->load_promos();
-		$index  = $this->find_index( $promos, $id );
+		$id       = (int) $request['id'];
+		$existing = PromoModel::get_promo( $id );
 
-		if ( false === $index ) {
+		if ( null === $existing ) {
 			return new \WP_REST_Response(
 				array( 'message' => __( 'Promo not found', 'discount-rules-woo' ) ),
 				404
 			);
 		}
 
-		$promos[ $index ]['active'] = ! $promos[ $index ]['active'];
-		$this->save_promos( $promos );
+		$new_active = empty( $existing['active'] ) ? 1 : 0;
+		PromoModel::update( $id, array( 'active' => $new_active ) );
 
-		return new \WP_REST_Response( $promos[ $index ], 200 );
+		$promo = PromoModel::get_promo( $id );
+		if ( null === $promo ) {
+			return new \WP_REST_Response(
+				array( 'message' => __( 'Promo not found', 'discount-rules-woo' ) ),
+				404
+			);
+		}
+
+		return new \WP_REST_Response( $this->to_rest( $promo ), 200 );
 	}
 
 	/**
@@ -304,59 +326,90 @@ class PromosController {
 	}
 
 	// ------------------------------------------------------------------
-	// Storage helpers
+	// REST <-> table mapping
 	// ------------------------------------------------------------------
 
 	/**
-	 * Load promos from the options table.
+	 * Map a validated, camelCase REST payload to the snake_case column shape
+	 * expected by PromoModel::insert()/update().
 	 *
-	 * @return array
+	 * - Dates: the public Y-m-d string is written straight into the DATETIME
+	 *   columns (MySQL widens 'Y-m-d' to 'Y-m-d 00:00:00'); '' becomes NULL.
+	 * - scope: the free-form string is wrapped as { "raw": "<text>" } and JSON
+	 *   encoded by PromoModel (mirrors the { target, raw } envelope the legacy
+	 *   migration writes; both expose the original string under `raw`).
+	 * - giftText: wrapped as { "text": "<value>" } inside gift_config.
+	 * - Empty code becomes NULL so multiple codeless promos don't collide on the
+	 *   UNIQUE(code) index.
+	 * - `uses`, `id`, `priority` are deliberately omitted: uses/id are managed by
+	 *   the model, and there is no priority column in the table.
+	 *
+	 * @param array $data Validated camelCase promo array.
+	 * @return array Column-shaped data for PromoModel.
 	 */
-	private function load_promos() {
-		$raw = get_option( self::OPTION_KEY, '[]' );
-		$arr = json_decode( $raw, true );
-		return is_array( $arr ) ? $arr : array();
+	private function to_columns( $data ) {
+		return array(
+			'name'         => $data['name'],
+			'code'         => '' !== $data['code'] ? $data['code'] : null,
+			'type'         => $data['type'],
+			'value'        => $data['value'],
+			'scope'        => array( 'raw' => $data['scope'] ),
+			'min_amount'   => $data['minAmount'],
+			'limit_global' => $data['limitGlobal'] ? (int) $data['limitGlobal'] : null,
+			'limit_user'   => $data['limitUser'] ? (int) $data['limitUser'] : null,
+			'date_from'    => '' !== $data['start'] ? $data['start'] : null,
+			'date_to'      => '' !== $data['end'] ? $data['end'] : null,
+			'active'       => $data['active'] ? 1 : 0,
+			'home'         => $data['home'] ? 1 : 0,
+			'cart_message' => $data['cartMessage'],
+			'gift_config'  => array( 'text' => $data['giftText'] ),
+		);
 	}
 
 	/**
-	 * Persist promos to the options table.
+	 * Map a PromoModel row (snake_case columns, JSON already decoded by
+	 * PromoModel::format_promo()) to the public camelCase REST shape.
 	 *
-	 * @param array $promos Promos array.
-	 */
-	private function save_promos( $promos ) {
-		update_option( self::OPTION_KEY, wp_json_encode( array_values( $promos ) ), false );
-	}
-
-	/**
-	 * Determine the next auto-increment ID.
+	 * - Dates: DATETIME is truncated back to Y-m-d; NULL becomes ''.
+	 * - scope: unwrapped from its { raw: ... } / { target, raw } envelope back to
+	 *   the original string.
+	 * - giftText: unwrapped from gift_config { text: ... }.
+	 * - priority: the table has no priority column, so it is reported with the
+	 *   default (1). It does not round-trip through storage.
 	 *
-	 * @param array $promos Existing promos.
-	 * @return int
+	 * @param array $row Formatted PromoModel row.
+	 * @return array Public REST promo.
 	 */
-	private function next_id( $promos ) {
-		$max = 0;
-		foreach ( $promos as $p ) {
-			if ( isset( $p['id'] ) && (int) $p['id'] > $max ) {
-				$max = (int) $p['id'];
-			}
+	private function to_rest( $row ) {
+		$scope = isset( $row['scope'] ) ? $row['scope'] : null;
+		if ( is_array( $scope ) ) {
+			$scope = isset( $scope['raw'] ) ? (string) $scope['raw'] : '';
+		} elseif ( ! is_string( $scope ) ) {
+			$scope = '';
 		}
-		return $max + 1;
-	}
 
-	/**
-	 * Find the array index of a promo by ID.
-	 *
-	 * @param array $promos Promos array.
-	 * @param int   $id     Promo ID.
-	 * @return int|false
-	 */
-	private function find_index( $promos, $id ) {
-		foreach ( $promos as $i => $p ) {
-			if ( isset( $p['id'] ) && (int) $p['id'] === $id ) {
-				return $i;
-			}
-		}
-		return false;
+		$gift      = isset( $row['gift_config'] ) ? $row['gift_config'] : null;
+		$gift_text = ( is_array( $gift ) && isset( $gift['text'] ) ) ? (string) $gift['text'] : '';
+
+		return array(
+			'id'          => (int) $row['id'],
+			'name'        => isset( $row['name'] ) ? (string) $row['name'] : '',
+			'code'        => ( isset( $row['code'] ) && null !== $row['code'] ) ? (string) $row['code'] : '',
+			'type'        => isset( $row['type'] ) ? (string) $row['type'] : '',
+			'value'       => isset( $row['value'] ) ? (float) $row['value'] : 0,
+			'scope'       => $scope,
+			'minAmount'   => isset( $row['min_amount'] ) ? (float) $row['min_amount'] : 0,
+			'limitGlobal' => isset( $row['limit_global'] ) ? (int) $row['limit_global'] : 0,
+			'limitUser'   => isset( $row['limit_user'] ) ? (int) $row['limit_user'] : 0,
+			'uses'        => isset( $row['uses'] ) ? (int) $row['uses'] : 0,
+			'start'       => ! empty( $row['date_from'] ) ? substr( $row['date_from'], 0, 10 ) : '',
+			'end'         => ! empty( $row['date_to'] ) ? substr( $row['date_to'], 0, 10 ) : '',
+			'active'      => ! empty( $row['active'] ),
+			'home'        => ! empty( $row['home'] ),
+			'priority'    => 1,
+			'cartMessage' => ( isset( $row['cart_message'] ) && null !== $row['cart_message'] ) ? (string) $row['cart_message'] : '',
+			'giftText'    => $gift_text,
+		);
 	}
 
 	// ------------------------------------------------------------------
@@ -538,18 +591,17 @@ class PromosController {
 	/**
 	 * Check a code against other promos and against native WooCommerce coupons.
 	 *
+	 * Uniqueness against other promos is delegated to PromoModel::code_exists()
+	 * (a single indexed COUNT query on the promos table). Collisions with native
+	 * WooCommerce coupons are still checked via wc_get_coupon_id_by_code().
+	 *
 	 * @param string   $code       Uppercase, already-sanitised code.
 	 * @param int|null $exclude_id Promo id to exclude (the promo being updated).
 	 * @return string|false Error message if the code collides, false if it's free.
 	 */
 	private function find_duplicate_code( $code, $exclude_id ) {
-		foreach ( $this->load_promos() as $promo ) {
-			if ( null !== $exclude_id && isset( $promo['id'] ) && (int) $promo['id'] === (int) $exclude_id ) {
-				continue;
-			}
-			if ( isset( $promo['code'] ) && $promo['code'] === $code ) {
-				return __( 'This code is already used by another promo.', 'discount-rules-woo' );
-			}
+		if ( PromoModel::code_exists( $code, $exclude_id ) ) {
+			return __( 'This code is already used by another promo.', 'discount-rules-woo' );
 		}
 
 		if ( function_exists( 'wc_get_coupon_id_by_code' ) && wc_get_coupon_id_by_code( $code ) ) {
