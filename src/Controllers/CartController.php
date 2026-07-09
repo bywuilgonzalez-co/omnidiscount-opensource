@@ -13,6 +13,15 @@ class CartController
     private $is_adding_to_cart = false;
 
     /**
+     * SANDBOX MODE — per-request cache for PromoBridgeController's cookie
+     * lookup (see get_sandbox_rule() below). Resolved at most once per
+     * request/singleton lifetime, exactly like RulesEngine's own
+     * $cached_rules; never shared across requests/users.
+     */
+    private $sandbox_rule_resolved = false;
+    private $sandbox_rule = null;
+
+    /**
      * Singleton instance.
      */
     public static function instance()
@@ -38,6 +47,12 @@ class CartController
 
         // Save order metadata on checkout
         add_action('woocommerce_checkout_create_order_line_item', [$this, 'save_line_item_metadata'], 20, 4);
+
+        // Count real promo redemptions once an order is paid. Both statuses point
+        // to the same handler; the per-order _drw_promos_counted flag guarantees a
+        // promo is only ever counted once, no matter which/how many times it fires.
+        add_action('woocommerce_order_status_processing', [$this, 'track_promo_redemptions'], 20, 2);
+        add_action('woocommerce_order_status_completed', [$this, 'track_promo_redemptions'], 20, 2);
 
         // Shipping modifications
         add_filter('woocommerce_package_rates', [$this, 'modify_shipping_package_rates'], 20, 2);
@@ -74,9 +89,20 @@ class CartController
 
         $engine = \Drw\App\Controllers\RulesEngine::instance();
 
+        // SANDBOX MODE — resolved once per request. Read-only, additive: see
+        // get_sandbox_rule() for the full safety contract. $sandbox_rule stays
+        // null for every request except the admin's own, cookie-carrying one.
+        $sandbox_rule = $this->get_sandbox_rule();
+
         // BOGO Auto-addition logic
         if (!$this->is_adding_to_cart) {
             $rules = $engine->get_active_rules();
+            if (null !== $sandbox_rule) {
+                // Local copy only (get_active_rules() returns cached_rules by
+                // value) — this does NOT mutate RulesEngine's internal cache,
+                // so it has zero effect on any other code path or user.
+                $rules[] = $sandbox_rule;
+            }
             if (!empty($rules)) {
                 foreach ($rules as $rule) {
                     $adjustments = !empty($rule['adjustments']) ? (array)$rule['adjustments'] : [];
@@ -161,7 +187,194 @@ class CartController
             }
         }
 
+        // SANDBOX MODE — additive per-item preview layer, applied ONLY when
+        // get_sandbox_rule() resolved a valid, current-admin-owned override
+        // above. Wrapped in try/catch so a bug here can only ever break the
+        // admin's OWN preview cart, never fatal the request for anyone.
+        if (null !== $sandbox_rule) {
+            try {
+                $this->apply_sandbox_item_adjustments($engine, $cart, $sandbox_rule);
+            } catch (\Throwable $e) {
+                error_log('[discount-rules-woo] Sandbox preview (item pricing) failed: ' . $e->getMessage());
+            }
+        }
+
         $this->is_recalculating = false;
+    }
+
+    /**
+     * SANDBOX MODE — resolve (and cache for the rest of the request) whether
+     * the CURRENT user has a valid sandbox override active, per
+     * PromoBridgeController::get_sandboxed_rule_for_current_user().
+     *
+     * This method, and everything it feeds into below, is the ONLY place
+     * CartController deviates from the normal engine-driven calculation. It
+     * is a strict no-op — returns null, changing nothing — for every request
+     * that isn't the sandboxing admin's own: no cookie, wrong/expired/forged
+     * cookie, cookie for a different user, or the current user lacking
+     * manage_woocommerce all fall through to null here (see the bridge
+     * method for the full check list). Wrapped in try/catch so any
+     * unexpected failure (e.g. a DB hiccup resolving the promo/rule) degrades
+     * to "sandbox off" instead of breaking cart calculation.
+     *
+     * @return array|null
+     */
+    private function get_sandbox_rule()
+    {
+        if ($this->sandbox_rule_resolved) {
+            return $this->sandbox_rule;
+        }
+        $this->sandbox_rule_resolved = true;
+
+        try {
+            if (class_exists('\\Drw\\App\\Controllers\\PromoBridgeController')) {
+                $this->sandbox_rule = \Drw\App\Controllers\PromoBridgeController::get_sandboxed_rule_for_current_user();
+            }
+        } catch (\Throwable $e) {
+            error_log('[discount-rules-woo] Sandbox cookie resolution failed: ' . $e->getMessage());
+            $this->sandbox_rule = null;
+        }
+
+        return $this->sandbox_rule;
+    }
+
+    /**
+     * SANDBOX MODE — apply the ONE sandboxed rule's adjustment on top of
+     * whatever price the real engine already computed for this cart, for the
+     * current (admin, cookie-validated) request only.
+     *
+     * Deliberately does NOT touch RulesEngine's private $cached_rules / the
+     * compounding pipeline in calculate_all_cart_discounts() — that cache has
+     * no public mutator, and reaching into it was judged too risky to do
+     * blindly for every other shopper's cart on the site. Instead this reuses
+     * RulesEngine's existing PUBLIC matching helpers (is_rule_matched(),
+     * is_product_targeted_by_rule()) plus the same standalone Adjustment
+     * classes (Bogo / BundleSet) RulesEngine itself delegates to, and layers
+     * the result on top of the current product price. Cart-level
+     * percentage/fixed fees and free_shipping are handled separately in
+     * apply_cart_wide_fees() / modify_shipping_package_rates() below.
+     *
+     * @param \Drw\App\Controllers\RulesEngine $engine
+     * @param \WC_Cart $cart
+     * @param array $rule Sandboxed rule (RuleModel-formatted row).
+     */
+    private function apply_sandbox_item_adjustments($engine, $cart, array $rule)
+    {
+        if ($engine->is_cart_level_rule($rule)) {
+            // percentage/fixed cart-level and free_shipping are applied by
+            // apply_cart_wide_fees() / modify_shipping_package_rates().
+            return;
+        }
+
+        if (!$engine->is_rule_matched($rule, $cart)) {
+            return;
+        }
+
+        $adjustments = !empty($rule['adjustments']) ? (array)$rule['adjustments'] : [];
+        $type = !empty($adjustments['type']) ? $adjustments['type'] : '';
+
+        if ($type === 'percentage' || $type === 'fixed') {
+            $value = (float)(isset($adjustments['value']) ? $adjustments['value'] : 0);
+            foreach ($cart->get_cart() as $cart_item_key => $cart_item) {
+                $product = $cart_item['data'];
+                if (!$engine->is_product_targeted_by_rule($rule, $product)) {
+                    continue;
+                }
+                $current_price = (float)$product->get_price();
+                $new_price = ($type === 'percentage')
+                    ? $current_price - ($current_price * ($value / 100))
+                    : $current_price - $value;
+                $this->set_sandbox_item_price($cart, $cart_item_key, $product, $new_price);
+            }
+        } elseif ($type === 'bulk') {
+            $tiers = !empty($adjustments['tiers']) ? (array)$adjustments['tiers'] : [];
+            foreach ($cart->get_cart() as $cart_item_key => $cart_item) {
+                $product = $cart_item['data'];
+                if (!$engine->is_product_targeted_by_rule($rule, $product)) {
+                    continue;
+                }
+                $qty = (int)$cart_item['quantity'];
+                foreach ($tiers as $tier) {
+                    $min_qty = isset($tier['min']) ? (int)$tier['min'] : 0;
+                    $max_qty = isset($tier['max']) && $tier['max'] !== '' ? (int)$tier['max'] : PHP_INT_MAX;
+                    if ($qty < $min_qty || $qty > $max_qty) {
+                        continue;
+                    }
+                    $tier_type  = !empty($tier['type']) ? $tier['type'] : 'percentage';
+                    $tier_value = (float)(!empty($tier['value']) ? $tier['value'] : 0);
+                    $current_price = (float)$product->get_price();
+                    $new_price = ($tier_type === 'fixed')
+                        ? $current_price - $tier_value
+                        : $current_price - ($current_price * ($tier_value / 100));
+                    $this->set_sandbox_item_price($cart, $cart_item_key, $product, $new_price);
+                    break;
+                }
+            }
+        } elseif ($type === 'bogo') {
+            $bogo_engine = new \Drw\App\Adjustments\Bogo();
+            $bogo_results = $bogo_engine->calculate($adjustments, $cart);
+            $this->apply_sandbox_ratio_results($cart, $bogo_results);
+        } elseif ($type === 'bundle_set') {
+            $bundle_engine = new \Drw\App\Adjustments\BundleSet();
+            $bundle_results = $bundle_engine->calculate($adjustments, $cart);
+            if (!empty($bundle_results['applied']) && !empty($bundle_results['items'])) {
+                $this->apply_sandbox_ratio_results($cart, $bundle_results['items']);
+            }
+        }
+    }
+
+    /**
+     * SANDBOX MODE helper — Bogo::calculate()/BundleSet::calculate() both
+     * return { cart_item_key => new_unit_price } computed off each item's
+     * REGULAR price. Convert that into a ratio and apply it to the item's
+     * CURRENT price (which may already reflect a real, non-sandboxed
+     * discount), exactly mirroring how RulesEngine's own private
+     * apply_rule_adjustments() composes bogo/bundle_set with earlier rules.
+     *
+     * @param \WC_Cart $cart
+     * @param array $results { cart_item_key => new_unit_price }
+     */
+    private function apply_sandbox_ratio_results($cart, array $results)
+    {
+        if (empty($results)) {
+            return;
+        }
+        $cart_items = $cart->get_cart();
+        foreach ($results as $cart_item_key => $new_unit_price) {
+            if (!isset($cart_items[$cart_item_key])) {
+                continue;
+            }
+            $product = $cart_items[$cart_item_key]['data'];
+            $reg_price = (float)$product->get_regular_price();
+            if ($reg_price <= 0) {
+                continue;
+            }
+            $ratio = $new_unit_price / $reg_price;
+            $new_price = (float)$product->get_price() * $ratio;
+            $this->set_sandbox_item_price($cart, $cart_item_key, $product, $new_price);
+        }
+    }
+
+    /**
+     * SANDBOX MODE helper — apply a computed price to the product instance
+     * and mirror recalculate_cart_item_prices()'s own metadata bookkeeping so
+     * the existing UI (format_cart_item_price(), savings totals, etc.) shows
+     * the sandboxed discount exactly like a real one, for this cart only.
+     *
+     * @param \WC_Cart $cart
+     * @param string $cart_item_key
+     * @param \WC_Product $product
+     * @param float $new_price
+     */
+    private function set_sandbox_item_price($cart, $cart_item_key, $product, $new_price)
+    {
+        $new_price = max(0.0, (float)$new_price);
+        $product->set_price($new_price);
+        $cart->cart_contents[$cart_item_key]['drw_discounted'] = true;
+        if (!isset($cart->cart_contents[$cart_item_key]['drw_original_price'])) {
+            $cart->cart_contents[$cart_item_key]['drw_original_price'] = (float)$product->get_regular_price();
+        }
+        $cart->cart_contents[$cart_item_key]['drw_discount_price'] = $new_price;
     }
 
     /**
@@ -182,6 +395,32 @@ class CartController
             foreach ($discounts['fees'] as $fee) {
                 $cart->add_fee($fee['name'], $fee['amount'], true);
             }
+        }
+
+        // SANDBOX MODE — additive cart-level fee for a sandboxed
+        // percentage/fixed promo (mirrors RulesEngine's own cart-level fee
+        // branch). No-op unless get_sandbox_rule() resolved a valid,
+        // current-admin-owned override; see that method for the full
+        // safety contract. Wrapped in try/catch so a bug here can only ever
+        // break the admin's OWN preview cart, never fatal the request.
+        try {
+            $sandbox_rule = $this->get_sandbox_rule();
+            if (null !== $sandbox_rule && $engine->is_cart_level_rule($sandbox_rule) && $engine->is_rule_matched($sandbox_rule, $cart)) {
+                $adjustments = !empty($sandbox_rule['adjustments']) ? (array)$sandbox_rule['adjustments'] : [];
+                $type = !empty($adjustments['type']) ? $adjustments['type'] : '';
+                if ($type === 'percentage' || $type === 'fixed') {
+                    $subtotal = (float)$cart->get_subtotal();
+                    $value = (float)(isset($adjustments['value']) ? $adjustments['value'] : 0);
+                    $fee_amount = ($type === 'percentage') ? $subtotal * ($value / 100) : $value;
+                    if ($fee_amount > 0) {
+                        $fee_amount = min($fee_amount, $subtotal);
+                        $label = !empty($sandbox_rule['title']) ? $sandbox_rule['title'] : __('Sandbox promo', 'discount-rules-woo');
+                        $cart->add_fee('[Sandbox] ' . $label, -$fee_amount, true);
+                    }
+                }
+            }
+        } catch (\Throwable $e) {
+            error_log('[discount-rules-woo] Sandbox preview (cart fee) failed: ' . $e->getMessage());
         }
     }
 
@@ -214,6 +453,74 @@ class CartController
     }
 
     /**
+     * Count real promo redemptions for a paid order, exactly once per order.
+     *
+     * Resolves which promos participated in the order and bumps each promo's
+     * usage counter a single time:
+     *   - Vía A (code-based promos): each applied coupon code is matched back to
+     *     its promo. Promo codes are stored upper-cased, WooCommerce returns
+     *     applied codes lower-cased, so the code is normalised before lookup.
+     *   - Vía B (automatic promos compiled to drw_rules): the discounted line
+     *     item carries the originating promo id as item meta (_drw_promo_id /
+     *     promo_id), read through the CRUD data-store API.
+     *
+     * HPOS-safe: order/line-item data is read ONLY through $order->get_coupon_codes(),
+     * $order->get_items() and ...->get_meta(); nothing touches postmeta/posts
+     * directly, and the counted flag is persisted with update_meta_data()/save().
+     * Idempotency: $order->get_meta('_drw_promos_counted') short-circuits repeat
+     * runs (processing -> completed, order re-saves, etc.) so no promo is ever
+     * double-counted for the same order.
+     *
+     * @param int            $order_id Order ID passed by the status hook.
+     * @param \WC_Order|null $order    Order object passed by the status hook.
+     */
+    public function track_promo_redemptions($order_id, $order = null)
+    {
+        if (!($order instanceof \WC_Order)) {
+            $order = function_exists('wc_get_order') ? wc_get_order($order_id) : null;
+        }
+        if (!$order) {
+            return;
+        }
+
+        // Already tallied for this order: never count twice.
+        if ($order->get_meta('_drw_promos_counted')) {
+            return;
+        }
+
+        $promo_ids = [];
+
+        // Vía A – coupon-backed promos.
+        foreach ($order->get_coupon_codes() as $code) {
+            $promo = \Drw\App\Models\PromoModel::get_promo_by_code(strtoupper((string)$code));
+            if ($promo && !empty($promo['id'])) {
+                $promo_ids[(int)$promo['id']] = true;
+            }
+        }
+
+        // Vía B – automatic promos stamped onto their discounted line items.
+        foreach ($order->get_items() as $item) {
+            $pid = $item->get_meta('_drw_promo_id', true);
+            if ($pid === '' || $pid === null) {
+                $pid = $item->get_meta('promo_id', true);
+            }
+            if ($pid !== '' && $pid !== null && (int)$pid > 0) {
+                $promo_ids[(int)$pid] = true;
+            }
+        }
+
+        // One increment per promo per order (array keys are already unique).
+        foreach (array_keys($promo_ids) as $pid) {
+            \Drw\App\Models\PromoModel::increment_usage((int)$pid);
+        }
+
+        // Flag the order as counted even when no promo matched, so a promo-less
+        // order isn't re-scanned on every subsequent status transition.
+        $order->update_meta_data('_drw_promos_counted', 1);
+        $order->save();
+    }
+
+    /**
      * Modifies shipping package rates to set shipping rate cost to 0 when Free Shipping is unlocked.
      */
     public function modify_shipping_package_rates($rates, $package)
@@ -226,7 +533,33 @@ class CartController
         $engine = \Drw\App\Controllers\RulesEngine::instance();
         $discounts = $engine->calculate_cart_level_discounts($cart);
 
-        if (!empty($discounts['free_shipping'])) {
+        $free_shipping = !empty($discounts['free_shipping']);
+
+        // SANDBOX MODE — additive free-shipping preview for a sandboxed
+        // free_ship_threshold-type promo. Only evaluated when the REAL
+        // engine hasn't already unlocked free shipping. No-op unless
+        // get_sandbox_rule() resolved a valid, current-admin-owned override;
+        // see that method for the full safety contract. Wrapped in
+        // try/catch so a bug here can only ever affect the admin's OWN
+        // preview cart, never fatal the request.
+        if (!$free_shipping) {
+            try {
+                $sandbox_rule = $this->get_sandbox_rule();
+                if (null !== $sandbox_rule && $engine->is_rule_matched($sandbox_rule, $cart)) {
+                    $adjustments = !empty($sandbox_rule['adjustments']) ? (array)$sandbox_rule['adjustments'] : [];
+                    if (!empty($adjustments['type']) && $adjustments['type'] === 'free_shipping') {
+                        $shipping_engine = new \Drw\App\Adjustments\FreeShipping();
+                        if ($shipping_engine->is_free_shipping_unlocked($adjustments, $cart)) {
+                            $free_shipping = true;
+                        }
+                    }
+                }
+            } catch (\Throwable $e) {
+                error_log('[discount-rules-woo] Sandbox preview (free shipping) failed: ' . $e->getMessage());
+            }
+        }
+
+        if ($free_shipping) {
             foreach ($rates as $rate_key => $rate) {
                 $rates[$rate_key]->cost = 0;
                 $taxes = [];
