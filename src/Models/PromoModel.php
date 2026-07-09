@@ -95,13 +95,23 @@ class PromoModel
 
     /**
      * Mark a promo as deleted (soft delete).
+     *
+     * The redeemable `code` is cleared to NULL so it no longer occupies the
+     * global UNIQUE index (`code_unique`). Uniqueness is validated only among
+     * non-deleted rows (see code_exists()), so leaving the code on a soft-deleted
+     * row would let validation report the code as free while the INSERT/UPDATE
+     * still collided at the DB level, breaking recreation of a previously used code.
      */
     public static function delete($id)
     {
         global $wpdb;
         $table = $wpdb->prefix . 'drw_promos';
 
-        return $wpdb->update($table, ['deleted_at' => current_time('mysql')], ['id' => (int)$id]);
+        return $wpdb->update(
+            $table,
+            ['deleted_at' => current_time('mysql'), 'code' => null],
+            ['id' => (int)$id]
+        );
     }
 
     /**

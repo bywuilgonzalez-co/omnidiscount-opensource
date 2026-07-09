@@ -54,7 +54,7 @@ class Database
             discount_amount FLOAT NOT NULL,
             details LONGTEXT NOT NULL,
             free_shipping TINYINT(1) DEFAULT 0,
-            PRIMARY KEY (id),
+            PRIMARY KEY  (id),
             KEY order_id_idx (order_id)
         ) $charset_collate;";
 
