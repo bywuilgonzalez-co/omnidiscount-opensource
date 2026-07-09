@@ -35,10 +35,13 @@ class Database
             date_to INT(11) DEFAULT NULL,
             usage_limit INT(11) DEFAULT NULL,
             used_count INT(11) DEFAULT 0,
+            source VARCHAR(16) DEFAULT NULL,
+            promo_id BIGINT UNSIGNED DEFAULT NULL,
             created_at DATETIME DEFAULT NULL,
             modified_at DATETIME DEFAULT NULL,
             PRIMARY KEY (id),
-            KEY enabled_deleted_idx (enabled, deleted)
+            KEY enabled_deleted_idx (enabled, deleted),
+            KEY source_idx (source)
         ) $charset_collate;";
 
         dbDelta($rules_sql);
