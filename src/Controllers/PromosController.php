@@ -212,6 +212,10 @@ class PromosController {
 			);
 		}
 
+		// Compile the freshly stored promo into a real, engine-visible discount
+		// (native WC_Coupon or wp_drw_rules row). Failures are logged, never fatal.
+		$this->sync_bridge( $new_id, 'compile' );
+
 		return new \WP_REST_Response( $this->to_rest( $promo ), 201 );
 	}
 
@@ -250,6 +254,9 @@ class PromosController {
 			);
 		}
 
+		// Re-sync the engine-visible discount with the updated promo definition.
+		$this->sync_bridge( $id, 'compile' );
+
 		return new \WP_REST_Response( $this->to_rest( $promo ), 200 );
 	}
 
@@ -269,6 +276,11 @@ class PromosController {
 				404
 			);
 		}
+
+		// Remove the engine-visible discount (WC_Coupon / drw_rules row) BEFORE the
+		// row is soft-deleted: decompile() resolves the promo via PromoModel, which
+		// filters out deleted rows, so it must run while the promo is still live.
+		$this->sync_bridge( $id, 'decompile' );
 
 		PromoModel::delete( $id );
 
@@ -301,6 +313,9 @@ class PromosController {
 		$new_active = empty( $existing['active'] ) ? 1 : 0;
 		PromoModel::update( $id, array( 'active' => $new_active ) );
 
+		// Activating publishes the discount to the engine; deactivating retracts it.
+		$this->sync_bridge( $id, $new_active ? 'compile' : 'decompile' );
+
 		$promo = PromoModel::get_promo( $id );
 		if ( null === $promo ) {
 			return new \WP_REST_Response(
@@ -323,6 +338,45 @@ class PromosController {
 	 */
 	public function get_types() {
 		return new \WP_REST_Response( PromoTypeRegistry::all(), 200 );
+	}
+
+	// ------------------------------------------------------------------
+	// Discount engine bridge
+	// ------------------------------------------------------------------
+
+	/**
+	 * Compile/decompile a persisted promo into (or out of) the discount engine
+	 * via PromoBridgeController.
+	 *
+	 * The promo row has already been written successfully by the time this runs,
+	 * so a failure here (e.g. WooCommerce / WC_Coupon not loaded, a DB hiccup in
+	 * the rules table) must NOT turn a successful save into a failed REST call.
+	 * We therefore swallow and log any Throwable and let the endpoint return its
+	 * normal response. \Throwable is caught deliberately so a fatal "class not
+	 * found" (WooCommerce absent) is contained as well.
+	 *
+	 * @param int    $id     Promo primary key.
+	 * @param string $action Either 'compile' or 'decompile'.
+	 * @return void
+	 */
+	private function sync_bridge( $id, $action ) {
+		try {
+			$bridge = new PromoBridgeController();
+			if ( 'decompile' === $action ) {
+				$bridge->decompile( (int) $id );
+			} else {
+				$bridge->compile( (int) $id );
+			}
+		} catch ( \Throwable $e ) {
+			error_log(
+				sprintf(
+					'[discount-rules-woo] Promo bridge %s failed for promo #%d: %s',
+					$action,
+					(int) $id,
+					$e->getMessage()
+				)
+			);
+		}
 	}
 
 	// ------------------------------------------------------------------
