@@ -12,23 +12,9 @@
 	var useRef = wp.element.useRef;
 	var apiFetch = wp.apiFetch;
 
-	var PROMO_TYPES = [
-		{ id: 'percent', label: 'Descuento porcentual', icon: 'tag', color: '#5b7b41', needsCode: true, value: 'percent', short: '% OFF' },
-		{ id: 'fixed', label: 'Descuento fijo', icon: 'tag', color: '#3a5a2a', needsCode: true, value: 'money', short: '$ OFF' },
-		{ id: 'launch', label: 'Precio de lanzamiento', icon: 'star-filled', color: '#00a000', needsCode: false, value: 'money', short: 'Lanzamiento' },
-		{ id: '2x1', label: '2x1', icon: 'archive', color: '#00c0b4', needsCode: false, value: 'none', short: '2x1' },
-		{ id: '3x2', label: '3x2', icon: 'archive', color: '#00c0b4', needsCode: false, value: 'none', short: '3x2' },
-		{ id: 'second_unit', label: 'Segunda unidad', icon: 'archive', color: '#008cd4', needsCode: true, value: 'percent', short: '2ª und.' },
-		{ id: 'tiered', label: 'Escalonado por monto', icon: 'chart-bar', color: '#1d5c9e', needsCode: false, value: 'percent', short: 'Escalonado' },
-		{ id: 'bundle', label: 'Bundle / combo', icon: 'screenoptions', color: '#8a32a2', needsCode: false, value: 'money', short: 'Combo' },
-		{ id: 'free_ship_threshold', label: 'Envío gratis con umbral', icon: 'car', color: '#bb8855', needsCode: false, value: 'money', short: 'Envío' },
-		{ id: 'free_ship', label: 'Envío gratis', icon: 'car', color: '#bb8855', needsCode: true, value: 'none', short: 'Envío' },
-		{ id: 'welcome', label: 'Cupón de bienvenida', icon: 'star-filled', color: '#d4af37', needsCode: true, value: 'percent', short: 'Bienvenida' },
-		{ id: 'gift', label: 'Regalo por compra', icon: 'cart', color: '#ff1a80', needsCode: false, value: 'text', short: 'Regalo' },
-		{ id: 'cashback', label: 'Puntos / cashback', icon: 'star-filled', color: '#7a3fa8', needsCode: false, value: 'percent', short: 'Cashback' },
-		{ id: 'flash', label: 'Oferta flash con contador', icon: 'update', color: '#b8412a', needsCode: false, value: 'percent', short: 'Flash' },
-		{ id: 'data_capture', label: 'Descuento por datos', icon: 'groups', color: '#0b7a55', needsCode: true, value: 'percent', short: 'Datos' }
-	];
+	// Single source of truth: Drw\App\Models\PromoTypeRegistry (PHP), preloaded
+	// via wp_localize_script so there is no duplicate catalogue here anymore.
+	var PROMO_TYPES = (window.drwAdminData && window.drwAdminData.promoTypes) || [];
 
 	function getType(id) {
 		for (var i = 0; i < PROMO_TYPES.length; i++) {
@@ -52,12 +38,12 @@
 		if (p.type === 'free_ship' || p.type === 'free_ship_threshold') { return 'Envío gratis'; }
 		if (p.type === '2x1') { return '2×1'; }
 		if (p.type === '3x2') { return '3×2'; }
-		if (t.value === 'percent') { return p.value + '% OFF'; }
-		if (t.value === 'money') {
+		if (t.valueType === 'percent') { return p.value + '% OFF'; }
+		if (t.valueType === 'currency') {
 			if (p.type === 'bundle' || p.type === 'launch') { return fmtCOP(p.value); }
 			return '−' + fmtCOP(p.value);
 		}
-		if (t.value === 'text') { return p.giftText || 'Regalo'; }
+		if (t.valueType === 'text') { return p.giftText || 'Regalo'; }
 		return t.short;
 	}
 
@@ -277,14 +263,14 @@
 					),
 
 					el('div', { className: 'drw-fields-row' },
-						t.value === 'percent' && el('div', { className: 'drw-field' },
+						t.valueType === 'percent' && el('div', { className: 'drw-field' },
 							el('label', null, 'Porcentaje de descuento'),
 							el('div', { style: { display: 'flex', alignItems: 'center', gap: 8 } },
 								el('input', { type: 'number', value: f.value, onChange: function (e) { set('value', e.target.value); }, style: { flex: 1 } }),
 								el('span', { className: 'drw-field-hint' }, '%')
 							)
 						),
-						t.value === 'money' && el('div', { className: 'drw-field' },
+						t.valueType === 'currency' && el('div', { className: 'drw-field' },
 							el('label', null,
 								f.type === 'bundle' ? 'Precio del combo (COP)' :
 								f.type === 'launch' ? 'Precio de lanzamiento (COP)' :
@@ -292,7 +278,7 @@
 							),
 							el('input', { type: 'number', value: f.value, onChange: function (e) { set('value', e.target.value); } })
 						),
-						t.value === 'text' && el('div', { className: 'drw-field' },
+						t.valueType === 'text' && el('div', { className: 'drw-field' },
 							el('label', null, 'Regalo incluido'),
 							el('input', { value: f.giftText || '', onChange: function (e) { set('giftText', e.target.value); }, placeholder: 'Ej. Bolsa reutilizable' })
 						),

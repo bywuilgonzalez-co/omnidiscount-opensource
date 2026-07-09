@@ -2,6 +2,8 @@
 
 namespace Drw\App\Controllers;
 
+use Drw\App\Models\PromoTypeRegistry;
+
 if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
@@ -26,29 +28,6 @@ class PromosController {
 	 * @var string
 	 */
 	const OPTION_KEY = 'drw_promos';
-
-	/**
-	 * Allowed promo types.
-	 *
-	 * @var string[]
-	 */
-	const TYPES = array(
-		'percent',
-		'fixed',
-		'launch',
-		'2x1',
-		'3x2',
-		'second_unit',
-		'tiered',
-		'bundle',
-		'free_ship_threshold',
-		'free_ship',
-		'welcome',
-		'gift',
-		'cashback',
-		'flash',
-		'data_capture',
-	);
 
 	/**
 	 * Get the singleton instance.
@@ -320,12 +299,14 @@ class PromosController {
 	/**
 	 * GET /drw/v1/promos/types
 	 *
-	 * Returns the catalogue of the 15 supported promo types.
+	 * Returns the catalogue of supported promo types. Kept as a refresh
+	 * endpoint; the admin UI receives the same data preloaded via
+	 * wp_localize_script (see AdminController::enqueue_admin_assets).
 	 *
 	 * @return \WP_REST_Response
 	 */
 	public function get_types() {
-		return new \WP_REST_Response( $this->type_definitions(), 200 );
+		return new \WP_REST_Response( PromoTypeRegistry::all(), 200 );
 	}
 
 	// ------------------------------------------------------------------
@@ -422,11 +403,11 @@ class PromosController {
 
 		// --- type -----------------------------------------------------------
 		$type = isset( $data['type'] ) ? sanitize_text_field( $data['type'] ) : '';
-		if ( ! in_array( $type, self::TYPES, true ) ) {
+		if ( ! PromoTypeRegistry::exists( $type ) ) {
 			return new \WP_Error(
 				'invalid_type',
 				/* translators: %s: comma-separated list of valid types */
-				sprintf( __( 'Invalid type. Allowed: %s', 'discount-rules-woo' ), implode( ', ', self::TYPES ) )
+				sprintf( __( 'Invalid type. Allowed: %s', 'discount-rules-woo' ), implode( ', ', PromoTypeRegistry::ids() ) )
 			);
 		}
 
@@ -524,137 +505,4 @@ class PromosController {
 		return $d && $d->format( 'Y-m-d' ) === $date;
 	}
 
-	// ------------------------------------------------------------------
-	// Type definitions catalogue
-	// ------------------------------------------------------------------
-
-	/**
-	 * Return the 15 promo type definitions.
-	 *
-	 * @return array
-	 */
-	private function type_definitions() {
-		return array(
-			array(
-				'id'        => 'percent',
-				'label'     => __( 'Percentage discount', 'discount-rules-woo' ),
-				'icon'      => 'percent',
-				'color'     => '#4F46E5',
-				'needsCode' => true,
-				'valueType' => 'percent',
-			),
-			array(
-				'id'        => 'fixed',
-				'label'     => __( 'Fixed amount discount', 'discount-rules-woo' ),
-				'icon'      => 'dollar-sign',
-				'color'     => '#059669',
-				'needsCode' => true,
-				'valueType' => 'currency',
-			),
-			array(
-				'id'        => 'launch',
-				'label'     => __( 'Launch offer', 'discount-rules-woo' ),
-				'icon'      => 'rocket',
-				'color'     => '#DC2626',
-				'needsCode' => false,
-				'valueType' => 'percent',
-			),
-			array(
-				'id'        => '2x1',
-				'label'     => __( 'Buy 2 get 1 free', 'discount-rules-woo' ),
-				'icon'      => 'gift',
-				'color'     => '#7C3AED',
-				'needsCode' => false,
-				'valueType' => 'none',
-			),
-			array(
-				'id'        => '3x2',
-				'label'     => __( 'Buy 3 pay 2', 'discount-rules-woo' ),
-				'icon'      => 'shopping-bag',
-				'color'     => '#DB2777',
-				'needsCode' => false,
-				'valueType' => 'none',
-			),
-			array(
-				'id'        => 'second_unit',
-				'label'     => __( 'Second unit discount', 'discount-rules-woo' ),
-				'icon'      => 'layers',
-				'color'     => '#2563EB',
-				'needsCode' => false,
-				'valueType' => 'percent',
-			),
-			array(
-				'id'        => 'tiered',
-				'label'     => __( 'Tiered pricing', 'discount-rules-woo' ),
-				'icon'      => 'trending-down',
-				'color'     => '#0891B2',
-				'needsCode' => false,
-				'valueType' => 'percent',
-			),
-			array(
-				'id'        => 'bundle',
-				'label'     => __( 'Bundle deal', 'discount-rules-woo' ),
-				'icon'      => 'package',
-				'color'     => '#CA8A04',
-				'needsCode' => false,
-				'valueType' => 'percent',
-			),
-			array(
-				'id'        => 'free_ship_threshold',
-				'label'     => __( 'Free shipping over threshold', 'discount-rules-woo' ),
-				'icon'      => 'truck',
-				'color'     => '#16A34A',
-				'needsCode' => false,
-				'valueType' => 'currency',
-			),
-			array(
-				'id'        => 'free_ship',
-				'label'     => __( 'Free shipping coupon', 'discount-rules-woo' ),
-				'icon'      => 'truck',
-				'color'     => '#65A30D',
-				'needsCode' => true,
-				'valueType' => 'none',
-			),
-			array(
-				'id'        => 'welcome',
-				'label'     => __( 'Welcome discount', 'discount-rules-woo' ),
-				'icon'      => 'user-plus',
-				'color'     => '#8B5CF6',
-				'needsCode' => true,
-				'valueType' => 'percent',
-			),
-			array(
-				'id'        => 'gift',
-				'label'     => __( 'Free gift with purchase', 'discount-rules-woo' ),
-				'icon'      => 'gift',
-				'color'     => '#F43F5E',
-				'needsCode' => false,
-				'valueType' => 'none',
-			),
-			array(
-				'id'        => 'cashback',
-				'label'     => __( 'Cashback', 'discount-rules-woo' ),
-				'icon'      => 'refresh-cw',
-				'color'     => '#0D9488',
-				'needsCode' => false,
-				'valueType' => 'percent',
-			),
-			array(
-				'id'        => 'flash',
-				'label'     => __( 'Flash sale', 'discount-rules-woo' ),
-				'icon'      => 'zap',
-				'color'     => '#EA580C',
-				'needsCode' => false,
-				'valueType' => 'percent',
-			),
-			array(
-				'id'        => 'data_capture',
-				'label'     => __( 'Data capture offer', 'discount-rules-woo' ),
-				'icon'      => 'mail',
-				'color'     => '#6366F1',
-				'needsCode' => true,
-				'valueType' => 'percent',
-			),
-		);
-	}
 }

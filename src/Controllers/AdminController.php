@@ -2,6 +2,8 @@
 
 namespace Drw\App\Controllers;
 
+use Drw\App\Models\PromoTypeRegistry;
+
 if (!defined('ABSPATH')) {
     exit;
 }
@@ -118,6 +120,8 @@ class AdminController
             'products'        => $products,
             'categories'      => $categories,
             'roles'           => $this->get_user_roles(),
+            // Single source of truth for promo types; see Drw\App\Models\PromoTypeRegistry.
+            'promoTypes'      => PromoTypeRegistry::all(),
         ]);
     }
 
