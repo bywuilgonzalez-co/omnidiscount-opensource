@@ -2047,13 +2047,26 @@ class PromosController {
 	 * @param array    $data       Raw input data.
 	 * @param bool     $is_update  Whether this is an update (relaxed required checks).
 	 * @param int|null $exclude_id Promo id to exclude from code-uniqueness checks (the promo being updated).
+	 * @param bool     $import     Import (legacy-migration) mode. Every field is still
+	 *                             sanitised exactly the same, and the PRICE-SAFETY gate
+	 *                             (registered type + in-range value, the same invariant
+	 *                             assert_activatable() enforces) still hard-fails — a migrated
+	 *                             row can land active=1 and go live without ever passing the
+	 *                             toggle_promo() gate, so that check must stay. Only the
+	 *                             create-time HYGIENE rejections that WooCommerce and the older,
+	 *                             laxer editor accepted are skipped, because they do not affect
+	 *                             the compiled price: name length, code format, code/coupon
+	 *                             uniqueness and date FORMAT. Structural checks that flag genuine
+	 *                             corruption (an inverted date range, or a redeemable type with
+	 *                             no code) are kept so they surface in the migration's $rejected
+	 *                             report instead of importing a broken row.
 	 * @return array|\WP_Error Sanitised promo array or error.
 	 */
-	public function validate_promo( $data, $is_update = false, $exclude_id = null ) {
+	public function validate_promo( $data, $is_update = false, $exclude_id = null, $import = false ) {
 
 		// --- name -----------------------------------------------------------
 		$name = isset( $data['name'] ) ? sanitize_text_field( $data['name'] ) : '';
-		if ( strlen( $name ) < 3 ) {
+		if ( ! $import && strlen( $name ) < 3 ) {
 			return new \WP_Error(
 				'invalid_name',
 				__( 'Name is required and must be at least 3 characters.', 'discount-rules-woo' ),
@@ -2074,7 +2087,7 @@ class PromosController {
 
 		// --- code -------------------------------------------------------------
 		$code = isset( $data['code'] ) ? strtoupper( sanitize_text_field( $data['code'] ) ) : '';
-		if ( '' !== $code && ! preg_match( '/^[A-Z0-9_]+$/', $code ) ) {
+		if ( ! $import && '' !== $code && ! preg_match( '/^[A-Z0-9_]+$/', $code ) ) {
 			return new \WP_Error(
 				'invalid_code',
 				__( 'Code must be uppercase alphanumeric with underscores only.', 'discount-rules-woo' ),
@@ -2090,7 +2103,7 @@ class PromosController {
 			);
 		}
 
-		if ( '' !== $code ) {
+		if ( ! $import && '' !== $code ) {
 			$duplicate = $this->find_duplicate_code( $code, $exclude_id );
 			if ( $duplicate ) {
 				return new \WP_Error(
@@ -2127,7 +2140,7 @@ class PromosController {
 
 		// --- dates ----------------------------------------------------------
 		$start = isset( $data['start'] ) ? sanitize_text_field( $data['start'] ) : '';
-		if ( '' !== $start && ! $this->is_valid_date( $start ) ) {
+		if ( ! $import && '' !== $start && ! $this->is_valid_date( $start ) ) {
 			return new \WP_Error(
 				'invalid_start_date',
 				__( 'Start date must be in Y-m-d format.', 'discount-rules-woo' ),
@@ -2136,7 +2149,7 @@ class PromosController {
 		}
 
 		$end = isset( $data['end'] ) ? sanitize_text_field( $data['end'] ) : '';
-		if ( '' !== $end && ! $this->is_valid_date( $end ) ) {
+		if ( ! $import && '' !== $end && ! $this->is_valid_date( $end ) ) {
 			return new \WP_Error(
 				'invalid_end_date',
 				__( 'End date must be in Y-m-d format.', 'discount-rules-woo' ),

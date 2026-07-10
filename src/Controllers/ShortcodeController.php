@@ -309,7 +309,7 @@ class ShortcodeController
 
         if ($value_type === 'percent') {
             /* translators: %s: discount percentage, e.g. "10". */
-            return esc_html(sprintf(__('%s%% OFF', 'discount-rules-woo'), $this->format_promo_number($value)));
+            return esc_html(sprintf(__('%s%% de descuento', 'discount-rules-woo'), $this->format_promo_number($value)));
         }
 
         if ($value_type === 'currency') {

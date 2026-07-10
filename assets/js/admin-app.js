@@ -1717,7 +1717,7 @@
                     { label: 'Estándar (al más cercano)', value: 'standard' },
                     { label: 'Siempre hacia abajo',       value: 'down'     },
                     { label: 'Siempre hacia arriba',      value: 'up'       },
-                    { label: 'Half-up (0.5 sube)',        value: 'half_up'  }
+                    { label: 'Mitad hacia arriba (0.5 sube)', value: 'half_up' }
                 ],
                 onChange: (v) => updateSetting('features.round_prices', v)
             })
@@ -1729,10 +1729,10 @@
                 label: 'Tema predefinido',
                 value: th.preset || 'default',
                 options: [
-                    { label: 'Default (Azul moderno)', value: 'default'  },
-                    { label: 'Dark (Oscuro)',           value: 'dark'     },
-                    { label: 'Colorful (Multicolor)',   value: 'colorful' },
-                    { label: 'Minimal (Negro/Blanco)',  value: 'minimal'  }
+                    { label: 'Estándar (azul moderno)',   value: 'default'  },
+                    { label: 'Oscuro',                    value: 'dark'     },
+                    { label: 'Multicolor',                value: 'colorful' },
+                    { label: 'Minimalista (negro/blanco)', value: 'minimal'  }
                 ],
                 onChange: (v) => updateSetting('theme.preset', v)
             }),
@@ -1784,7 +1784,7 @@
             el('p', { className: 'drw-settings-label' }, 'Espaciado'),
             el('div', { className: 'drw-colors-grid' },
                 el(TextControl, { label: 'Padding base (px)',  type: 'number', value: String(sp.padding_base  || 16), onChange: (v) => updateSetting('theme.spacing.padding_base',  parseInt(v, 10) || 16) }),
-                el(TextControl, { label: 'Border radius (px)', type: 'number', value: String(sp.border_radius || 8),  onChange: (v) => updateSetting('theme.spacing.border_radius', parseInt(v, 10) || 8)  }),
+                el(TextControl, { label: 'Radio de borde (px)', type: 'number', value: String(sp.border_radius || 8),  onChange: (v) => updateSetting('theme.spacing.border_radius', parseInt(v, 10) || 8)  }),
                 el(SelectControl, {
                     label: 'Nivel de sombra',
                     value: sp.shadow_level || 'medium',

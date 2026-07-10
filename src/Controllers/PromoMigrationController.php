@@ -104,17 +104,22 @@ class PromoMigrationController {
 				continue; // Already inserted by a previous run -- skip, never duplicate.
 			}
 
-			// Re-validate every legacy entry through the SAME gate the REST
-			// create/update path uses BEFORE it can land in the live table.
-			// Legacy blobs were written by an older, laxer editor and may hold
-			// values (bad type, percent > 100, inverted dates, unescaped HTML)
-			// that would otherwise be imported unvalidated and, once activated,
-			// compile into an invalid / negative price in production. Invalid
-			// entries are collected in $rejected and NEVER inserted; valid ones
-			// are stored through to_columns() so the persisted row is
+			// Re-validate every legacy entry, but through the PRICE-SAFETY gate
+			// (import mode), not the full create-time gate. Legacy blobs were
+			// written by an older, laxer editor: a value that would compile into
+			// an invalid / negative price (bad type, percent > 100, negative
+			// value) is still rejected and NEVER inserted, because a migrated row
+			// can land active=1 and go live WITHOUT ever passing toggle_promo()'s
+			// assert_activatable() check. But create-time HYGIENE that does not
+			// affect the compiled price -- a hyphenated/spaced code, a name under
+			// 3 chars, a non-Y-m-d date, or a code that merely collides with a
+			// WooCommerce coupon -- must NOT drop the row: WooCommerce and the
+			// legacy editor accepted it, so rejecting it here would silently lose
+			// a legitimate discount. Every field is still fully sanitised, and
+			// valid rows are stored through to_columns() so the persisted row is
 			// byte-for-byte what a real create_promo() would have written.
 			$camel     = self::legacy_to_camel( $legacy );
-			$validated = \Drw\App\Controllers\PromosController::instance()->validate_promo( $camel );
+			$validated = \Drw\App\Controllers\PromosController::instance()->validate_promo( $camel, false, null, true );
 
 			if ( is_wp_error( $validated ) ) {
 				$rejected[] = array(
