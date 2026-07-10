@@ -3,6 +3,7 @@
 namespace Drw\App\Controllers;
 
 use Drw\App\Models\PromoTypeRegistry;
+use Drw\App\Models\RuleTemplateRegistry;
 
 if (!defined('ABSPATH')) {
     exit;
@@ -311,6 +312,10 @@ class AdminController
             'roles'           => $this->get_user_roles(),
             // Single source of truth for promo types; see Drw\App\Models\PromoTypeRegistry.
             'promoTypes'      => PromoTypeRegistry::all(),
+            // One-click template gallery for "Crear nueva regla de descuento".
+            // Each entry carries a complete RuleEditor-ready `rule` default; see
+            // Drw\App\Models\RuleTemplateRegistry and DrwApp.handleSelectTemplate().
+            'ruleTemplates'   => RuleTemplateRegistry::all(),
             // Used by LivePreviewPanel/PromoStatsPanel/NaturalLanguageSummary to
             // format money in the store's real currency instead of a bare number.
             'currencySymbol'  => get_woocommerce_currency_symbol(),

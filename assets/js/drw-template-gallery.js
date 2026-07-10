@@ -38,6 +38,20 @@
 		});
 	}
 
+	// Render an icon by name for the given icon set. The promo catalogue uses
+	// Material Symbols; the generic gallery (e.g. the Reglas template gallery)
+	// uses WordPress dashicons, which inherit their color from the icon tile.
+	function renderIcon(iconSet, name, size, extraClass) {
+		if (iconSet === 'dashicon') {
+			return el('span', {
+				className: 'dashicons dashicons-' + name + (extraClass ? ' ' + extraClass : ''),
+				'aria-hidden': 'true',
+				style: { fontSize: size + 'px', width: size + 'px', height: size + 'px', lineHeight: size + 'px' }
+			});
+		}
+		return el(MaterialIcon, { name: name, size: size, className: extraClass });
+	}
+
 	// -- Date helpers ---------------------------------------------------------
 	function todayISO() {
 		return new Date().toISOString().slice(0, 10);
@@ -321,6 +335,108 @@
 		);
 	}
 
+	// -- Tarjeta genérica (galería basada en un catálogo `templates`) ----------
+	// Consumida por la galería genérica: cada item es { id, label, description,
+	// icon, color, ... } y se entrega intacto a onSelectTemplate al hacer clic
+	// (el consumidor decide qué campo usar, p. ej. `rule` en la galería de Reglas).
+	function GenericTemplateCard(props) {
+		var tpl = props.template;
+		var onSelect = props.onSelect;
+		var iconSet = props.iconSet;
+		var color = tpl.color || '#5b7b41';
+
+		return el('button', {
+			type: 'button',
+			className: 'drw-promo-card drw-template-card',
+			style: { textAlign: 'left', font: 'inherit', cursor: 'pointer', width: '100%' },
+			onClick: function () { onSelect(tpl); }
+		},
+			el('div', { className: 'drw-promo-header' },
+				el('span', { className: 'drw-icon-tile', style: { '--drw-tile-color': color } },
+					renderIcon(iconSet, tpl.icon || 'tag', 20)
+				),
+				el('div', { className: 'drw-promo-title-wrap' },
+					el('span', { className: 'drw-promo-name' }, tpl.label)
+				)
+			),
+			tpl.description && el('p', { className: 'drw-text-muted', style: { margin: 0, fontSize: 12.5, lineHeight: 1.5 } }, tpl.description)
+		);
+	}
+
+	// -- Galería genérica -------------------------------------------------------
+	// Renderiza un catálogo plano de plantillas (prop `templates`) sin agrupar,
+	// reutilizando el shell/estilo de la galería de promos. `search` viene del
+	// estado de TemplateGallery para no romper la regla de hooks.
+	function renderGenericGallery(props, search, setSearch) {
+		var templates = props.templates || [];
+		var iconSet = props.iconSet || 'material';
+		var onSelectTemplate = props.onSelectTemplate;
+		var onStartBlank = props.onStartBlank;
+		var title = props.title || '¿Qué quieres lograr?';
+		var subtitle = props.subtitle || 'Elige una plantilla para empezar con todo prellenado, o crea una desde cero.';
+		var blankLabel = props.blankLabel || 'Empezar en blanco';
+
+		function handleSelect(tpl) {
+			if (typeof onSelectTemplate === 'function') { onSelectTemplate(tpl); }
+		}
+		function handleBlank() {
+			if (typeof onStartBlank === 'function') { onStartBlank(); }
+		}
+
+		var query = search.trim().toLowerCase();
+		var visible = templates.filter(function (tpl) {
+			if (!query) { return true; }
+			return ((tpl.label || '') + ' ' + (tpl.description || '')).toLowerCase().indexOf(query) !== -1;
+		});
+
+		return el('div', { className: 'drw-template-gallery' },
+
+			el('div', { className: 'drw-page-header' },
+				el('div', null,
+					el('h2', { className: 'drw-page-title' }, title),
+					el('p', { className: 'drw-text-muted', style: { margin: '4px 0 0', fontSize: 13 } }, subtitle)
+				),
+				el('button', { type: 'button', className: 'drw-btn drw-btn-ghost', onClick: handleBlank },
+					renderIcon(iconSet, 'edit', 15), ' ', blankLabel
+				)
+			),
+
+			el('div', { className: 'drw-search-wrap', style: { maxWidth: 360, marginBottom: 22 } },
+				renderIcon(iconSet, 'search', 16, 'drw-search-icon'),
+				el('input', {
+					type: 'search',
+					'aria-label': 'Buscar plantilla',
+					placeholder: 'Buscar plantilla…',
+					value: search,
+					onChange: function (e) { setSearch(e.target.value); }
+				})
+			),
+
+			visible.length === 0 && el('div', { className: 'drw-empty' },
+				el('div', null,
+					el('div', { className: 'drw-empty-icon' }, renderIcon(iconSet, 'search', 22)),
+					el('h3', { className: 'drw-empty-title' }, 'Sin resultados'),
+					el('p', { className: 'drw-empty-text' },
+						'No encontramos plantillas para "' + search + '". Prueba con otra palabra o empieza en blanco.'
+					),
+					el('button', { type: 'button', className: 'drw-btn drw-btn-primary', onClick: handleBlank }, blankLabel)
+				)
+			),
+
+			visible.length > 0 && el('div', { className: 'drw-promo-grid' },
+				visible.map(function (tpl) {
+					return el(GenericTemplateCard, { key: tpl.id, template: tpl, iconSet: iconSet, onSelect: handleSelect });
+				})
+			),
+
+			visible.length > 0 && el('div', { style: { textAlign: 'center', marginTop: 22 } },
+				el('button', { type: 'button', className: 'drw-btn drw-btn-ghost drw-btn-sm', onClick: handleBlank },
+					'O empieza en blanco (modo experto) →'
+				)
+			)
+		);
+	}
+
 	// -- Galería principal --------------------------------------------------
 	function TemplateGallery(props) {
 		var onSelectTemplate = props.onSelectTemplate;
@@ -329,6 +445,13 @@
 		var searchState = useState('');
 		var search = searchState[0];
 		var setSearch = searchState[1];
+
+		// Generic mode: a caller passes a flat `templates` catalogue (e.g. the
+		// Reglas gallery). The classic promo mode (no `templates`) is unchanged,
+		// so drw-promo-wizard.js keeps working exactly as before.
+		if (Array.isArray(props.templates)) {
+			return renderGenericGallery(props, search, setSearch);
+		}
 
 		function handleSelect(templateData) {
 			if (typeof onSelectTemplate === 'function') {

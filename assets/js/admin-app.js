@@ -93,7 +93,7 @@
                     })
                     .catch((err) => {
                         setResults([]);
-                        setError(err.message || 'Could not search products.');
+                        setError(err.message || 'No se pudieron buscar los productos.');
                     })
                     .finally(() => setLoading(false));
             }, 250);
@@ -119,7 +119,7 @@
         const mergedSelected = ids.map((id) => {
             return selectedProducts.find((product) => parseInt(product.id, 10) === id)
                 || (adminData.products || []).find((product) => parseInt(product.id, 10) === id)
-                || { id, name: `Product #${id}`, sku: '' };
+                || { id, name: `Producto #${id}`, sku: '' };
         });
 
         return el('div', { className: 'drw-product-search' },
@@ -127,11 +127,11 @@
                 label,
                 type: 'search',
                 value: search,
-                help: help || 'Type at least 2 characters to search the full WooCommerce catalog.',
-                placeholder: 'Search products by name or SKU...',
+                help: help || 'Escribe al menos 2 caracteres para buscar en todo el catálogo de WooCommerce.',
+                placeholder: 'Busca productos por nombre o SKU...',
                 onChange: setSearch
             }),
-            loading && el('div', { className: 'drw-product-search-status' }, el(Spinner), el('span', null, 'Searching products...')),
+            loading && el('div', { className: 'drw-product-search-status' }, el(Spinner), el('span', null, 'Buscando productos...')),
             error && el('div', { className: 'drw-product-search-error' }, error),
             results.length > 0 && el('ul', { className: 'drw-product-search-results' },
                 results.map((product) => {
@@ -142,7 +142,7 @@
                             type: 'button',
                             disabled,
                             onClick: () => addProduct(product)
-                        }, disabled ? `${productLabel(product)} - selected` : productLabel(product))
+                        }, disabled ? `${productLabel(product)} - seleccionado` : productLabel(product))
                     );
                 })
             ),
@@ -155,7 +155,7 @@
                             type: 'button',
                             className: 'drw-selected-product-remove',
                             onClick: () => removeProduct(productId),
-                            label: `Remove ${product.name}`
+                            label: `Quitar ${product.name}`
                         }, 'x')
                     );
                 })
@@ -192,31 +192,57 @@
                     setLoading(false);
                 })
                 .catch((err) => {
-                    setErrorMsg(err.message || 'Error fetching rules.');
+                    setErrorMsg(err.message || 'Error al cargar las reglas.');
                     setLoading(false);
                 });
         };
 
+        // The blank-rule default. Kept as the single source of truth for BOTH
+        // the "Empezar en blanco" path and what the template gallery falls back
+        // to, so "empezar en blanco" produces the exact same object the old
+        // handleAddRule() used to build directly.
+        const buildDefaultRule = () => ({
+            title: '',
+            enabled: true,
+            exclusive: false,
+            priority: 10,
+            apply_to: 'all_products',
+            filters: {
+                product_ids: [],
+                category_ids: [],
+                exclude_product_ids: [],
+                exclude_category_ids: []
+            },
+            conditions: [],
+            adjustments: {
+                type: 'percentage', // percentage, fixed, bulk
+                value: 10,
+                tiers: []
+            }
+        });
+
+        // "+ Crear regla" now opens the one-click template gallery first instead
+        // of jumping straight into the long form. editingRule is cleared so the
+        // header reads "Crear nueva regla de descuento" while the gallery shows.
         const handleAddRule = () => {
-            setEditingRule({
-                title: '',
-                enabled: true,
-                exclusive: false,
-                priority: 10,
-                apply_to: 'all_products',
-                filters: {
-                    product_ids: [],
-                    category_ids: [],
-                    exclude_product_ids: [],
-                    exclude_category_ids: []
-                },
-                conditions: [],
-                adjustments: {
-                    type: 'percentage', // percentage, fixed, bulk
-                    value: 10,
-                    tiers: []
-                }
-            });
+            setEditingRule(null);
+            setScreen('templates');
+        };
+
+        // Gallery: "Empezar en blanco" — identical behaviour to the old
+        // handleAddRule(): seed the editor with the blank default and open it.
+        const handleStartBlank = () => {
+            setEditingRule(buildDefaultRule());
+            setScreen('edit');
+        };
+
+        // Gallery: a template card was chosen. Seed editingRule with a DEEP COPY
+        // of the template's `rule` (the localized catalogue is shared, and the
+        // RuleEditor mutates nested tier/condition objects in place) and open the
+        // editor. RuleEditor itself is untouched — only its initial data differs.
+        const handleSelectTemplate = (tpl) => {
+            const rule = tpl && tpl.rule ? tpl.rule : buildDefaultRule();
+            setEditingRule(JSON.parse(JSON.stringify(rule)));
             setScreen('edit');
         };
 
@@ -227,7 +253,7 @@
         };
 
         const handleDeleteRule = (id) => {
-            if (!confirm('Are you sure you want to delete this rule?')) {
+            if (!confirm('¿Seguro que deseas eliminar esta regla?')) {
                 return;
             }
             setLoading(true);
@@ -236,11 +262,11 @@
                 method: 'DELETE'
             })
             .then(() => {
-                showSuccess('Rule deleted successfully.');
+                showSuccess('Regla eliminada correctamente.');
                 fetchRules();
             })
             .catch((err) => {
-                setErrorMsg(err.message || 'Error deleting rule.');
+                setErrorMsg(err.message || 'Error al eliminar la regla.');
                 setLoading(false);
             });
         };
@@ -256,13 +282,13 @@
                 fetchRules();
             })
             .catch((err) => {
-                setErrorMsg(err.message || 'Error updating status.');
+                setErrorMsg(err.message || 'Error al actualizar el estado.');
             });
         };
 
         const handleSaveRule = () => {
             if (!editingRule.title.trim()) {
-                setErrorMsg('Rule title is required.');
+                setErrorMsg('El título de la regla es obligatorio.');
                 return;
             }
             setLoading(true);
@@ -272,12 +298,12 @@
                 data: editingRule
             })
             .then(() => {
-                showSuccess('Rule saved successfully.');
+                showSuccess('Regla guardada correctamente.');
                 fetchRules();
                 setScreen('list');
             })
             .catch((err) => {
-                setErrorMsg(err.message || 'Error saving rule.');
+                setErrorMsg(err.message || 'Error al guardar la regla.');
                 setLoading(false);
             });
         };
@@ -291,7 +317,7 @@
         if (loading && rules.length === 0) {
             return el('div', { className: 'drw-dashboard', style: { textAlign: 'center', padding: '50px' } }, 
                 el(Spinner),
-                el('p', null, 'Loading rules engine...')
+                el('p', null, 'Cargando motor de reglas...')
             );
         }
 
@@ -319,10 +345,12 @@
             screen === 'settings'
                 ? el(GlobalSettings, { onBack: () => setScreen('list') })
                 : screen === 'promos'
-                    ? (window.DrwPromosPage ? el(window.DrwPromosPage, { onBack: () => setScreen('list') }) : el('p', null, 'Loading promos...'))
+                    ? (window.DrwPromosPage ? el(window.DrwPromosPage, { onBack: () => setScreen('list') }) : el('p', null, 'Cargando promociones...'))
                     : screen === 'list'
                         ? el(RulesList, { rules, onEdit: handleEditRule, onDelete: handleDeleteRule, onToggle: handleToggleStatus })
-                        : el(RuleEditor, { rule: editingRule, setRule: setEditingRule, onSave: handleSaveRule, onCancel: () => setScreen('list') })
+                        : screen === 'templates'
+                            ? el(RuleTemplatePicker, { onSelectTemplate: handleSelectTemplate, onStartBlank: handleStartBlank, onCancel: () => setScreen('list') })
+                            : el(RuleEditor, { rule: editingRule, setRule: setEditingRule, onSave: handleSaveRule, onCancel: () => setScreen('list') })
         );
     }
 
@@ -381,6 +409,83 @@
                     )
                 );
             })
+        );
+    }
+
+    /**
+     * Rule Template Gallery Screen
+     *
+     * Thin wrapper that reuses the shared window.DrwTemplateGallery component in
+     * its generic mode, fed by the RuleTemplateRegistry catalogue localized as
+     * adminData.ruleTemplates. The gallery's styling lives in admin-promos.css
+     * whose --drw-* tokens are scoped to a container class, so we render inside
+     * `.drw-token-scope` to make those tokens resolve on the Reglas screen.
+     */
+    function RuleTemplatePicker({ onSelectTemplate, onStartBlank, onCancel }) {
+        const Gallery = window.DrwTemplateGallery;
+        const templates = adminData.ruleTemplates || [];
+
+        if (typeof Gallery !== 'function') {
+            // Graceful degradation: never trap the merchant if the gallery script
+            // failed to load — send them straight into a blank rule.
+            return el('div', { className: 'drw-form-section' },
+                el('p', null, 'La galería de plantillas no está disponible.'),
+                el('div', { style: { display: 'flex', gap: '12px' } },
+                    el(Button, { className: 'drw-primary-btn', onClick: onStartBlank }, 'Empezar en blanco'),
+                    el(Button, { className: 'drw-secondary-btn', onClick: onCancel }, 'Cancelar')
+                )
+            );
+        }
+
+        return el('div', { className: 'drw-token-scope drw-rule-template-gallery' },
+            el('div', { style: { marginBottom: '10px' } },
+                el('button', { type: 'button', className: 'drw-btn drw-btn-ghost drw-btn-sm', onClick: onCancel },
+                    '← Volver a reglas'
+                )
+            ),
+            el(Gallery, {
+                templates,
+                iconSet: 'dashicon',
+                title: '¿Qué tipo de descuento quieres crear?',
+                subtitle: 'Elige una plantilla para empezar con la configuración lista, o crea una regla desde cero.',
+                blankLabel: 'Empezar en blanco',
+                onSelectTemplate,
+                onStartBlank
+            })
+        );
+    }
+
+    /**
+     * Collapsible section wrapper for the Rule Editor.
+     *
+     * Wraps each existing form block so the merchant can fold the long form into
+     * digestible sections. Sections default to open, so the editor still shows
+     * everything on first render exactly as before — collapsing is opt-in.
+     */
+    function Collapsible({ title, children, defaultOpen = true }) {
+        const [open, setOpen] = useState(defaultOpen);
+        // Spread children as individual args (not a single array) so React
+        // doesn't emit spurious "unique key" warnings for the static section body.
+        const kids = Array.isArray(children) ? children : [children];
+        // WAI-ARIA disclosure pattern: the toggle <button> lives INSIDE the
+        // heading (valid HTML + keeps the section heading in the a11y tree).
+        return el('div', { className: 'drw-form-section drw-collapsible' + (open ? ' is-open' : '') },
+            el('h3', { className: 'drw-collapsible-heading' },
+                el('button', {
+                    type: 'button',
+                    className: 'drw-collapsible-toggle',
+                    'aria-expanded': open,
+                    onClick: () => setOpen(!open)
+                },
+                    el('span', { className: 'drw-collapsible-title' }, title),
+                    el('span', { className: 'drw-collapsible-chevron', 'aria-hidden': 'true' },
+                        el('svg', { width: 16, height: 16, viewBox: '0 0 16 16', fill: 'none' },
+                            el('path', { d: 'M4 6l4 4 4-4', stroke: 'currentColor', strokeWidth: 1.6, strokeLinecap: 'round', strokeLinejoin: 'round' })
+                        )
+                    )
+                )
+            ),
+            open && el.apply(null, ['div', { className: 'drw-collapsible-body' }].concat(kids))
         );
     }
 
@@ -467,24 +572,23 @@
 
         return el('div', null,
             // Section 1: Basic Config
-            el('div', { className: 'drw-form-section' },
-                el('h3', null, 'General Configuration'),
+            el(Collapsible, { title: 'Configuración General' },
                 el(TextControl, {
-                    label: 'Rule Title',
+                    label: 'Título de la regla',
                     value: rule.title,
                     onChange: (val) => updateRuleField('title', val),
-                    placeholder: 'e.g. Summer Storewide Clearance 15%'
+                    placeholder: 'Ej. Liquidación de verano 15%'
                 }),
                 el('div', { className: 'drw-flex-row' },
                     el(TextControl, {
-                        label: 'Priority',
+                        label: 'Prioridad',
                         type: 'number',
                         value: rule.priority,
                         onChange: (val) => updateRuleField('priority', parseInt(val) || 10)
                     }),
                     el('div', { style: { paddingTop: '28px' } },
                         el(ToggleControl, {
-                            label: 'Exclusive (stops other rules from applying)',
+                            label: 'Exclusiva (impide que se apliquen otras reglas)',
                             checked: rule.exclusive,
                             onChange: (val) => updateRuleField('exclusive', val)
                         })
@@ -493,15 +597,14 @@
             ),
 
             // Section 2: Target Scope
-            el('div', { className: 'drw-form-section' },
-                el('h3', null, 'Product Filtering (Apply to)'),
+            el(Collapsible, { title: 'Filtrado de productos (Aplica a)' },
                 el(SelectControl, {
-                    label: 'Apply rule to:',
+                    label: 'Aplicar la regla a:',
                     value: rule.apply_to,
                     options: [
-                        { label: 'All Products', value: 'all_products' },
-                        { label: 'Specific Products Only', value: 'specific_products' },
-                        { label: 'Specific Categories Only', value: 'specific_categories' }
+                        { label: 'Todos los productos', value: 'all_products' },
+                        { label: 'Solo productos específicos', value: 'specific_products' },
+                        { label: 'Solo categorías específicas', value: 'specific_categories' }
                     ],
                     onChange: (val) => updateRuleField('apply_to', val)
                 }),
@@ -509,7 +612,7 @@
                 // Specific Products Select
                 rule.apply_to === 'specific_products' && el('div', { style: { marginTop: '12px' } },
                     el(ProductSearchMultiSelect, {
-                        label: 'Select Target Products',
+                        label: 'Selecciona los productos objetivo',
                         selectedIds: rule.filters.product_ids || [],
                         onChange: (ids) => updateFilters('product_ids', ids)
                     })
@@ -517,7 +620,7 @@
 
                 // Specific Categories Select
                 rule.apply_to === 'specific_categories' && el('div', { style: { marginTop: '12px' } },
-                    el('p', { style: { fontWeight: '600', marginBottom: '6px' } }, 'Select Target Categories:'),
+                    el('p', { style: { fontWeight: '600', marginBottom: '6px' } }, 'Selecciona las categorías objetivo:'),
                     el('div', { style: { maxHeight: '150px', overflowY: 'auto', border: '1px solid #cbd5e1', padding: '10px', borderRadius: '6px', background: '#fff' } },
                         adminData.categories.map((cat) => {
                             const isChecked = (rule.filters.category_ids || []).includes(cat.id);
@@ -546,16 +649,16 @@
                 ),
 
                 el('div', { className: 'drw-filter-exclusions' },
-                    el('h4', null, 'Exclusions'),
-                    el('p', { className: 'drw-help-text' }, 'Exclude products or categories from this rule even when they match the selected target scope.'),
+                    el('h4', null, 'Exclusiones'),
+                    el('p', { className: 'drw-help-text' }, 'Excluye productos o categorías de esta regla aunque coincidan con el alcance seleccionado.'),
                     el(ProductSearchMultiSelect, {
-                        label: 'Exclude Products',
+                        label: 'Excluir productos',
                         selectedIds: rule.filters.exclude_product_ids || [],
-                        help: 'Products selected here will never receive this rule discount.',
+                        help: 'Los productos seleccionados aquí nunca recibirán el descuento de esta regla.',
                         onChange: (ids) => updateFilters('exclude_product_ids', ids)
                     }),
                     el('div', { style: { marginTop: '12px' } },
-                        el('span', { className: 'drw-field-label' }, 'Exclude Categories:'),
+                        el('span', { className: 'drw-field-label' }, 'Excluir categorías:'),
                         el('div', { className: 'drw-checklist-box drw-exclusion-category-box' },
                             adminData.categories.map((cat) => {
                                 const isChecked = (rule.filters.exclude_category_ids || []).includes(cat.id);
@@ -585,25 +688,24 @@
             ),
 
             // Section 3: Pricing Adjustments
-            el('div', { className: 'drw-form-section' },
-                el('h3', null, 'Pricing Adjustments'),
+            el(Collapsible, { title: 'Ajustes de precio' },
                 el(SelectControl, {
-                    label: 'Discount Type',
+                    label: 'Tipo de descuento',
                     value: rule.adjustments.type === 'bundle' ? 'bundle_set' : rule.adjustments.type,
                     options: [
-                        { label: 'Percentage Discount', value: 'percentage' },
-                        { label: 'Fixed Price Discount', value: 'fixed' },
-                        { label: 'Bulk Tiered Discount', value: 'bulk' },
-                        { label: 'BOGO Buy X Get Y', value: 'bogo' },
-                        { label: 'Free Shipping', value: 'free_shipping' },
-                        { label: 'Bundle Set Pricing', value: 'bundle_set' }
+                        { label: 'Descuento porcentual', value: 'percentage' },
+                        { label: 'Descuento de precio fijo', value: 'fixed' },
+                        { label: 'Descuento escalonado por cantidad', value: 'bulk' },
+                        { label: 'BOGO Compra X Lleva Y', value: 'bogo' },
+                        { label: 'Envío gratis', value: 'free_shipping' },
+                        { label: 'Precio de paquete (bundle)', value: 'bundle_set' }
                     ],
                     onChange: (val) => updateAdjustments('type', val)
                 }),
 
                 // Single values
                 (rule.adjustments.type === 'percentage' || rule.adjustments.type === 'fixed') && el(TextControl, {
-                    label: rule.adjustments.type === 'percentage' ? 'Percentage Value (%)' : 'Fixed Discount Value ($)',
+                    label: rule.adjustments.type === 'percentage' ? 'Valor porcentual (%)' : 'Valor del descuento fijo ($)',
                     type: 'number',
                     value: rule.adjustments.value,
                     onChange: (val) => updateAdjustments('value', parseFloat(val) || 0)
@@ -613,15 +715,15 @@
                 rule.adjustments.type === 'bogo' && el('div', { className: 'drw-bogo-container', style: { marginTop: '12px' } },
                     el('div', { className: 'drw-flex-row' },
                         el(TextControl, {
-                            label: 'Buy Qty',
+                            label: 'Cantidad a comprar',
                             type: 'number',
                             value: rule.adjustments.buy_qty || '',
                             onChange: (val) => updateAdjustments('buy_qty', parseInt(val) || 1)
                         }),
                         el(ProductSearchMultiSelect, {
-                            label: 'Get Product Selection',
+                            label: 'Selección de producto de regalo',
                             selectedIds: rule.adjustments.get_products || (rule.adjustments.get_product_id ? [rule.adjustments.get_product_id] : []),
-                            help: 'Search and select one or more products to discount as the Get items.',
+                            help: 'Busca y selecciona uno o más productos para descontar como productos de regalo.',
                             onChange: (ids) => {
                                 setRule({
                                     ...rule,
@@ -634,7 +736,7 @@
                             }
                         }),
                         el(TextControl, {
-                            label: 'Get Qty',
+                            label: 'Cantidad a llevar',
                             type: 'number',
                             value: rule.adjustments.get_qty || '',
                             onChange: (val) => updateAdjustments('get_qty', parseInt(val) || 1)
@@ -642,17 +744,17 @@
                     ),
                     el('div', { className: 'drw-flex-row', style: { marginTop: '8px' } },
                         el(SelectControl, {
-                            label: 'BOGO Discount Type',
+                            label: 'Tipo de descuento BOGO',
                             value: rule.adjustments.discount_type || rule.adjustments.bogo_discount_type || 'free',
                             options: [
-                                { label: 'Free Product', value: 'free' },
-                                { label: 'Percentage Discount', value: 'percentage' },
-                                { label: 'Fixed Price Discount', value: 'fixed' }
+                                { label: 'Producto gratis', value: 'free' },
+                                { label: 'Descuento porcentual', value: 'percentage' },
+                                { label: 'Descuento de precio fijo', value: 'fixed' }
                             ],
                             onChange: (val) => updateAdjustments('discount_type', val)
                         }),
                         ((rule.adjustments.discount_type || rule.adjustments.bogo_discount_type) === 'percentage' || (rule.adjustments.discount_type || rule.adjustments.bogo_discount_type) === 'fixed') && el(TextControl, {
-                            label: 'BOGO Discount Value',
+                            label: 'Valor del descuento BOGO',
                             type: 'number',
                             value: rule.adjustments.discount_value || rule.adjustments.bogo_value || '',
                             onChange: (val) => updateAdjustments('discount_value', parseFloat(val) || 0)
@@ -663,7 +765,7 @@
                 // Bundle parameters
                 (rule.adjustments.type === 'bundle_set' || rule.adjustments.type === 'bundle') && el('div', { className: 'drw-bundle-container', style: { marginTop: '12px' } },
                     el(TextControl, {
-                        label: 'Bundle Set Price Value ($)',
+                        label: 'Precio del paquete ($)',
                         type: 'number',
                         value: rule.adjustments.bundle_price || rule.adjustments.set_price || '',
                         onChange: (val) => updateAdjustments('bundle_price', parseFloat(val) || 0)
@@ -672,15 +774,15 @@
 
                 // Tiered values
                 rule.adjustments.type === 'bulk' && el('div', { style: { marginTop: '12px' } },
-                    el('p', { style: { fontWeight: '600' } }, 'Quantity Tiers:'),
+                    el('p', { style: { fontWeight: '600' } }, 'Niveles por cantidad:'),
                     el('table', { className: 'drw-tier-table' },
                         el('thead', null,
                             el('tr', null,
-                                el('th', null, 'Min Qty'),
-                                el('th', null, 'Max Qty'),
-                                el('th', null, 'Discount Type'),
-                                el('th', null, 'Value'),
-                                el('th', null, 'Actions')
+                                el('th', null, 'Cant. mín.'),
+                                el('th', null, 'Cant. máx.'),
+                                el('th', null, 'Tipo de descuento'),
+                                el('th', null, 'Valor'),
+                                el('th', null, 'Acciones')
                             )
                         ),
                         el('tbody', null,
@@ -694,7 +796,7 @@
                                     })),
                                     el('td', null, el('input', {
                                         type: 'number',
-                                        placeholder: 'Infinite',
+                                        placeholder: 'Infinito',
                                         style: { width: '80px' },
                                         value: tier.max,
                                         onChange: (e) => updateTier(idx, 'max', e.target.value === '' ? '' : parseInt(e.target.value))
@@ -703,8 +805,8 @@
                                         value: tier.type,
                                         onChange: (e) => updateTier(idx, 'type', e.target.value)
                                     },
-                                        el('option', { value: 'percentage' }, 'Percentage Off'),
-                                        el('option', { value: 'fixed' }, 'Fixed Off')
+                                        el('option', { value: 'percentage' }, 'Porcentaje de descuento'),
+                                        el('option', { value: 'fixed' }, 'Descuento fijo')
                                     )),
                                     el('td', null, el('input', {
                                         type: 'number',
@@ -712,39 +814,38 @@
                                         value: tier.value,
                                         onChange: (e) => updateTier(idx, 'value', parseFloat(e.target.value) || 0)
                                     })),
-                                    el('td', null, el(Button, { className: 'drw-remove-btn', onClick: () => removeTier(idx) }, 'Remove'))
+                                    el('td', null, el(Button, { className: 'drw-remove-btn', onClick: () => removeTier(idx) }, 'Eliminar'))
                                 );
                             })
                         )
                     ),
-                    el(Button, { className: 'drw-secondary-btn', onClick: addTier }, '+ Add Tier')
+                    el(Button, { className: 'drw-secondary-btn', onClick: addTier }, '+ Agregar nivel')
                 )
             ),
 
             // Section 4: Rules Conditions
-            el('div', { className: 'drw-form-section' },
-                el('h3', null, 'Conditions Checklist'),
+            el(Collapsible, { title: 'Lista de condiciones' },
                 (rule.conditions || []).map((cond, idx) => {
                     return el('div', { key: idx, className: 'drw-condition-row' },
                         // Condition type selector
                         el(SelectControl, {
                             value: cond.type,
                             options: [
-                                { label: 'Cart Subtotal', value: 'subtotal' },
-                                { label: 'Cart Item Count', value: 'items_count' },
-                                { label: 'User Role', value: 'user_role' },
-                                { label: 'User Email', value: 'user_email' },
-                                { label: 'Shipping Address', value: 'shipping_location' },
-                                { label: 'Cart Coupon Applied', value: 'cart_coupon' },
-                                { label: 'Total Cart Items Quantity', value: 'cart_items_quantity' },
-                                { label: 'Total Cart Weight', value: 'cart_items_weight' },
-                                { label: 'Already On Sale Status', value: 'onsale_products' },
-                                { label: 'Product/Category Combination', value: 'product_combination' },
-                                { label: 'User Logged In Status', value: 'user_logged_in' },
-                                { label: 'User List (Specific IDs)', value: 'user_list' },
-                                { label: 'Billing Address City', value: 'billing_city' },
-                                { label: 'Scheduling (Dates/Times/Days)', value: 'order_date' },
-                                { label: 'Customer Purchase History', value: 'purchase_history' }
+                                { label: 'Subtotal del carrito', value: 'subtotal' },
+                                { label: 'Cantidad de artículos del carrito', value: 'items_count' },
+                                { label: 'Rol de usuario', value: 'user_role' },
+                                { label: 'Correo del usuario', value: 'user_email' },
+                                { label: 'Dirección de envío', value: 'shipping_location' },
+                                { label: 'Cupón aplicado en el carrito', value: 'cart_coupon' },
+                                { label: 'Cantidad total de artículos del carrito', value: 'cart_items_quantity' },
+                                { label: 'Peso total del carrito', value: 'cart_items_weight' },
+                                { label: 'Estado de productos en oferta', value: 'onsale_products' },
+                                { label: 'Combinación de productos/categorías', value: 'product_combination' },
+                                { label: 'Estado de sesión del usuario', value: 'user_logged_in' },
+                                { label: 'Lista de usuarios (IDs específicos)', value: 'user_list' },
+                                { label: 'Ciudad de facturación', value: 'billing_city' },
+                                { label: 'Programación (fechas/horas/días)', value: 'order_date' },
+                                { label: 'Historial de compras del cliente', value: 'purchase_history' }
                             ],
                             onChange: (val) => updateCondition(idx, 'type', val)
                         }),
@@ -753,10 +854,10 @@
                         cond.type === 'subtotal' && el(SelectControl, {
                             value: cond.operator,
                             options: [
-                                { label: '>= Greater Than or Equal', value: 'greater_than_or_equal' },
-                                { label: '<= Less Than or Equal', value: 'less_than_or_equal' },
-                                { label: '> Greater Than', value: 'greater_than' },
-                                { label: '< Less Than', value: 'less_than' }
+                                { label: '>= Mayor o igual que', value: 'greater_than_or_equal' },
+                                { label: '<= Menor o igual que', value: 'less_than_or_equal' },
+                                { label: '> Mayor que', value: 'greater_than' },
+                                { label: '< Menor que', value: 'less_than' }
                             ],
                             onChange: (val) => updateCondition(idx, 'operator', val)
                         }),
@@ -769,16 +870,16 @@
                         cond.type === 'items_count' && el(SelectControl, {
                             value: cond.check_type,
                             options: [
-                                { label: 'Total items quantity', value: 'total_quantity' },
-                                { label: 'Distinct line items count', value: 'line_items_count' }
+                                { label: 'Cantidad total de artículos', value: 'total_quantity' },
+                                { label: 'Número de líneas distintas', value: 'line_items_count' }
                             ],
                             onChange: (val) => updateCondition(idx, 'check_type', val)
                         }),
                         cond.type === 'items_count' && el(SelectControl, {
                             value: cond.operator,
                             options: [
-                                { label: '>= Greater Than or Equal', value: 'greater_than_or_equal' },
-                                { label: '<= Less Than or Equal', value: 'less_than_or_equal' }
+                                { label: '>= Mayor o igual que', value: 'greater_than_or_equal' },
+                                { label: '<= Menor o igual que', value: 'less_than_or_equal' }
                             ],
                             onChange: (val) => updateCondition(idx, 'operator', val)
                         }),
@@ -791,8 +892,8 @@
                         cond.type === 'user_role' && el(SelectControl, {
                             value: cond.operator,
                             options: [
-                                { label: 'Is In List', value: 'in_list' },
-                                { label: 'Is Not In List', value: 'not_in_list' }
+                                { label: 'Está en la lista', value: 'in_list' },
+                                { label: 'No está en la lista', value: 'not_in_list' }
                             ],
                             onChange: (val) => updateCondition(idx, 'operator', val)
                         }),
@@ -824,13 +925,13 @@
                         cond.type === 'user_email' && el(SelectControl, {
                             value: cond.operator,
                             options: [
-                                { label: 'Matches Domain/Email', value: 'in_list' },
-                                { label: 'Does Not Match', value: 'not_in_list' }
+                                { label: 'Coincide con dominio/correo', value: 'in_list' },
+                                { label: 'No coincide', value: 'not_in_list' }
                             ],
                             onChange: (val) => updateCondition(idx, 'operator', val)
                         }),
                         cond.type === 'user_email' && el(TextControl, {
-                            placeholder: 'e.g. *@gmail.com, test@corp.com',
+                            placeholder: 'Ej. *@gmail.com, correo@empresa.com',
                             value: Array.isArray(cond.value) ? cond.value.join(', ') : cond.value,
                             onChange: (val) => updateCondition(idx, 'value', val.split(',').map(s => s.trim()))
                         }),
@@ -838,23 +939,23 @@
                         cond.type === 'shipping_location' && el(SelectControl, {
                             value: cond.location_type,
                             options: [
-                                { label: 'Country Code', value: 'country' },
-                                { label: 'State Code', value: 'state' },
-                                { label: 'City Name', value: 'city' },
-                                { label: 'Zip/Postcode', value: 'zip' }
+                                { label: 'Código de país', value: 'country' },
+                                { label: 'Código de estado/departamento', value: 'state' },
+                                { label: 'Nombre de ciudad', value: 'city' },
+                                { label: 'Código postal', value: 'zip' }
                             ],
                             onChange: (val) => updateCondition(idx, 'location_type', val)
                         }),
                         cond.type === 'shipping_location' && el(SelectControl, {
                             value: cond.operator,
                             options: [
-                                { label: 'Matches Address', value: 'in_list' },
-                                { label: 'Does Not Match', value: 'not_in_list' }
+                                { label: 'Coincide con la dirección', value: 'in_list' },
+                                { label: 'No coincide', value: 'not_in_list' }
                             ],
                             onChange: (val) => updateCondition(idx, 'operator', val)
                         }),
                         cond.type === 'shipping_location' && el(TextControl, {
-                            placeholder: 'e.g. US, CA, NY, 902*',
+                            placeholder: 'Ej. US, CO, NY, 902*',
                             value: Array.isArray(cond.value) ? cond.value.join(', ') : cond.value,
                             onChange: (val) => updateCondition(idx, 'value', val.split(',').map(s => s.trim()))
                         }),
@@ -863,26 +964,26 @@
                         cond.type === 'cart_coupon' && el(SelectControl, {
                             value: cond.operator || 'applied',
                             options: [
-                                { label: 'Is Applied', value: 'applied' },
-                                { label: 'Is Not Applied', value: 'not_applied' }
+                                { label: 'Está aplicado', value: 'applied' },
+                                { label: 'No está aplicado', value: 'not_applied' }
                             ],
                             onChange: (val) => updateCondition(idx, 'operator', val)
                         }),
                         cond.type === 'cart_coupon' && el(TextControl, {
-                            placeholder: 'e.g. promo50, summer20',
+                            placeholder: 'Ej. promo50, verano20',
                             value: cond.value || '',
                             onChange: (val) => updateCondition(idx, 'value', val)
                         }),
                         cond.type === 'cart_coupon' && el('div', { className: 'drw-coupon-schedule-container' },
                             el('div', { className: 'drw-flex-row' },
                                 el(TextControl, {
-                                    label: 'Start Date',
+                                    label: 'Fecha de inicio',
                                     type: 'date',
                                     value: cond.start_date || '',
                                     onChange: (val) => updateCondition(idx, 'start_date', val)
                                 }),
                                 el(TextControl, {
-                                    label: 'End Date',
+                                    label: 'Fecha de fin',
                                     type: 'date',
                                     value: cond.end_date || '',
                                     onChange: (val) => updateCondition(idx, 'end_date', val)
@@ -890,22 +991,22 @@
                             ),
                             el('div', { className: 'drw-flex-row' },
                                 el(TextControl, {
-                                    label: 'Start Time',
+                                    label: 'Hora de inicio',
                                     type: 'time',
                                     value: cond.start_time || '',
                                     onChange: (val) => updateCondition(idx, 'start_time', val)
                                 }),
                                 el(TextControl, {
-                                    label: 'End Time',
+                                    label: 'Hora de fin',
                                     type: 'time',
                                     value: cond.end_time || '',
                                     onChange: (val) => updateCondition(idx, 'end_time', val)
                                 }),
                                 el(TextControl, {
-                                    label: 'Duration (minutes)',
+                                    label: 'Duración (minutos)',
                                     type: 'number',
                                     value: cond.duration_minutes || '',
-                                    help: 'Optional. If set, duration starts from the start date/time.',
+                                    help: 'Opcional. Si se define, la duración cuenta desde la fecha/hora de inicio.',
                                     onChange: (val) => updateCondition(idx, 'duration_minutes', parseInt(val) || '')
                                 })
                             )
@@ -915,11 +1016,11 @@
                         cond.type === 'cart_items_quantity' && el(SelectControl, {
                             value: cond.operator || 'greater_than_or_equal',
                             options: [
-                                { label: '>= Greater Than or Equal', value: 'greater_than_or_equal' },
-                                { label: '<= Less Than or Equal', value: 'less_than_or_equal' },
-                                { label: '> Greater Than', value: 'greater_than' },
-                                { label: '< Less Than', value: 'less_than' },
-                                { label: '== Equal', value: 'equal' }
+                                { label: '>= Mayor o igual que', value: 'greater_than_or_equal' },
+                                { label: '<= Menor o igual que', value: 'less_than_or_equal' },
+                                { label: '> Mayor que', value: 'greater_than' },
+                                { label: '< Menor que', value: 'less_than' },
+                                { label: '== Igual a', value: 'equal' }
                             ],
                             onChange: (val) => updateCondition(idx, 'operator', val)
                         }),
@@ -933,10 +1034,10 @@
                         cond.type === 'cart_items_weight' && el(SelectControl, {
                             value: cond.operator || 'greater_than_or_equal',
                             options: [
-                                { label: '>= Greater Than or Equal', value: 'greater_than_or_equal' },
-                                { label: '<= Less Than or Equal', value: 'less_than_or_equal' },
-                                { label: '> Greater Than', value: 'greater_than' },
-                                { label: '< Less Than', value: 'less_than' }
+                                { label: '>= Mayor o igual que', value: 'greater_than_or_equal' },
+                                { label: '<= Menor o igual que', value: 'less_than_or_equal' },
+                                { label: '> Mayor que', value: 'greater_than' },
+                                { label: '< Menor que', value: 'less_than' }
                             ],
                             onChange: (val) => updateCondition(idx, 'operator', val)
                         }),
@@ -950,8 +1051,8 @@
                         cond.type === 'onsale_products' && el(SelectControl, {
                             value: cond.value || 'exclude',
                             options: [
-                                { label: 'Exclude On-Sale Products', value: 'exclude' },
-                                { label: 'Only On-Sale Products', value: 'only' }
+                                { label: 'Excluir productos en oferta', value: 'exclude' },
+                                { label: 'Solo productos en oferta', value: 'only' }
                             ],
                             onChange: (val) => updateCondition(idx, 'value', val)
                         }),
@@ -961,22 +1062,22 @@
                             el(SelectControl, {
                                 value: cond.operator || 'contains_any',
                                 options: [
-                                    { label: 'Contains Any of these', value: 'contains_any' },
-                                    { label: 'Contains All of these', value: 'contains_all' },
-                                    { label: 'Contains None of these', value: 'contains_none' }
+                                    { label: 'Contiene cualquiera de estos', value: 'contains_any' },
+                                    { label: 'Contiene todos estos', value: 'contains_all' },
+                                    { label: 'No contiene ninguno de estos', value: 'contains_none' }
                                 ],
                                 onChange: (val) => updateCondition(idx, 'operator', val)
                             }),
                             el('div', { className: 'drw-flex-row', style: { marginTop: '8px' } },
                                 el('div', null,
                                     el(ProductSearchMultiSelect, {
-                                        label: 'Products',
+                                        label: 'Productos',
                                         selectedIds: cond.product_ids || [],
                                         onChange: (ids) => updateCondition(idx, 'product_ids', ids)
                                     })
                                 ),
                                 el('div', null,
-                                    el('span', { className: 'drw-field-label' }, 'Categories:'),
+                                    el('span', { className: 'drw-field-label' }, 'Categorías:'),
                                     el('div', { className: 'drw-checklist-box' },
                                         (adminData.categories || []).map(c => {
                                             const isChecked = (cond.category_ids || []).includes(c.id);
@@ -1009,8 +1110,8 @@
                         cond.type === 'user_logged_in' && el(SelectControl, {
                             value: cond.value || 'yes',
                             options: [
-                                { label: 'User Is Logged In', value: 'yes' },
-                                { label: 'User Is Guest (Not Logged In)', value: 'no' }
+                                { label: 'El usuario ha iniciado sesión', value: 'yes' },
+                                { label: 'El usuario es invitado (sin sesión)', value: 'no' }
                             ],
                             onChange: (val) => updateCondition(idx, 'value', val)
                         }),
@@ -1019,13 +1120,13 @@
                         cond.type === 'user_list' && el(SelectControl, {
                             value: cond.operator || 'in_list',
                             options: [
-                                { label: 'User ID is in list', value: 'in_list' },
-                                { label: 'User ID is NOT in list', value: 'not_in_list' }
+                                { label: 'El ID de usuario está en la lista', value: 'in_list' },
+                                { label: 'El ID de usuario NO está en la lista', value: 'not_in_list' }
                             ],
                             onChange: (val) => updateCondition(idx, 'operator', val)
                         }),
                         cond.type === 'user_list' && el(TextControl, {
-                            placeholder: 'e.g. 1, 25, 48',
+                            placeholder: 'Ej. 1, 25, 48',
                             value: cond.value || '',
                             onChange: (val) => updateCondition(idx, 'value', val)
                         }),
@@ -1034,13 +1135,13 @@
                         cond.type === 'billing_city' && el(SelectControl, {
                             value: cond.operator || 'in_list',
                             options: [
-                                { label: 'Matches City', value: 'in_list' },
-                                { label: 'Does Not Match City', value: 'not_in_list' }
+                                { label: 'Coincide con la ciudad', value: 'in_list' },
+                                { label: 'No coincide con la ciudad', value: 'not_in_list' }
                             ],
                             onChange: (val) => updateCondition(idx, 'operator', val)
                         }),
                         cond.type === 'billing_city' && el(TextControl, {
-                            placeholder: 'e.g. New York, London, Paris',
+                            placeholder: 'Ej. Bogotá, Medellín, Cali',
                             value: cond.value || '',
                             onChange: (val) => updateCondition(idx, 'value', val)
                         }),
@@ -1049,13 +1150,13 @@
                         cond.type === 'order_date' && el('div', { className: 'drw-order-date-container' },
                             el('div', { className: 'drw-flex-row' },
                                 el(TextControl, {
-                                    label: 'Start Date',
+                                    label: 'Fecha de inicio',
                                     type: 'date',
                                     value: cond.start_date || '',
                                     onChange: (val) => updateCondition(idx, 'start_date', val)
                                 }),
                                 el(TextControl, {
-                                    label: 'End Date',
+                                    label: 'Fecha de fin',
                                     type: 'date',
                                     value: cond.end_date || '',
                                     onChange: (val) => updateCondition(idx, 'end_date', val)
@@ -1063,46 +1164,57 @@
                             ),
                             el('div', { className: 'drw-flex-row', style: { marginTop: '8px' } },
                                 el(TextControl, {
-                                    label: 'Start Time',
+                                    label: 'Hora de inicio',
                                     type: 'time',
                                     value: cond.start_time || '',
                                     onChange: (val) => updateCondition(idx, 'start_time', val)
                                 }),
                                 el(TextControl, {
-                                    label: 'End Time',
+                                    label: 'Hora de fin',
                                     type: 'time',
                                     value: cond.end_time || '',
                                     onChange: (val) => updateCondition(idx, 'end_time', val)
                                 }),
                                 el(TextControl, {
-                                    label: 'Duration (minutes)',
+                                    label: 'Duración (minutos)',
                                     type: 'number',
                                     value: cond.duration_minutes || '',
-                                    help: 'Optional. If set, duration starts from the start date/time.',
+                                    help: 'Opcional. Si se define, la duración cuenta desde la fecha/hora de inicio.',
                                     onChange: (val) => updateCondition(idx, 'duration_minutes', parseInt(val) || '')
                                 })
                             ),
                             el('div', { style: { marginTop: '8px' } },
-                                el('span', { className: 'drw-field-label' }, 'Active Days of Week:'),
+                                el('span', { className: 'drw-field-label' }, 'Días de la semana activos:'),
                                 el('div', { className: 'drw-days-checkboxes' },
-                                    ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'].map(day => {
-                                        const isChecked = (cond.weekdays || []).includes(day);
-                                        return el('label', { key: day, className: 'drw-day-checkbox-label' },
+                                    // Stored value stays the English day name (the OrderDate
+                                    // condition matches strtolower(date('l')) server-side);
+                                    // only the visible abbreviation is translated.
+                                    [
+                                        { value: 'Monday', label: 'Lun' },
+                                        { value: 'Tuesday', label: 'Mar' },
+                                        { value: 'Wednesday', label: 'Mié' },
+                                        { value: 'Thursday', label: 'Jue' },
+                                        { value: 'Friday', label: 'Vie' },
+                                        { value: 'Saturday', label: 'Sáb' },
+                                        { value: 'Sunday', label: 'Dom' }
+                                    ].map(day => {
+                                        const isChecked = (cond.weekdays || []).includes(day.value);
+                                        return el('label', { key: day.value, className: 'drw-day-checkbox-label' },
                                             el('input', {
                                                 type: 'checkbox',
                                                 checked: isChecked,
                                                 onChange: (e) => {
                                                     const list = [...(cond.weekdays || [])];
                                                     if (e.target.checked) {
-                                                        list.push(day);
+                                                        list.push(day.value);
                                                     } else {
-                                                        const idxOf = list.indexOf(day);
+                                                        const idxOf = list.indexOf(day.value);
                                                         if (idxOf > -1) list.splice(idxOf, 1);
                                                     }
                                                     updateCondition(idx, 'weekdays', list);
                                                 }
                                             }),
-                                            ' ' + day.substring(0, 3)
+                                            ' ' + day.label
                                         );
                                     })
                                 )
@@ -1114,9 +1226,9 @@
                             el(SelectControl, {
                                 value: cond.history_metric || 'orders_count',
                                 options: [
-                                    { label: 'Total Orders Count', value: 'orders_count' },
-                                    { label: 'Total Amount Spent ($)', value: 'revenue' },
-                                    { label: 'Previously Purchased Products', value: 'products_bought' }
+                                    { label: 'Número total de pedidos', value: 'orders_count' },
+                                    { label: 'Monto total gastado ($)', value: 'revenue' },
+                                    { label: 'Productos comprados anteriormente', value: 'products_bought' }
                                 ],
                                 onChange: (val) => {
                                     updateCondition(idx, 'history_metric', val);
@@ -1133,8 +1245,8 @@
                                 el(SelectControl, {
                                     value: cond.operator || 'greater_than_or_equal',
                                     options: [
-                                        { label: '>= Greater Than or Equal', value: 'greater_than_or_equal' },
-                                        { label: '<= Less Than or Equal', value: 'less_than_or_equal' }
+                                        { label: '>= Mayor o igual que', value: 'greater_than_or_equal' },
+                                        { label: '<= Menor o igual que', value: 'less_than_or_equal' }
                                     ],
                                     onChange: (val) => updateCondition(idx, 'operator', val)
                                 }),
@@ -1148,29 +1260,29 @@
                                 el(SelectControl, {
                                     value: cond.operator || 'contains_any',
                                     options: [
-                                        { label: 'Contains Any of these', value: 'contains_any' },
-                                        { label: 'Contains All of these', value: 'contains_all' }
+                                        { label: 'Contiene cualquiera de estos', value: 'contains_any' },
+                                        { label: 'Contiene todos estos', value: 'contains_all' }
                                     ],
                                     onChange: (val) => updateCondition(idx, 'operator', val)
                                 }),
                                 el(ProductSearchMultiSelect, {
-                                    label: 'Select Products',
+                                    label: 'Selecciona productos',
                                     selectedIds: Array.isArray(cond.value) ? cond.value : [],
                                     onChange: (ids) => updateCondition(idx, 'value', ids)
                                 })
                             )
                         ),
 
-                        el(Button, { className: 'drw-remove-btn', onClick: () => removeCondition(idx) }, 'Delete')
+                        el(Button, { className: 'drw-remove-btn', onClick: () => removeCondition(idx) }, 'Eliminar')
                     );
                 }),
-                el(Button, { className: 'drw-secondary-btn', onClick: addCondition }, '+ Add Condition')
+                el(Button, { className: 'drw-secondary-btn', onClick: addCondition }, '+ Agregar condición')
             ),
 
             // Save / Cancel Actions
             el('div', { style: { display: 'flex', gap: '12px', marginTop: '24px' } },
-                el(Button, { className: 'drw-primary-btn', onClick: onSave }, 'Save Rules Configuration'),
-                el(Button, { className: 'drw-secondary-btn', onClick: onCancel }, 'Cancel')
+                el(Button, { className: 'drw-primary-btn', onClick: onSave }, 'Guardar configuración de reglas'),
+                el(Button, { className: 'drw-secondary-btn', onClick: onCancel }, 'Cancelar')
             )
         );
     }
