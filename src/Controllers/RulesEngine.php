@@ -292,7 +292,7 @@ class RulesEngine
                 $temp_price = (float)$original_price;
                 if ($type === 'percentage') {
                     $discount_val = (float)$adjustments['value'];
-                    $temp_price -= ($temp_price * ($discount_val / 100));
+                    $temp_price = max(0.0, $temp_price - ($temp_price * ($discount_val / 100)));
                 } elseif ($type === 'fixed') {
                     $discount_val = (float)$adjustments['value'];
                     $temp_price = max(0.0, $temp_price - $discount_val);
@@ -306,7 +306,7 @@ class RulesEngine
                             $tier_value = (float)(!empty($tier['value']) ? $tier['value'] : 0);
 
                             if ($tier_type === 'percentage') {
-                                $temp_price -= ($temp_price * ($tier_value / 100));
+                                $temp_price = max(0.0, $temp_price - ($temp_price * ($tier_value / 100)));
                             } elseif ($tier_type === 'fixed') {
                                 $temp_price = max(0.0, $temp_price - $tier_value);
                             }
@@ -350,7 +350,7 @@ class RulesEngine
                 $rule_applied = false;
                 if ($type === 'percentage') {
                     $discount_val = (float)$adjustments['value'];
-                    $price -= ($price * ($discount_val / 100));
+                    $price = max(0.0, $price - ($price * ($discount_val / 100)));
                     $rule_applied = true;
                 } elseif ($type === 'fixed') {
                     $discount_val = (float)$adjustments['value'];
@@ -366,7 +366,7 @@ class RulesEngine
                             $tier_value = (float)(!empty($tier['value']) ? $tier['value'] : 0);
 
                             if ($tier_type === 'percentage') {
-                                $price -= ($price * ($tier_value / 100));
+                                $price = max(0.0, $price - ($price * ($tier_value / 100)));
                             } elseif ($tier_type === 'fixed') {
                                 $price = max(0.0, $price - $tier_value);
                             }
@@ -695,7 +695,7 @@ class RulesEngine
                     $product = $item['data'];
                     if ($this->is_product_targeted_by_rule($rule, $product)) {
                         if ($type === 'percentage') {
-                            $item_prices[$key] -= $item_prices[$key] * ($value / 100);
+                            $item_prices[$key] = max(0.0, $item_prices[$key] - $item_prices[$key] * ($value / 100));
                         } elseif ($type === 'fixed') {
                             $item_prices[$key] = max(0.0, $item_prices[$key] - $value);
                         }
@@ -716,7 +716,7 @@ class RulesEngine
                                 $tier_value = (float)(!empty($tier['value']) ? $tier['value'] : 0);
 
                                 if ($tier_type === 'percentage') {
-                                    $item_prices[$key] -= $item_prices[$key] * ($tier_value / 100);
+                                    $item_prices[$key] = max(0.0, $item_prices[$key] - $item_prices[$key] * ($tier_value / 100));
                                 } elseif ($tier_type === 'fixed') {
                                     $item_prices[$key] = max(0.0, $item_prices[$key] - $tier_value);
                                 }

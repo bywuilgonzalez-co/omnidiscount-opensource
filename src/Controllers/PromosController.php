@@ -439,6 +439,24 @@ class PromosController {
 		}
 
 		$new_active = empty( $existing['active'] ) ? 1 : 0;
+
+		// Activating publishes the discount to the engine, so the stored row must
+		// still pass validation BEFORE it goes live. Rows imported by the legacy
+		// migration (or written before newer validation rules) could otherwise be
+		// flipped active without re-validation and compile into an invalid /
+		// negative price in production. We re-project the stored row to the REST
+		// shape and run the exact same validate_promo() gate create/update use,
+		// excluding this promo's own id so its code never collides with itself.
+		// Deactivating is always allowed: retracting a bad promo must never be
+		// blocked by validation.
+		if ( $new_active ) {
+			$camel     = $this->to_rest( $existing );
+			$validated = $this->validate_promo( $camel, true, $id );
+			if ( is_wp_error( $validated ) ) {
+				return $this->validation_error_response( $validated );
+			}
+		}
+
 		PromoModel::update( $id, array( 'active' => $new_active ) );
 
 		// Activating publishes the discount to the engine; deactivating retracts it.
@@ -812,6 +830,19 @@ class PromosController {
 	 * @return \WP_REST_Response Always 200; availability is signalled via body.
 	 */
 	public function check_code_availability( $request ) {
+		// Defense in depth: this is an admin-only helper endpoint, but it is
+		// cheap to script into a hammering loop from an already-authenticated
+		// session. check_permission() remains the real access gate.
+		if ( ! RateLimiter::check( 'check-code:' . get_current_user_id(), 30, 60 ) ) {
+			return $this->validation_error_response(
+				new \WP_Error(
+					'rate_limited',
+					__( 'Demasiadas solicitudes, intenta de nuevo en un momento.', 'discount-rules-woo' ),
+					array( 'status' => 429 )
+				)
+			);
+		}
+
 		$code = isset( $request['code'] ) ? strtoupper( sanitize_text_field( $request['code'] ) ) : '';
 
 		$exclude_param = $request['exclude'];
@@ -891,6 +922,20 @@ class PromosController {
 	 * @return \WP_REST_Response
 	 */
 	public function check_conflicts( $request ) {
+		// Defense in depth: this is an admin-only, non-persisting helper
+		// endpoint, but it runs a full scope-overlap scan against every active
+		// promo, so it is worth capping call frequency independent of
+		// check_permission(), which remains the real access gate.
+		if ( ! RateLimiter::check( 'check-conflicts:' . get_current_user_id(), 20, 60 ) ) {
+			return $this->validation_error_response(
+				new \WP_Error(
+					'rate_limited',
+					__( 'Demasiadas solicitudes, intenta de nuevo en un momento.', 'discount-rules-woo' ),
+					array( 'status' => 429 )
+				)
+			);
+		}
+
 		$data = $this->get_request_data( $request );
 
 		$exclude_id = ( isset( $data['id'] ) && is_numeric( $data['id'] ) ) ? (int) $data['id'] : null;
@@ -1544,7 +1589,7 @@ class PromosController {
 	 * @param array $data Validated camelCase promo array.
 	 * @return array Column-shaped data for PromoModel.
 	 */
-	private function to_columns( $data ) {
+	public function to_columns( $data ) {
 		return array(
 			'name'         => $data['name'],
 			'code'         => '' !== $data['code'] ? $data['code'] : null,
@@ -1754,7 +1799,7 @@ class PromosController {
 	 * @param int|null $exclude_id Promo id to exclude from code-uniqueness checks (the promo being updated).
 	 * @return array|\WP_Error Sanitised promo array or error.
 	 */
-	private function validate_promo( $data, $is_update = false, $exclude_id = null ) {
+	public function validate_promo( $data, $is_update = false, $exclude_id = null ) {
 
 		// --- name -----------------------------------------------------------
 		$name = isset( $data['name'] ) ? sanitize_text_field( $data['name'] ) : '';

@@ -297,6 +297,24 @@ class RuleModel
             }
         }
 
+        // Clamp percentage discounts to [0, 100] so a hand-authored "Modo experto"
+        // rule (or migrated data) can never drive a price below zero in RulesEngine.
+        if ($type === 'percentage' && isset($adjustments['value'])) {
+            $adjustments['value'] = max(0.0, min(100.0, (float)$adjustments['value']));
+        }
+
+        if ($type === 'bulk' && isset($adjustments['tiers']) && is_array($adjustments['tiers'])) {
+            foreach ($adjustments['tiers'] as $index => $tier) {
+                if (!is_array($tier)) {
+                    continue;
+                }
+                $tier_type = !empty($tier['type']) ? $tier['type'] : 'percentage';
+                if ($tier_type === 'percentage' && isset($tier['value'])) {
+                    $adjustments['tiers'][$index]['value'] = max(0.0, min(100.0, (float)$tier['value']));
+                }
+            }
+        }
+
         return $adjustments;
     }
 

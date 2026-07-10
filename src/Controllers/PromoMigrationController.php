@@ -87,6 +87,7 @@ class PromoMigrationController {
 		$expected      = count( $decoded );
 		$migrated      = count( $already_migrated );
 		$wrote_new_ids = false;
+		$rejected      = array();
 
 		foreach ( $decoded as $legacy ) {
 			if ( ! is_array( $legacy ) ) {
@@ -103,7 +104,29 @@ class PromoMigrationController {
 				continue; // Already inserted by a previous run -- skip, never duplicate.
 			}
 
-			$new_id = PromoModel::insert( self::map_legacy_promo( $legacy ) );
+			// Re-validate every legacy entry through the SAME gate the REST
+			// create/update path uses BEFORE it can land in the live table.
+			// Legacy blobs were written by an older, laxer editor and may hold
+			// values (bad type, percent > 100, inverted dates, unescaped HTML)
+			// that would otherwise be imported unvalidated and, once activated,
+			// compile into an invalid / negative price in production. Invalid
+			// entries are collected in $rejected and NEVER inserted; valid ones
+			// are stored through to_columns() so the persisted row is
+			// byte-for-byte what a real create_promo() would have written.
+			$camel     = self::legacy_to_camel( $legacy );
+			$validated = \Drw\App\Controllers\PromosController::instance()->validate_promo( $camel );
+
+			if ( is_wp_error( $validated ) ) {
+				$rejected[] = array(
+					'legacy_id' => $legacy_id,
+					'name'      => isset( $legacy['name'] ) ? (string) $legacy['name'] : '',
+					'reason'    => $validated->get_error_message(),
+				);
+				continue;
+			}
+
+			$columns = \Drw\App\Controllers\PromosController::instance()->to_columns( $validated );
+			$new_id  = PromoModel::insert( $columns );
 
 			if ( $new_id ) {
 				$migrated++;
@@ -122,59 +145,60 @@ class PromoMigrationController {
 			return array(
 				'status'   => 'ok',
 				'migrated' => $migrated,
+				'rejected' => $rejected,
 			);
 		}
 
 		// Do NOT roll back: keep whatever landed so a retry can finish the job.
+		// $rejected explains which legacy entries were dropped for failing
+		// validation (an empty array keeps the result shape identical for any
+		// caller that does not inspect it).
 		return array(
 			'status'   => 'incomplete',
 			'migrated' => $migrated,
 			'expected' => $expected,
+			'rejected' => $rejected,
 		);
 	}
 
 	/**
-	 * Map a single legacy promo entry to the PromoModel::insert() column shape.
+	 * Translate a single legacy promo entry into the camelCase REST shape that
+	 * PromosController::validate_promo() consumes.
 	 *
-	 * The legacy `scope` is a free-form string; the structured scope arrives in a
-	 * later phase, so here it is preserved verbatim inside a JSON envelope
-	 * { "target": "legacy", "raw": "<original text>" }. PromoModel encodes the
-	 * scope / gift_config arrays to JSON on insert.
+	 * This mirrors the field mapping map_legacy_promo() performs, but stops one
+	 * step earlier: it returns the public camelCase contract (name, code, type,
+	 * value, scope, minAmount, limitGlobal, limitUser, start, end, active, home,
+	 * cartMessage, giftText) instead of the final snake_case columns. Passing the
+	 * result through validate_promo() + to_columns() then yields exactly the row
+	 * a real create_promo() would persist, so migrated data is held to the same
+	 * validation and sanitisation as data entered through the REST API.
+	 *
+	 * The legacy `scope` is a free-form string; it is forwarded verbatim so
+	 * validate_promo()/sanitize_scope() keeps it as a sanitised legacy string
+	 * (later wrapped in the historical { raw: "<text>" } envelope by
+	 * to_columns()/scope_to_storage()). The legacy `uses` counter is intentionally
+	 * not carried here: to_columns() omits it by design (usage is model-managed),
+	 * matching the REST create path.
 	 *
 	 * @param array $legacy Legacy promo entry.
-	 * @return array Column-shaped data for PromoModel::insert().
+	 * @return array camelCase promo payload for PromosController::validate_promo().
 	 */
-	private static function map_legacy_promo( array $legacy ) {
-		$scope_raw = isset( $legacy['scope'] ) ? (string) $legacy['scope'] : '';
-		$gift_text = isset( $legacy['giftText'] ) ? (string) $legacy['giftText'] : '';
-
+	private static function legacy_to_camel( array $legacy ) {
 		return array(
-			'name'         => isset( $legacy['name'] ) ? (string) $legacy['name'] : '',
-			// Empty/missing code becomes NULL so multiple codeless legacy promos
-			// don't collide on the UNIQUE(code) index (MySQL allows many NULLs but
-			// only one ''). Mirrors PromosController::to_columns() normalisation.
-			'code'         => ( isset( $legacy['code'] ) && '' !== (string) $legacy['code'] ) ? (string) $legacy['code'] : null,
-			'type'         => isset( $legacy['type'] ) ? (string) $legacy['type'] : '',
-			// Coerce numerics to the real column types (mirrors the REST path in
-			// PromosController::to_columns()); a blank legacy field ('') must not
-			// reach a DECIMAL/INT column, or a strict-mode INSERT fails (error 1366).
-			'value'        => isset( $legacy['value'] ) ? (float) $legacy['value'] : 0,
-			'scope'        => array(
-				'target' => 'legacy',
-				'raw'    => $scope_raw,
-			),
-			'min_amount'   => ( isset( $legacy['minAmount'] ) && '' !== (string) $legacy['minAmount'] ) ? (float) $legacy['minAmount'] : null,
-			'limit_global' => ! empty( $legacy['limitGlobal'] ) ? (int) $legacy['limitGlobal'] : null,
-			'limit_user'   => ! empty( $legacy['limitUser'] ) ? (int) $legacy['limitUser'] : null,
-			'uses'         => isset( $legacy['uses'] ) ? (int) $legacy['uses'] : 0,
-			'date_from'    => ( isset( $legacy['start'] ) && '' !== $legacy['start'] ) ? (string) $legacy['start'] : null,
-			'date_to'      => ( isset( $legacy['end'] ) && '' !== $legacy['end'] ) ? (string) $legacy['end'] : null,
-			'active'       => ( ! isset( $legacy['active'] ) || $legacy['active'] ) ? 1 : 0,
-			'home'         => ! empty( $legacy['home'] ) ? 1 : 0,
-			'cart_message' => isset( $legacy['cartMessage'] ) ? (string) $legacy['cartMessage'] : '',
-			'gift_config'  => array(
-				'text' => $gift_text,
-			),
+			'name'        => isset( $legacy['name'] ) ? (string) $legacy['name'] : '',
+			'code'        => isset( $legacy['code'] ) ? (string) $legacy['code'] : '',
+			'type'        => isset( $legacy['type'] ) ? (string) $legacy['type'] : '',
+			'value'       => isset( $legacy['value'] ) ? $legacy['value'] : 0,
+			'scope'       => isset( $legacy['scope'] ) ? (string) $legacy['scope'] : '',
+			'minAmount'   => isset( $legacy['minAmount'] ) ? $legacy['minAmount'] : 0,
+			'limitGlobal' => isset( $legacy['limitGlobal'] ) ? $legacy['limitGlobal'] : 0,
+			'limitUser'   => isset( $legacy['limitUser'] ) ? $legacy['limitUser'] : 0,
+			'start'       => isset( $legacy['start'] ) ? (string) $legacy['start'] : '',
+			'end'         => isset( $legacy['end'] ) ? (string) $legacy['end'] : '',
+			'active'      => ! isset( $legacy['active'] ) || (bool) $legacy['active'],
+			'home'        => ! empty( $legacy['home'] ),
+			'cartMessage' => isset( $legacy['cartMessage'] ) ? (string) $legacy['cartMessage'] : '',
+			'giftText'    => isset( $legacy['giftText'] ) ? (string) $legacy['giftText'] : '',
 		);
 	}
 }

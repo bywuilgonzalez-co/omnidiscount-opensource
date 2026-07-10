@@ -392,7 +392,14 @@ class CartController
         $discounts = $engine->calculate_cart_level_discounts($cart);
 
         if (!empty($discounts['fees'])) {
-            foreach ($discounts['fees'] as $fee) {
+            // Each cart-level rule already caps its OWN fee at the subtotal in
+            // RulesEngine::apply_rule_adjustments(), but several non-exclusive
+            // automatic cart promos can still STACK and, combined, exceed the
+            // real cart subtotal — an unintended free/negative checkout. Scale
+            // the whole set down proportionally so the fees can never sum past
+            // the subtotal actually being charged for the items at this point.
+            $fees = $this->scale_fees_to_subtotal($discounts['fees'], (float)$cart->get_subtotal());
+            foreach ($fees as $fee) {
                 $cart->add_fee($fee['name'], $fee['amount'], true);
             }
         }
@@ -422,6 +429,64 @@ class CartController
         } catch (\Throwable $e) {
             error_log('[discount-rules-woo] Sandbox preview (cart fee) failed: ' . $e->getMessage());
         }
+    }
+
+    /**
+     * Scale stacked cart-wide discount fees down so their combined magnitude
+     * can never exceed the cart subtotal they are applied against.
+     *
+     * RulesEngine::apply_rule_adjustments() already caps each rule's OWN fee at
+     * the subtotal, but several non-exclusive automatic cart promos can still
+     * stack: the sum of their (negative) amounts can drop the order below zero,
+     * i.e. an unintended free/negative checkout. This is the last line of
+     * defence — when the combined discount would exceed $subtotal, every fee is
+     * multiplied by (subtotal / total) so the fees sum to exactly the subtotal
+     * while each fee keeps its relative share; otherwise the fees are returned
+     * untouched.
+     *
+     * Pure and side-effect free so it can be unit-tested in isolation. Fee
+     * amounts are expected to be negative (discounts), matching the shape
+     * produced by RulesEngine::apply_rule_adjustments():
+     * [ 'name' => string, 'amount' => float ].
+     *
+     * @param array $fees     Fees, each [ 'name' => string, 'amount' => float ].
+     * @param float $subtotal Real cart subtotal to cap the combined fees at.
+     * @return array Fees with amounts scaled proportionally only when the cap
+     *               is exceeded; otherwise the input array unchanged.
+     */
+    private function scale_fees_to_subtotal(array $fees, $subtotal)
+    {
+        $subtotal = (float)$subtotal;
+
+        // An empty set has nothing to scale.
+        if (empty($fees)) {
+            return $fees;
+        }
+
+        $total = 0.0;
+        foreach ($fees as $fee) {
+            $total += abs(isset($fee['amount']) ? (float)$fee['amount'] : 0.0);
+        }
+
+        // Combined discount already fits within the subtotal (or there is
+        // nothing to scale): leave every fee exactly as-is. No re-casting on
+        // this path, so the input array is returned bit-for-bit unchanged.
+        if ($total <= 0.0 || $total <= $subtotal) {
+            return $fees;
+        }
+
+        // A real cart subtotal is never negative; clamp defensively so the
+        // ratio can only shrink magnitudes, never flip a discount into a
+        // surcharge. When the real subtotal is 0 (e.g. a fully item-discounted
+        // cart) every fee scales to 0, which still sums to exactly the
+        // subtotal and keeps checkout from ever going negative.
+        $ratio = max(0.0, $subtotal) / $total;
+        foreach ($fees as $key => $fee) {
+            $amount = isset($fee['amount']) ? (float)$fee['amount'] : 0.0;
+            $fees[$key]['amount'] = $amount * $ratio;
+        }
+
+        return $fees;
     }
 
     /**
