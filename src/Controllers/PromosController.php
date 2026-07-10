@@ -926,7 +926,16 @@ class PromosController {
 		// endpoint, but it runs a full scope-overlap scan against every active
 		// promo, so it is worth capping call frequency independent of
 		// check_permission(), which remains the real access gate.
-		if ( ! RateLimiter::check( 'check-conflicts:' . get_current_user_id(), 20, 60 ) ) {
+		//
+		// Unlike a manual button, this endpoint is driven by a LIVE checker
+		// (drw-conflict-checker.js) that fires once per settled promoDraft/
+		// ruleDraft change (500ms debounce), so a single legitimate editing
+		// session legitimately produces dozens of accepted calls. The cap is
+		// kept generous (60/min) so filling out one promo or rule never trips
+		// it, while still bounding a runaway/compromised session — the real
+		// gate remains check_permission(). See RateLimiter::check() for the
+		// sliding-window caveat (the window only fully clears after 60s idle).
+		if ( ! RateLimiter::check( 'check-conflicts:' . get_current_user_id(), 60, 60 ) ) {
 			return $this->validation_error_response(
 				new \WP_Error(
 					'rate_limited',

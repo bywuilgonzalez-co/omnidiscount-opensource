@@ -185,6 +185,19 @@ class StoreApiController {
             return;
         }
 
+        // Honour the same features.show_minicart_promos toggle the classic
+        // mini-cart badges respect (CartController::minicart_promos_enabled()).
+        // The Blocks Mini-Cart drawer badge is the direct visual analog of the
+        // classic mini-cart badge, so a merchant who switches off "promo badges
+        // in the mini-cart" expects BOTH drawer surfaces to go quiet. This gates
+        // only the drawer badge SCRIPT; the Store API `promos` extension data
+        // (get_cart_extension_data) and the Cart/Checkout Block notices are left
+        // untouched, matching that setting's documented mini-cart-only scope.
+        if (class_exists('\\Drw\\App\\Models\\SettingsModel')
+            && ! (bool) \Drw\App\Models\SettingsModel::get_setting('features.show_minicart_promos', true)) {
+            return;
+        }
+
         // 'wp-data' ships with WordPress core (same script-loader family as
         // 'wp-element', already a dependency of admin-app.js/drw-promo-wizard.js)
         // since WP 5.0; declared explicitly so it's guaranteed enqueued even if
