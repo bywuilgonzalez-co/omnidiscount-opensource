@@ -986,21 +986,21 @@ class PromosController {
 			$warnings[] = array(
 				'severity' => 'error',
 				'field'    => 'start',
-				'message'  => __( 'Start date must be in Y-m-d format.', 'discount-rules-woo' ),
+				'message'  => __( 'La fecha de inicio debe tener el formato Y-m-d.', 'discount-rules-woo' ),
 			);
 		}
 		if ( ! $end_valid ) {
 			$warnings[] = array(
 				'severity' => 'error',
 				'field'    => 'end',
-				'message'  => __( 'End date must be in Y-m-d format.', 'discount-rules-woo' ),
+				'message'  => __( 'La fecha de fin debe tener el formato Y-m-d.', 'discount-rules-woo' ),
 			);
 		}
 		if ( $start_valid && $end_valid && '' !== $start && '' !== $end && $end < $start ) {
 			$warnings[] = array(
 				'severity' => 'error',
 				'field'    => 'end',
-				'message'  => __( 'End date must be on or after the start date.', 'discount-rules-woo' ),
+				'message'  => __( 'La fecha de fin debe ser igual o posterior a la fecha de inicio.', 'discount-rules-woo' ),
 			);
 		}
 
@@ -1025,7 +1025,9 @@ class PromosController {
 			$warnings[] = array(
 				'severity' => 'warning',
 				'field'    => 'scope',
-				'message'  => __( 'No hay productos ni categorías seleccionados: esta promoción no se aplicaría a nada.', 'discount-rules-woo' ),
+				'message'  => ( 'rule' === $context )
+					? __( 'No hay productos ni categorías seleccionados: esta regla no se aplicaría a nada.', 'discount-rules-woo' )
+					: __( 'No hay productos ni categorías seleccionados: esta promoción no se aplicaría a nada.', 'discount-rules-woo' ),
 			);
 		}
 

@@ -1707,6 +1707,7 @@
                 el(ToggleControl, { label: 'Habilitar programación por fechas (date_from / date_to)', checked: !!ft.enable_scheduling,    onChange: (v) => updateSetting('features.enable_scheduling',    v) }),
                 el(ToggleControl, { label: 'Habilitar límites de uso por regla',                      checked: !!ft.enable_usage_limits,  onChange: (v) => updateSetting('features.enable_usage_limits',  v) }),
                 el(ToggleControl, { label: 'Mostrar etiquetas de descuento en el catálogo',           checked: !!ft.show_discount_labels, onChange: (v) => updateSetting('features.show_discount_labels', v) }),
+                el(ToggleControl, { label: 'Mostrar insignias de promoción en el mini-carrito',       checked: ft.show_minicart_promos !== false, onChange: (v) => updateSetting('features.show_minicart_promos', v) }),
                 el(ToggleControl, { label: 'Modo debug (registrar en consola del navegador)',          checked: !!ft.enable_debug_mode,    onChange: (v) => updateSetting('features.enable_debug_mode',    v) })
             ),
             el(SelectControl, {
