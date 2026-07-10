@@ -390,6 +390,16 @@
 		var loading = loadingState[0];
 		var setLoading = loadingState[1];
 
+		// One-time legacy migration banner: null while unknown/not-applicable
+		// (nothing rendered), otherwise { legacyCount, migratedCount,
+		// backupExists, needsMigration }. See PromoMigrationController.
+		var legacyState = useState(null);
+		var legacy = legacyState[0];
+		var setLegacy = legacyState[1];
+		var migratingState = useState(false);
+		var migrating = migratingState[0];
+		var setMigrating = migratingState[1];
+
 		function fetchPromos() {
 			apiFetch({ path: '/drw/v1/promos' })
 				.then(function (data) {
@@ -402,7 +412,32 @@
 				});
 		}
 
-		useEffect(function () { fetchPromos(); }, []);
+		function fetchLegacyStatus() {
+			apiFetch({ path: '/drw/v1/promos/legacy-migration' })
+				.then(function (data) { setLegacy(data); })
+				.catch(function () { setLegacy(null); });
+		}
+
+		useEffect(function () { fetchPromos(); fetchLegacyStatus(); }, []);
+
+		function runLegacyMigration() {
+			if (migrating) { return; }
+			setMigrating(true);
+			apiFetch({ path: '/drw/v1/promos/legacy-migration', method: 'POST' })
+				.then(function (result) {
+					if (result.status === 'ok') {
+						showToast('Migradas ' + result.migrated + ' promociones antiguas.');
+					} else if (result.status === 'incomplete') {
+						showToast('Se migraron ' + result.migrated + ' de ' + result.expected + '. Puedes reintentar sin duplicar nada.');
+					} else {
+						showToast('No había promociones antiguas por migrar.');
+					}
+					fetchLegacyStatus();
+					fetchPromos();
+				})
+				.catch(function () { showToast('Error al migrar. El respaldo original no se toca; puedes reintentar cuando quieras.'); })
+				.then(function () { setMigrating(false); });
+		}
 
 		function handleToggle(id) {
 			apiFetch({ path: '/drw/v1/promos/' + id + '/toggle', method: 'POST' })
@@ -486,6 +521,30 @@
 				el('button', { className: 'drw-btn drw-btn-ghost drw-btn-sm', onClick: onBack },
 					'← Volver a Reglas'
 				)
+			),
+
+			legacy && legacy.needsMigration && el('div', {
+				className: 'drw-legacy-migration-banner',
+				style: {
+					display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, flexWrap: 'wrap',
+					padding: '12px 16px', marginBottom: 16,
+					background: '#fff8e6', border: '1px solid #f0d585', borderRadius: 8
+				}
+			},
+				el('div', null,
+					el('div', { style: { fontWeight: 600, fontSize: 13 } },
+						'Detectamos ' + (legacy.legacyCount - legacy.migratedCount) + ' promoción(es) del sistema anterior sin migrar.'
+					),
+					el('div', { className: 'drw-field-hint' },
+						'Se copian a la tabla nueva sin borrar ni modificar el respaldo original. Es seguro repetir esto las veces que haga falta.'
+					)
+				),
+				el('button', {
+					type: 'button',
+					className: 'drw-btn drw-btn-primary drw-btn-sm',
+					disabled: migrating,
+					onClick: runLegacyMigration
+				}, migrating ? 'Migrando…' : 'Migrar ahora')
 			),
 
 			el('div', { className: 'drw-kpi-row' },

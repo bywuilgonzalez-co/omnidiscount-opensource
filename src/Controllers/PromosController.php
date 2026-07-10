@@ -253,6 +253,30 @@ class PromosController {
 				),
 			)
 		);
+
+		// GET  /promos/legacy-migration – status of the one-time legacy import
+		//      (how many wp_options('drw_promos') entries exist, how many are
+		//      already migrated). Purely informational, never writes anything.
+		// POST /promos/legacy-migration – actually run
+		//      PromoMigrationController::migrate_legacy_promos(). Safe to call
+		//      more than once: it tracks already-migrated legacy ids and never
+		//      re-inserts a row (see PromoMigrationController::MIGRATED_IDS_KEY).
+		register_rest_route(
+			$namespace,
+			'/promos/legacy-migration',
+			array(
+				array(
+					'methods'             => \WP_REST_Server::READABLE,
+					'callback'            => array( $this, 'get_legacy_migration_status' ),
+					'permission_callback' => array( $this, 'check_permission' ),
+				),
+				array(
+					'methods'             => \WP_REST_Server::CREATABLE,
+					'callback'            => array( $this, 'run_legacy_migration' ),
+					'permission_callback' => array( $this, 'check_permission' ),
+				),
+			)
+		);
 	}
 
 	// ------------------------------------------------------------------
@@ -1926,6 +1950,60 @@ class PromosController {
 			),
 			$status
 		);
+	}
+
+	// ------------------------------------------------------------------
+	// Legacy migration (one-shot, admin-triggered)
+	// ------------------------------------------------------------------
+
+	/**
+	 * GET /drw/v1/promos/legacy-migration
+	 *
+	 * Read-only status check so the admin UI can decide whether to show the
+	 * "migrate now" banner at all, and to render an accurate count instead of
+	 * a blind "click to migrate" button.
+	 *
+	 * @return \WP_REST_Response
+	 */
+	public function get_legacy_migration_status() {
+		$decoded      = json_decode( get_option( PromoMigrationController::LEGACY_KEY, '[]' ), true );
+		$legacy_count = is_array( $decoded ) ? count( $decoded ) : 0;
+
+		$migrated_ids    = get_option( PromoMigrationController::MIGRATED_IDS_KEY, array() );
+		$migrated_count  = is_array( $migrated_ids ) ? count( $migrated_ids ) : 0;
+		$backup_exists   = null !== get_option( PromoMigrationController::BACKUP_KEY, null );
+
+		return new \WP_REST_Response(
+			array(
+				'legacyCount'     => $legacy_count,
+				'migratedCount'   => $migrated_count,
+				'backupExists'    => $backup_exists,
+				// False once every legacy entry has already been migrated (or
+				// there was never any legacy data to begin with) -- lets the
+				// UI hide the banner instead of offering a no-op button.
+				'needsMigration'  => $legacy_count > 0 && $migrated_count < $legacy_count,
+			),
+			200
+		);
+	}
+
+	/**
+	 * POST /drw/v1/promos/legacy-migration
+	 *
+	 * Runs PromoMigrationController::migrate_legacy_promos(). Safe to call
+	 * more than once (accidental double-click included): already-migrated
+	 * legacy entries are tracked and skipped, so a repeat call can only ever
+	 * finish an incomplete migration, never duplicate a row. See
+	 * PromoMigrationController for the full contract and status values.
+	 *
+	 * @return \WP_REST_Response
+	 */
+	public function run_legacy_migration() {
+		$result = PromoMigrationController::migrate_legacy_promos();
+
+		$status_code = 'incomplete' === $result['status'] ? 207 : 200; // 207: partial success, safe to retry.
+
+		return new \WP_REST_Response( $result, $status_code );
 	}
 
 }

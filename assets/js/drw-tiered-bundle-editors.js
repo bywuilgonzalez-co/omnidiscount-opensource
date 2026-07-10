@@ -223,8 +223,10 @@
 		var onChange = props.onChange || function () {};
 
 		if (typeof window.DrwProductCategoryPicker === 'function') {
+			// No separate <label> here: DrwProductCategoryPicker renders its
+			// own (via wp.components.TextControl's `label` prop, passed
+			// below), so adding one here would duplicate it visually.
 			return el('div', { className: 'drw-field' },
-				label && el('label', null, label),
 				el(window.DrwProductCategoryPicker, {
 					label: label,
 					productIds: value.productIds || [],
