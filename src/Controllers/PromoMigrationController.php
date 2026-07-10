@@ -160,6 +160,18 @@ class PromoMigrationController {
 					$already_migrated[] = $legacy_id;
 					$wrote_new_ids       = true;
 				}
+			} else {
+				// The row passed validation and the code-collision guard above, yet
+				// PromoModel::insert() still returned 0 (e.g. a legacy DATETIME the
+				// import gate did not format-check rejected by SQL strict mode, or any
+				// other $wpdb->insert failure). Import mode's whole contract is
+				// "reported, never silently inserted": surface it in $rejected so the
+				// admin sees the drop and the migration does not report a phantom loss.
+				$rejected[] = array(
+					'legacy_id' => $legacy_id,
+					'name'      => isset( $legacy['name'] ) ? (string) $legacy['name'] : '',
+					'reason'    => __( 'No se pudo guardar la promoción en la base de datos.', 'discount-rules-woo' ),
+				);
 			}
 		}
 

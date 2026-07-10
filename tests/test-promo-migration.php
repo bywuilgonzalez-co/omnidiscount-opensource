@@ -324,13 +324,13 @@ namespace {
 
 	assert_same( '2', $rejected[0]['legacy_id'], 'The invalid-type entry (id 2) should be rejected first.' );
 	assert_same( 'Tipo inválido', $rejected[0]['name'], 'A rejected entry carries its legacy name for the admin notice.' );
-	assert_true( false !== strpos( $rejected[0]['reason'], 'Invalid type' ), 'An unknown type must be rejected with the invalid-type reason.' );
+	assert_true( false !== strpos( $rejected[0]['reason'], 'Tipo no válido' ), 'An unknown type must be rejected with the invalid-type reason.' );
 
 	assert_same( '3', $rejected[1]['legacy_id'], 'The percent > 100 entry (id 3) should be rejected.' );
-	assert_same( 'Percentage value cannot exceed 100.', $rejected[1]['reason'], 'value = 500 on a percent promo must be rejected as an over-100 percentage.' );
+	assert_same( 'El porcentaje no puede superar 100.', $rejected[1]['reason'], 'value = 500 on a percent promo must be rejected as an over-100 percentage.' );
 
 	assert_same( '4', $rejected[2]['legacy_id'], 'The inverted-dates entry (id 4) should be rejected.' );
-	assert_same( 'End date must be on or after the start date.', $rejected[2]['reason'], 'end before start must be rejected as an invalid date range.' );
+	assert_same( 'La fecha de fin debe ser igual o posterior a la fecha de inicio.', $rejected[2]['reason'], 'end before start must be rejected as an invalid date range.' );
 
 	// The valid <script> name is sanitised in the inserted row (tags stripped).
 	$script_row = PromoModel::$inserted[1];
@@ -393,7 +393,7 @@ namespace {
 	assert_same( 1, $dup_result['migrated'], 'migrated counts only the row that actually landed.' );
 	assert_same( 1, count( $dup_result['rejected'] ), 'The colliding second entry must be surfaced under rejected, not lost silently.' );
 	assert_same( '2', $dup_result['rejected'][0]['legacy_id'], 'The duplicate-code entry (id 2) is the rejected one.' );
-	assert_same( 'This code is already used by another promo.', $dup_result['rejected'][0]['reason'], 'The rejection reason must name the duplicate-code collision.' );
+	assert_same( 'Este código ya está en uso por otra promoción.', $dup_result['rejected'][0]['reason'], 'The rejection reason must name the duplicate-code collision.' );
 
 	echo "Promo migration OK\n";
 }

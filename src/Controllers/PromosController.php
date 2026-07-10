@@ -2071,7 +2071,7 @@ class PromosController {
 		if ( ! $import && strlen( $name ) < 3 ) {
 			return new \WP_Error(
 				'invalid_name',
-				__( 'Name is required and must be at least 3 characters.', 'discount-rules-woo' ),
+				__( 'El nombre es obligatorio y debe tener al menos 3 caracteres.', 'discount-rules-woo' ),
 				array( 'field' => 'name', 'status' => 400 )
 			);
 		}
@@ -2082,7 +2082,7 @@ class PromosController {
 			return new \WP_Error(
 				'invalid_type',
 				/* translators: %s: comma-separated list of valid types */
-				sprintf( __( 'Invalid type. Allowed: %s', 'discount-rules-woo' ), implode( ', ', PromoTypeRegistry::ids() ) ),
+				sprintf( __( 'Tipo no válido. Permitidos: %s', 'discount-rules-woo' ), implode( ', ', PromoTypeRegistry::ids() ) ),
 				array( 'field' => 'type', 'status' => 400 )
 			);
 		}
@@ -2092,7 +2092,7 @@ class PromosController {
 		if ( ! $import && '' !== $code && ! preg_match( '/^[A-Z0-9_]+$/', $code ) ) {
 			return new \WP_Error(
 				'invalid_code',
-				__( 'Code must be uppercase alphanumeric with underscores only.', 'discount-rules-woo' ),
+				__( 'El código solo puede contener mayúsculas, números y guiones bajos.', 'discount-rules-woo' ),
 				array( 'field' => 'code', 'status' => 400 )
 			);
 		}
@@ -2100,7 +2100,7 @@ class PromosController {
 		if ( PromoTypeRegistry::needs_code( $type ) && '' === $code ) {
 			return new \WP_Error(
 				'code_required',
-				__( 'This promo type requires a redeemable code.', 'discount-rules-woo' ),
+				__( 'Este tipo de promoción requiere un código canjeable.', 'discount-rules-woo' ),
 				array( 'field' => 'code', 'status' => 400 )
 			);
 		}
@@ -2121,21 +2121,21 @@ class PromosController {
 		if ( $value < 0 ) {
 			return new \WP_Error(
 				'invalid_value',
-				__( 'Value must be zero or positive.', 'discount-rules-woo' ),
+				__( 'El valor debe ser cero o positivo.', 'discount-rules-woo' ),
 				array( 'field' => 'value', 'status' => 400 )
 			);
 		}
 		if ( 'percent' === $type && $value > 100 ) {
 			return new \WP_Error(
 				'invalid_percent',
-				__( 'Percentage value cannot exceed 100.', 'discount-rules-woo' ),
+				__( 'El porcentaje no puede superar 100.', 'discount-rules-woo' ),
 				array( 'field' => 'value', 'status' => 400 )
 			);
 		}
 		if ( 'cashback' === $type && $value > 100 ) {
 			return new \WP_Error(
 				'invalid_cashback',
-				__( 'Cashback percentage cannot exceed 100.', 'discount-rules-woo' ),
+				__( 'El porcentaje de cashback no puede superar 100.', 'discount-rules-woo' ),
 				array( 'field' => 'value', 'status' => 400 )
 			);
 		}
@@ -2145,7 +2145,7 @@ class PromosController {
 		if ( ! $import && '' !== $start && ! $this->is_valid_date( $start ) ) {
 			return new \WP_Error(
 				'invalid_start_date',
-				__( 'Start date must be in Y-m-d format.', 'discount-rules-woo' ),
+				__( 'La fecha de inicio debe tener el formato Y-m-d.', 'discount-rules-woo' ),
 				array( 'field' => 'start', 'status' => 400 )
 			);
 		}
@@ -2154,7 +2154,7 @@ class PromosController {
 		if ( ! $import && '' !== $end && ! $this->is_valid_date( $end ) ) {
 			return new \WP_Error(
 				'invalid_end_date',
-				__( 'End date must be in Y-m-d format.', 'discount-rules-woo' ),
+				__( 'La fecha de fin debe tener el formato Y-m-d.', 'discount-rules-woo' ),
 				array( 'field' => 'end', 'status' => 400 )
 			);
 		}
@@ -2162,7 +2162,7 @@ class PromosController {
 		if ( '' !== $start && '' !== $end && $end < $start ) {
 			return new \WP_Error(
 				'invalid_date_range',
-				__( 'End date must be on or after the start date.', 'discount-rules-woo' ),
+				__( 'La fecha de fin debe ser igual o posterior a la fecha de inicio.', 'discount-rules-woo' ),
 				array( 'field' => 'end', 'status' => 400 )
 			);
 		}
@@ -2232,11 +2232,11 @@ class PromosController {
 	 */
 	private function find_duplicate_code( $code, $exclude_id ) {
 		if ( PromoModel::code_exists( $code, $exclude_id ) ) {
-			return __( 'This code is already used by another promo.', 'discount-rules-woo' );
+			return __( 'Este código ya está en uso por otra promoción.', 'discount-rules-woo' );
 		}
 
 		if ( function_exists( 'wc_get_coupon_id_by_code' ) && wc_get_coupon_id_by_code( $code ) ) {
-			return __( 'This code is already used by an existing WooCommerce coupon.', 'discount-rules-woo' );
+			return __( 'Este código ya está en uso por un cupón de WooCommerce existente.', 'discount-rules-woo' );
 		}
 
 		return false;
