@@ -183,15 +183,23 @@ class RuleTemplateRegistry {
 				),
 			),
 
-			// 4. BOGO 2x1.
+			// 4. BOGO: compra 2, lleva 1 gratis.
+			// NOTA: buy_qty=2/get_qty=1 significa "compra 2, lleva 1 más gratis"
+			// (3 unidades por el precio de 2) -- eso es "3x2" en la convencion de
+			// nombres del plugin (ver PromoTypeRegistry '3x2'), NO "2x1" (que
+			// seria buy_qty=1/get_qty=1: comprar 1 y llevar 1 gratis). La etiqueta
+			// se dejo generica a proposito para no comprometerse con un nombre
+			// numerico que no coincida con los datos reales -- encontrado y
+			// corregido via prueba real en navegador: NaturalLanguageSummary
+			// describia correctamente "3x2" mientras la plantilla decia "2x1".
 			array(
 				'id'          => 'bogo_2x1',
-				'label'       => __( 'BOGO 2x1', 'discount-rules-woo' ),
+				'label'       => __( 'BOGO: compra 2, lleva 1 gratis', 'discount-rules-woo' ),
 				'description' => __( 'Compra 2 y lleva 1 gratis. Personaliza las cantidades y el producto de regalo.', 'discount-rules-woo' ),
 				'icon'        => 'archive',
 				'color'       => '#00c0b4',
 				'rule'        => array(
-					'title'       => __( 'BOGO 2x1', 'discount-rules-woo' ),
+					'title'       => __( 'BOGO: compra 2, lleva 1 gratis', 'discount-rules-woo' ),
 					'enabled'     => true,
 					'exclusive'   => false,
 					'priority'    => 10,
