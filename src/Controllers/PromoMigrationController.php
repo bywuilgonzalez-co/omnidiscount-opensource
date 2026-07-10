@@ -138,15 +138,15 @@ class PromoMigrationController {
 			// never be inserted: the wp_drw_promos `code_unique` index rejects it
 			// and PromoModel::insert() would return 0, silently dropping the row
 			// with no trace in $rejected and leaving the migration permanently
-			// 'incomplete'. Surface that unrecoverable collision here (same reason
-			// string find_duplicate_code() uses) so the admin can rename/merge the
-			// duplicate instead of losing a discount without knowing.
+			// 'incomplete'. Surface that unrecoverable collision here (the Spanish
+			// equivalent of the reason find_duplicate_code() reports) so the admin
+			// can rename/merge the duplicate instead of losing a discount unknowingly.
 			$validated_code = isset( $validated['code'] ) ? (string) $validated['code'] : '';
 			if ( '' !== $validated_code && PromoModel::code_exists( $validated_code ) ) {
 				$rejected[] = array(
 					'legacy_id' => $legacy_id,
 					'name'      => isset( $legacy['name'] ) ? (string) $legacy['name'] : '',
-					'reason'    => __( 'This code is already used by another promo.', 'discount-rules-woo' ),
+					'reason'    => __( 'Este código ya está en uso por otra promoción.', 'discount-rules-woo' ),
 				);
 				continue;
 			}

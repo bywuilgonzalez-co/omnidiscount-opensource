@@ -504,7 +504,7 @@ class PromosController {
 			return new \WP_Error(
 				'invalid_type',
 				/* translators: %s: comma-separated list of valid types */
-				sprintf( __( 'Invalid type. Allowed: %s', 'discount-rules-woo' ), implode( ', ', PromoTypeRegistry::ids() ) ),
+				sprintf( __( 'Tipo no válido. Permitidos: %s', 'discount-rules-woo' ), implode( ', ', PromoTypeRegistry::ids() ) ),
 				array( 'field' => 'type', 'status' => 400 )
 			);
 		}
@@ -513,14 +513,14 @@ class PromosController {
 		if ( $value < 0 ) {
 			return new \WP_Error(
 				'invalid_value',
-				__( 'Value must be zero or positive.', 'discount-rules-woo' ),
+				__( 'El valor debe ser cero o positivo.', 'discount-rules-woo' ),
 				array( 'field' => 'value', 'status' => 400 )
 			);
 		}
 		if ( ( 'percent' === $type || 'cashback' === $type ) && $value > 100 ) {
 			return new \WP_Error(
 				'invalid_percent',
-				__( 'Percentage value cannot exceed 100.', 'discount-rules-woo' ),
+				__( 'El porcentaje no puede superar 100.', 'discount-rules-woo' ),
 				array( 'field' => 'value', 'status' => 400 )
 			);
 		}
@@ -882,7 +882,8 @@ class PromosController {
 	 * - exclude (int, optional)    Promo id to exclude (editing an existing promo).
 	 *
 	 * @param \WP_REST_Request $request Request object.
-	 * @return \WP_REST_Response Always 200; availability is signalled via body.
+	 * @return \WP_REST_Response 200 with availability signalled via the body,
+	 *                           or 429 when the per-user rate limit is exceeded.
 	 */
 	public function check_code_availability( $request ) {
 		// Defense in depth: this is an admin-only helper endpoint, but it is
@@ -968,9 +969,10 @@ class PromosController {
 	 *   (e) empty scope     - target is 'products'/'category' but no ids were
 	 *                        selected, so the promo would discount nothing.
 	 *
-	 * This endpoint ALWAYS returns 200 with a `warnings` array -- it never
-	 * returns a 4xx and never mutates any data. The only gate that actually
-	 * blocks create_promo()/update_promo() from persisting bad data remains
+	 * On success this endpoint returns 200 with a `warnings` array and never
+	 * mutates any data; the only 4xx it can return is 429, when the per-user
+	 * rate limit is exceeded. The only gate that actually blocks
+	 * create_promo()/update_promo() from persisting bad data remains
 	 * validate_promo(); this is purely an early-warning UI aid.
 	 *
 	 * @param \WP_REST_Request $request Request object.
