@@ -34,6 +34,7 @@
 	var useState = wp.element.useState;
 	var useEffect = wp.element.useEffect;
 	var useRef = wp.element.useRef;
+	var apiFetch = wp.apiFetch;
 
 	// Single source of truth: PromoTypeRegistry (PHP) via wp_localize_script.
 	var PROMO_TYPES = (window.drwAdminData && window.drwAdminData.promoTypes) || [];
@@ -253,6 +254,18 @@
 		var saving = savingState[0];
 		var setSaving = savingState[1];
 
+		// Sample product for LivePreviewPanel (Paso 2) when the scope itself
+		// doesn't already name a specific product (target === 'products').
+		var previewProductState = useState(null);
+		var previewProductId = previewProductState[0];
+		var setPreviewProductId = previewProductState[1];
+
+		// "Probar en mi tienda" (sandbox mode) result, Paso 3. Local/ephemeral —
+		// not part of the saved promo, just feedback for the click.
+		var sandboxState = useState({ status: 'idle', message: '' }); // idle | loading | ok | error
+		var sandbox = sandboxState[0];
+		var setSandbox = sandboxState[1];
+
 		var mountedRef = useRef(true);
 		useEffect(function () {
 			mountedRef.current = true;
@@ -336,6 +349,25 @@
 			} else {
 				setSaving(false);
 			}
+		}
+
+		// -- Sandbox mode (Paso 3) -------------------------------------------
+		// Only meaningful for an already-saved promo (needs a real id) of an
+		// automatic type (needsCode === false) — see
+		// PromosController::activate_sandbox() for the same two guards
+		// enforced server-side.
+		function doSandbox() {
+			if (isNew || needsCode || sandbox.status === 'loading') { return; }
+			setSandbox({ status: 'loading', message: '' });
+			apiFetch({ path: '/drw/v1/promos/' + f.id + '/sandbox', method: 'POST' })
+				.then(function (res) {
+					if (!mountedRef.current) { return; }
+					setSandbox({ status: 'ok', message: (res && res.message) || 'Activado solo para tu sesión de administrador.' });
+				})
+				.catch(function (err) {
+					if (!mountedRef.current) { return; }
+					setSandbox({ status: 'error', message: (err && err.message) || 'No se pudo activar el modo sandbox.' });
+				});
 		}
 
 		// -- Value / mechanic editors (Paso 2) ------------------------------
@@ -426,7 +458,7 @@
 		}
 
 		function renderConfigStep() {
-			return el('div', { className: 'drw-fields' },
+			var mainFields = el('div', { className: 'drw-fields' },
 				el('div', null,
 					el('label', { className: 'drw-section-label' }, 'Tipo de oferta'),
 					el('div', { className: 'drw-promo-type-grid' },
@@ -510,6 +542,46 @@
 					)
 				)
 			);
+
+			// Live preview needs a real WC product to price against. Reuse the
+			// scope's own first product when it names one; otherwise let the
+			// merchant pick any product just for previewing (not persisted).
+			var scopeProductId = (f.scope && f.scope.target === 'products' && Array.isArray(f.scope.ids) && f.scope.ids.length > 0)
+				? f.scope.ids[0]
+				: null;
+			var sampleProductId = scopeProductId || previewProductId;
+
+			var LivePreview = window.DrwLivePreviewPanel;
+			var Picker = window.DrwProductCategoryPicker;
+			// No section label here: LivePreviewPanel already renders its own
+			// "Vista previa en vivo" header, so an outer one would just repeat it.
+			var sidebar = typeof LivePreview !== 'function' ? null : el('div', {
+				className: 'drw-wizard-sidebar',
+				style: { flex: '0 1 280px', minWidth: 0 }
+			},
+				!scopeProductId && typeof Picker === 'function' && el('div', { className: 'drw-field', style: { marginBottom: 10 } },
+					el('label', null, 'Producto de ejemplo'),
+					el(Picker, {
+						mode: 'products',
+						value: previewProductId ? [previewProductId] : [],
+						onChange: function (ids) {
+							var last = Array.isArray(ids) && ids.length ? ids[ids.length - 1] : null;
+							setPreviewProductId(last);
+						},
+						label: 'Buscar un producto para previsualizar',
+						help: 'Solo para esta vista previa; no cambia el alcance de la promoción. Si eliges varios, se usa el último que selecciones.'
+					})
+				),
+				el(LivePreview, { promoDraft: f, sampleProductId: sampleProductId })
+			);
+
+			return el('div', {
+				className: 'drw-wizard-config-layout',
+				style: { display: 'flex', flexWrap: 'wrap', gap: '20px', alignItems: 'flex-start' }
+			},
+				el('div', { style: { flex: '1 1 380px', minWidth: 0 } }, mainFields),
+				sidebar
+			);
 		}
 
 		function summaryRow(key, val) {
@@ -521,8 +593,17 @@
 
 		function renderSummaryStep() {
 			var vigencia = f.end ? (f.start + ' → ' + f.end) : (f.start ? ('Desde ' + f.start + ' (permanente)') : 'Permanente');
+			var NLSummary = window.DrwNaturalLanguageSummary;
+			var ConflictChecker = window.DrwConflictChecker;
+			var StatsPanel = window.DrwPromoStatsPanel;
+
 			return el('div', null,
 				el('label', { className: 'drw-section-label' }, 'Revisa y publica'),
+
+				typeof NLSummary === 'function' && el('div', { style: { marginBottom: 14 } },
+					el(NLSummary, { promoDraft: f })
+				),
+
 				el('div', { className: 'drw-summary-card' },
 					summaryRow('Nombre', f.name || el('span', { className: 'drw-field-hint' }, 'Sin nombre')),
 					summaryRow('Tipo', t.label),
@@ -535,6 +616,44 @@
 					summaryRow('Por cliente', Number(f.limitUser) > 0 ? f.limitUser + '×' : 'Ilimitado'),
 					f.cartMessage && summaryRow('Mensaje', f.cartMessage)
 				),
+
+				typeof ConflictChecker === 'function' && el('div', { style: { marginTop: 14 } },
+					el(ConflictChecker, {
+						promoDraft: {
+							id: isNew ? null : f.id,
+							name: f.name,
+							code: f.code,
+							type: f.type,
+							value: f.value,
+							scope: f.scope,
+							start: f.start,
+							end: f.end
+						}
+					})
+				),
+
+				!isNew && typeof StatsPanel === 'function' && el('div', { style: { marginTop: 16 } },
+					el('label', { className: 'drw-section-label' }, 'Desempeño real'),
+					el(StatsPanel, { promoId: f.id })
+				),
+
+				!isNew && !needsCode && el('div', { className: 'drw-sandbox-box', style: { marginTop: 16, padding: '12px 14px', border: '1px dashed var(--drw-border, #d8dcd3)', borderRadius: 8 } },
+					el('div', { style: { display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10, flexWrap: 'wrap' } },
+						el('div', null,
+							el('div', { style: { fontWeight: 600, fontSize: 13 } }, 'Probar en mi tienda'),
+							el('div', { className: 'drw-field-hint' }, 'Actívala solo para tu sesión de administrador, sin publicarla a clientes reales.')
+						),
+						el('button', {
+							type: 'button',
+							className: 'drw-btn drw-btn-ghost drw-btn-sm',
+							disabled: sandbox.status === 'loading',
+							onClick: doSandbox
+						}, sandbox.status === 'loading' ? 'Activando…' : 'Probar en mi tienda')
+					),
+					sandbox.status === 'ok' && el('p', { style: { marginTop: 8, marginBottom: 0, fontSize: 12.5, color: 'var(--drw-success, #10b981)' } }, sandbox.message),
+					sandbox.status === 'error' && el('p', { style: { marginTop: 8, marginBottom: 0, fontSize: 12.5, color: 'var(--drw-error, #ef4444)' } }, sandbox.message)
+				),
+
 				!valid && el('p', { className: 'drw-field-hint', style: { marginTop: 12, color: 'var(--drw-error)' } },
 					needsCode && (f.code || '').trim().length < 3
 						? 'Falta un código válido (mínimo 3 caracteres) para este tipo de promoción.'

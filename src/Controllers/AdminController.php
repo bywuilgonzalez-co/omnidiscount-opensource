@@ -160,6 +160,20 @@ class AdminController
             true
         );
         wp_enqueue_script(
+            'drw-natural-language-summary',
+            DRW_PLUGIN_URL . 'assets/js/drw-natural-language-summary.js',
+            ['wp-element', 'drw-admin-app'],
+            DRW_VERSION,
+            true
+        );
+        wp_enqueue_script(
+            'drw-promo-stats-panel',
+            DRW_PLUGIN_URL . 'assets/js/drw-promo-stats-panel.js',
+            ['wp-element', 'wp-api-fetch'],
+            DRW_VERSION,
+            true
+        );
+        wp_enqueue_script(
             'drw-promo-wizard',
             DRW_PLUGIN_URL . 'assets/js/drw-promo-wizard.js',
             [
@@ -174,6 +188,8 @@ class AdminController
                 'drw-code-input',
                 'drw-conflict-checker',
                 'drw-live-preview-panel',
+                'drw-natural-language-summary',
+                'drw-promo-stats-panel',
             ],
             DRW_VERSION,
             true
@@ -214,6 +230,9 @@ class AdminController
             'roles'           => $this->get_user_roles(),
             // Single source of truth for promo types; see Drw\App\Models\PromoTypeRegistry.
             'promoTypes'      => PromoTypeRegistry::all(),
+            // Used by LivePreviewPanel/PromoStatsPanel/NaturalLanguageSummary to
+            // format money in the store's real currency instead of a bare number.
+            'currencySymbol'  => get_woocommerce_currency_symbol(),
         ]);
     }
 
