@@ -440,20 +440,25 @@ class PromosController {
 
 		$new_active = empty( $existing['active'] ) ? 1 : 0;
 
-		// Activating publishes the discount to the engine, so the stored row must
-		// still pass validation BEFORE it goes live. Rows imported by the legacy
-		// migration (or written before newer validation rules) could otherwise be
-		// flipped active without re-validation and compile into an invalid /
-		// negative price in production. We re-project the stored row to the REST
-		// shape and run the exact same validate_promo() gate create/update use,
-		// excluding this promo's own id so its code never collides with itself.
-		// Deactivating is always allowed: retracting a bad promo must never be
-		// blocked by validation.
+		// Activating republishes the discount to the engine, so the stored row
+		// must still be SAFE to compile before it goes live: a row imported by
+		// the pre-hardening migration (or written under a laxer editor) could
+		// otherwise be flipped active and compile into an invalid / negative
+		// price in production. assert_activatable() enforces exactly that
+		// price-safety invariant (registered type + in-range value) and nothing
+		// more. It deliberately does NOT re-run the full create-time
+		// validate_promo() gate: code format, code/coupon uniqueness, name
+		// length and date format are create-time hygiene that do not affect the
+		// compiled price, and re-checking them here would permanently trap
+		// legitimately-stored rows -- e.g. an inactive promo whose code merely
+		// collided with a WooCommerce coupon created AFTER it, or a legacy row
+		// with a hyphenated code -- with no path to ever reactivate them.
+		// Deactivating is always allowed: retracting a promo must never be
+		// blocked.
 		if ( $new_active ) {
-			$camel     = $this->to_rest( $existing );
-			$validated = $this->validate_promo( $camel, true, $id );
-			if ( is_wp_error( $validated ) ) {
-				return $this->validation_error_response( $validated );
+			$safety = $this->assert_activatable( $existing );
+			if ( is_wp_error( $safety ) ) {
+				return $this->validation_error_response( $safety );
 			}
 		}
 
@@ -471,6 +476,56 @@ class PromosController {
 		}
 
 		return new \WP_REST_Response( $this->to_rest( $promo ), 200 );
+	}
+
+	/**
+	 * Price-safety gate for (re)activating an already-stored promo row.
+	 *
+	 * Activation republishes the row to the engine, so the ONE invariant that
+	 * must still hold is that it cannot compile into an invalid / negative
+	 * price: its type must be a registered adjustment and its value must be in
+	 * range (percentage/cashback never above 100, no negative value). This is
+	 * the exact concern the toggle re-validation was added to guard.
+	 *
+	 * Everything else validate_promo() enforces at create time -- code format,
+	 * code/coupon uniqueness, name length, date format -- is create-time
+	 * hygiene that does NOT affect the compiled price, so it is intentionally
+	 * NOT re-checked here: doing so would permanently trap a legitimately-stored
+	 * row (imported verbatim by the pre-hardening migration, written under a
+	 * laxer editor, or whose code merely collided with a WooCommerce coupon
+	 * created after the promo) with no way to reactivate it.
+	 *
+	 * @param array $row Stored PromoModel row (snake_case columns).
+	 * @return true|\WP_Error True if the row is safe to activate, WP_Error otherwise.
+	 */
+	private function assert_activatable( $row ) {
+		$type = isset( $row['type'] ) ? (string) $row['type'] : '';
+		if ( ! PromoTypeRegistry::exists( $type ) ) {
+			return new \WP_Error(
+				'invalid_type',
+				/* translators: %s: comma-separated list of valid types */
+				sprintf( __( 'Invalid type. Allowed: %s', 'discount-rules-woo' ), implode( ', ', PromoTypeRegistry::ids() ) ),
+				array( 'field' => 'type', 'status' => 400 )
+			);
+		}
+
+		$value = isset( $row['value'] ) ? floatval( $row['value'] ) : 0;
+		if ( $value < 0 ) {
+			return new \WP_Error(
+				'invalid_value',
+				__( 'Value must be zero or positive.', 'discount-rules-woo' ),
+				array( 'field' => 'value', 'status' => 400 )
+			);
+		}
+		if ( ( 'percent' === $type || 'cashback' === $type ) && $value > 100 ) {
+			return new \WP_Error(
+				'invalid_percent',
+				__( 'Percentage value cannot exceed 100.', 'discount-rules-woo' ),
+				array( 'field' => 'value', 'status' => 400 )
+			);
+		}
+
+		return true;
 	}
 
 	/**
