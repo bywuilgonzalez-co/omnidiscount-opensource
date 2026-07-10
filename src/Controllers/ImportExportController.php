@@ -115,7 +115,7 @@ class ImportExportController {
         // instead of WooCommerce. Capability stays 'manage_woocommerce' unchanged.
         add_submenu_page(
             'drw-discount-rules',
-            __('Importar / Exportar', 'discount-rules-woo'),
+            __('OmniDiscount — Importar / Exportar', 'discount-rules-woo'),
             __('Importar / Exportar', 'discount-rules-woo'),
             'manage_woocommerce',
             'drw-import-export',
