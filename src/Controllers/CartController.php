@@ -444,7 +444,7 @@ class CartController
                 $item->add_meta_data('_drw_original_price', $original, true);
                 $item->add_meta_data('_drw_discount_price', $discounted, true);
                 $item->add_meta_data(
-                    __('Discount Rules Saved', 'discount-rules-woo'), 
+                    __('Ahorro OmniDiscount', 'discount-rules-woo'),
                     wc_price($saving * (int)$values['quantity']), 
                     false
                 );

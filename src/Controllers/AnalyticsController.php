@@ -176,9 +176,9 @@ class AnalyticsController {
     public function render_analytics_page() {
         ?>
         <div class="wrap">
-            <h1><?php esc_html_e('Discount Rules – Analytics', 'discount-rules-woo'); ?></h1>
+            <h1><?php esc_html_e('OmniDiscount — Analíticas', 'discount-rules-woo'); ?></h1>
             <div id="drw-analytics-app">
-                <p><?php esc_html_e('Loading analytics...', 'discount-rules-woo'); ?></p>
+                <p><?php esc_html_e('Cargando analíticas...', 'discount-rules-woo'); ?></p>
             </div>
         </div>
         <?php

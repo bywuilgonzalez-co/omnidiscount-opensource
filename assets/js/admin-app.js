@@ -301,12 +301,12 @@
                     screen === 'settings' ? 'Configuración Global' :
                     screen === 'promos'   ? 'Cupones y Promociones' :
                     screen === 'list'     ? 'OmniDiscount Dashboard' :
-                    (editingRule && editingRule.id ? 'Edit Discount Rule' : 'Create New Discount Rule')
+                    (editingRule && editingRule.id ? 'Editar regla de descuento' : 'Crear nueva regla de descuento')
                 ),
                 screen === 'list' && el('div', { style: { display: 'flex', gap: '8px' } },
                     el(Button, { className: 'drw-secondary-btn', onClick: () => setScreen('promos') }, '🎟 Cupones'),
                     el(Button, { className: 'drw-secondary-btn', onClick: () => setScreen('settings') }, '⚙ Configuración'),
-                    el(Button, { className: 'drw-primary-btn', onClick: handleAddRule }, '+ Create Rule')
+                    el(Button, { className: 'drw-primary-btn', onClick: handleAddRule }, '+ Crear regla')
                 )
             ),
 
@@ -327,7 +327,7 @@
     function RulesList({ rules, onEdit, onDelete, onToggle }) {
         if (rules.length === 0) {
             return el('div', { style: { textAlign: 'center', padding: '40px 0', color: '#64748b' } },
-                el('p', { style: { fontSize: '16px' } }, 'No rules found. Click "Create Rule" to configure your first discount!'),
+                el('p', { style: { fontSize: '16px' } }, 'Aún no hay reglas. Haz clic en "+ Crear regla" para configurar tu primer descuento.'),
             );
         }
 
@@ -338,31 +338,31 @@
                 let detailsText = '';
                 
                 if (adjType === 'percentage') {
-                    detailsText = `${adjVal}% Off`;
+                    detailsText = `${adjVal}% de descuento`;
                 } else if (adjType === 'fixed') {
-                    detailsText = `$${adjVal} Flat Off`;
+                    detailsText = `$${adjVal} de descuento fijo`;
                 } else if (adjType === 'bulk') {
-                    detailsText = 'Bulk Tiered Discount';
+                    detailsText = 'Descuento por niveles de cantidad';
                 } else if (adjType === 'bogo') {
                     const bogoType = rule.adjustments.bogo_discount_type || 'free';
                     const bogoVal = rule.adjustments.bogo_value || 0;
-                    const bogoText = bogoType === 'free' ? 'Free' : (bogoType === 'percentage' ? `${bogoVal}% Off` : `$${bogoVal} Off`);
-                    detailsText = `BOGO: Buy ${rule.adjustments.buy_qty || 1} Get ${rule.adjustments.get_qty || 1} (${bogoText})`;
+                    const bogoText = bogoType === 'free' ? 'gratis' : (bogoType === 'percentage' ? `${bogoVal}% de descuento` : `$${bogoVal} de descuento`);
+                    detailsText = `BOGO: compra ${rule.adjustments.buy_qty || 1} y llévate ${rule.adjustments.get_qty || 1} (${bogoText})`;
                 } else if (adjType === 'free_shipping') {
-                    detailsText = 'Free Shipping';
+                    detailsText = 'Envío gratis';
                 } else if (adjType === 'bundle_set' || adjType === 'bundle') {
-                    detailsText = `Bundle Set Price ($${rule.adjustments.bundle_price || rule.adjustments.set_price || 0})`;
+                    detailsText = `Precio de paquete ($${rule.adjustments.bundle_price || rule.adjustments.set_price || 0})`;
                 }
 
                 return el('div', { key: rule.id, className: 'drw-rule-card' },
                     el('div', { className: 'drw-rule-info' },
                         el('h4', { className: 'drw-rule-name' }, 
                             rule.title,
-                            el('span', { className: `drw-badge ${rule.enabled ? 'drw-badge-active' : 'drw-badge-inactive'}` }, rule.enabled ? 'Enabled' : 'Disabled')
+                            el('span', { className: `drw-badge ${rule.enabled ? 'drw-badge-active' : 'drw-badge-inactive'}` }, rule.enabled ? 'Activa' : 'Inactiva')
                         ),
                         el('div', { className: 'drw-rule-meta' },
-                            el('span', null, `Priority: ${rule.priority}`),
-                            el('span', null, `Target: ${rule.apply_to.replace('_', ' ')}`),
+                            el('span', null, `Prioridad: ${rule.priority}`),
+                            el('span', null, `Aplica a: ${({ all_products: 'todos los productos', specific_products: 'productos específicos', specific_categories: 'categorías específicas' })[rule.apply_to] || rule.apply_to.replace('_', ' ')}`),
                             el('span', { className: 'drw-badge drw-badge-type' }, detailsText)
                         )
                     ),
@@ -371,8 +371,8 @@
                             checked: rule.enabled,
                             onChange: () => onToggle(rule)
                         }),
-                        el(Button, { className: 'drw-secondary-btn', onClick: () => onEdit(rule) }, 'Edit'),
-                        el(Button, { className: 'drw-remove-btn', onClick: () => onDelete(rule.id) }, 'Delete')
+                        el(Button, { className: 'drw-secondary-btn', onClick: () => onEdit(rule) }, 'Editar'),
+                        el(Button, { className: 'drw-remove-btn', onClick: () => onDelete(rule.id) }, 'Eliminar')
                     )
                 );
             })

@@ -49,7 +49,7 @@ class ImportExportController {
         $rules = !empty($body['rules']) && is_array($body['rules']) ? $body['rules'] : [];
 
         if (empty($rules)) {
-            return new \WP_Error('no_rules', __('No rules found in import data.', 'discount-rules-woo'), ['status' => 400]);
+            return new \WP_Error('no_rules', __('No se encontraron reglas en los datos de importación.', 'discount-rules-woo'), ['status' => 400]);
         }
 
         $imported = 0;
@@ -63,7 +63,7 @@ class ImportExportController {
     }
 
     public function handle_export() {
-        if (!current_user_can('manage_woocommerce')) { wp_die(esc_html__('Permission denied.', 'discount-rules-woo')); }
+        if (!current_user_can('manage_woocommerce')) { wp_die(esc_html__('Permiso denegado.', 'discount-rules-woo')); }
         check_admin_referer('drw_export_rules');
 
         $rules = \Drw\App\Models\RuleModel::get_all_rules();
@@ -83,7 +83,7 @@ class ImportExportController {
     }
 
     public function handle_import() {
-        if (!current_user_can('manage_woocommerce')) { wp_die(esc_html__('Permission denied.', 'discount-rules-woo')); }
+        if (!current_user_can('manage_woocommerce')) { wp_die(esc_html__('Permiso denegado.', 'discount-rules-woo')); }
         check_admin_referer('drw_import_rules');
 
         $imported = 0;
@@ -94,7 +94,7 @@ class ImportExportController {
             $data    = json_decode($content, true);
 
             if (json_last_error() !== JSON_ERROR_NONE || empty($data['rules'])) {
-                $error = __('Invalid JSON file.', 'discount-rules-woo');
+                $error = __('El archivo JSON no es válido.', 'discount-rules-woo');
             } else {
                 foreach ($data['rules'] as $rule) {
                     unset($rule['id']);
@@ -113,8 +113,8 @@ class ImportExportController {
     public function add_import_export_submenu() {
         add_submenu_page(
             'woocommerce',
-            __('Import / Export', 'discount-rules-woo'),
-            __('Import / Export', 'discount-rules-woo'),
+            __('Importar / Exportar', 'discount-rules-woo'),
+            __('Importar / Exportar', 'discount-rules-woo'),
             'manage_woocommerce',
             'drw-import-export',
             [$this, 'render_import_export_page']
@@ -124,11 +124,11 @@ class ImportExportController {
     public function render_import_export_page() {
         ?>
         <div class="wrap">
-            <h1><?php esc_html_e('Discount Rules – Import / Export', 'discount-rules-woo'); ?></h1>
+            <h1><?php esc_html_e('OmniDiscount — Importar / Exportar', 'discount-rules-woo'); ?></h1>
 
             <?php if (!empty($_GET['imported'])) : ?>
                 <div class="notice notice-success is-dismissible">
-                    <p><?php printf(esc_html__('%d rule(s) imported successfully.', 'discount-rules-woo'), (int)$_GET['imported']); ?></p>
+                    <p><?php /* translators: %d: number of imported rules. */ printf(esc_html__('%d regla(s) importada(s) correctamente.', 'discount-rules-woo'), (int)$_GET['imported']); ?></p>
                 </div>
             <?php endif; ?>
 
@@ -136,22 +136,22 @@ class ImportExportController {
                 <div class="notice notice-error"><p><?php echo esc_html(urldecode($_GET['error'])); ?></p></div>
             <?php endif; ?>
 
-            <h2><?php esc_html_e('Export Rules', 'discount-rules-woo'); ?></h2>
-            <p><?php esc_html_e('Download all discount rules as a JSON file.', 'discount-rules-woo'); ?></p>
+            <h2><?php esc_html_e('Exportar reglas', 'discount-rules-woo'); ?></h2>
+            <p><?php esc_html_e('Descarga todas las reglas de descuento en un archivo JSON.', 'discount-rules-woo'); ?></p>
             <form method="post" action="<?php echo esc_url(admin_url('admin-post.php')); ?>">
                 <?php wp_nonce_field('drw_export_rules'); ?>
                 <input type="hidden" name="action" value="drw_export_rules">
-                <?php submit_button(__('Download JSON', 'discount-rules-woo'), 'secondary'); ?>
+                <?php submit_button(__('Descargar JSON', 'discount-rules-woo'), 'secondary'); ?>
             </form>
 
             <hr>
-            <h2><?php esc_html_e('Import Rules', 'discount-rules-woo'); ?></h2>
-            <p><?php esc_html_e('Upload a JSON file exported from another store. Rules will be appended (existing rules are not deleted).', 'discount-rules-woo'); ?></p>
+            <h2><?php esc_html_e('Importar reglas', 'discount-rules-woo'); ?></h2>
+            <p><?php esc_html_e('Sube un archivo JSON exportado desde otra tienda. Las reglas se añadirán a las existentes (no se elimina ninguna).', 'discount-rules-woo'); ?></p>
             <form method="post" action="<?php echo esc_url(admin_url('admin-post.php')); ?>" enctype="multipart/form-data">
                 <?php wp_nonce_field('drw_import_rules'); ?>
                 <input type="hidden" name="action" value="drw_import_rules">
                 <input type="file" name="drw_import_file" accept=".json" required>
-                <?php submit_button(__('Import Rules', 'discount-rules-woo')); ?>
+                <?php submit_button(__('Importar reglas', 'discount-rules-woo')); ?>
             </form>
         </div>
         <?php

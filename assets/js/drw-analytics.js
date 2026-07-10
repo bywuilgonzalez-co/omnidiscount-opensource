@@ -42,12 +42,12 @@
     }
 
     function renderLoading() {
-        appEl.innerHTML = '<p>Loading analytics…</p>';
+        appEl.innerHTML = '<p>Cargando analíticas…</p>';
     }
 
     function renderError(err) {
         var msg = (err && err.message) ? err.message : String(err);
-        appEl.innerHTML = '<p style="color:#c00;">Error loading analytics: ' + escHtml(msg) + '</p>';
+        appEl.innerHTML = '<p style="color:#c00;">Error al cargar las analíticas: ' + escHtml(msg) + '</p>';
     }
 
     function renderTable(data) {
@@ -55,27 +55,27 @@
 
         var html =
             '<div id="drw-analytics-controls" style="margin-bottom:16px;">' +
-                '<label for="drw-days-select" style="font-weight:600;margin-right:8px;">Time range:</label>' +
+                '<label for="drw-days-select" style="font-weight:600;margin-right:8px;">Rango de tiempo:</label>' +
                 '<select id="drw-days-select">' +
-                    '<option value="7"'   + sel(7)   + '>Last 7 days</option>'  +
-                    '<option value="30"'  + sel(30)  + '>Last 30 days</option>' +
-                    '<option value="90"'  + sel(90)  + '>Last 90 days</option>' +
-                    '<option value="365"' + sel(365) + '>Last 365 days</option>' +
+                    '<option value="7"'   + sel(7)   + '>Últimos 7 días</option>'  +
+                    '<option value="30"'  + sel(30)  + '>Últimos 30 días</option>' +
+                    '<option value="90"'  + sel(90)  + '>Últimos 90 días</option>' +
+                    '<option value="365"' + sel(365) + '>Últimos 365 días</option>' +
                 '</select>' +
             '</div>' +
             '<table class="widefat striped" style="max-width:540px;">' +
                 '<thead>' +
                     '<tr>' +
-                        '<th>Metric</th>' +
-                        '<th>Value</th>' +
+                        '<th>Métrica</th>' +
+                        '<th>Valor</th>' +
                     '</tr>' +
                 '</thead>' +
                 '<tbody>' +
-                    row('Period',                   escHtml(String(data.days)) + ' days') +
-                    row('Orders with discounts',    escHtml(String(data.orders_with_discounts))) +
-                    row('Total discount',           symbol + escHtml(toFixed2(data.total_discount))) +
-                    row('Average discount',         symbol + escHtml(toFixed2(data.average_discount))) +
-                    row('Free-shipping orders',     escHtml(String(data.free_shipping_orders))) +
+                    row('Periodo',                     escHtml(String(data.days)) + ' días') +
+                    row('Pedidos con descuentos',      escHtml(String(data.orders_with_discounts))) +
+                    row('Descuento total',             symbol + escHtml(toFixed2(data.total_discount))) +
+                    row('Descuento promedio',          symbol + escHtml(toFixed2(data.average_discount))) +
+                    row('Pedidos con envío gratis',    escHtml(String(data.free_shipping_orders))) +
                 '</tbody>' +
             '</table>';
 

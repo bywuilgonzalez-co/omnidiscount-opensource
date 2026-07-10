@@ -95,7 +95,7 @@ class Updater
         $remote_version = ltrim($release->tag_name, 'vV');
 
         $res = new \stdClass();
-        $res->name = 'Dynamic Pricing & Discount Rules for WooCommerce';
+        $res->name = 'OmniDiscount — Dynamic Pricing & Discount Rules for WooCommerce';
         $res->slug = 'discount-rules-woo';
         $res->version = $remote_version;
         $res->author = '<a href="https://bywuilgonzalez.com">Bywuilgonzalez.com</a>';

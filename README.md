@@ -1,8 +1,8 @@
-# Dynamic Pricing & Discount Rules for WooCommerce
+# OmniDiscount — Dynamic Pricing & Discount Rules for WooCommerce
 
 A free, open-source plugin for WooCommerce that gives store owners a complete engine for dynamic pricing, discount rules, and promotional logic — without recurring fees.
 
-**Version:** 1.2.1 · **License:** GPLv3 · **Requires:** WordPress 5.6+, WooCommerce 6.0+, PHP 7.4+
+**Version:** 1.5.0 · **License:** GPLv3 · **Requires:** WordPress 5.6+, WooCommerce 6.0+, PHP 7.4+
 
 ---
 
@@ -57,7 +57,7 @@ Every rule supports optional date/time windows:
 
 ### Admin Interface
 
-- Modern React UI embedded inside the WooCommerce dashboard (`WooCommerce > Discount Rules`)
+- Modern React UI under its own top-level **OmniDiscount** admin menu
 - Async product and category search (no page reload required)
 - Real-time rule preview
 - Powered by `@wordpress/components` — no external UI dependencies
@@ -97,8 +97,8 @@ The plugin includes a built-in GitHub-based updater. Once installed, it checks f
 
 ### Creating a Rule
 
-1. Go to **WooCommerce → Discount Rules**.
-2. Click **Add New Rule**.
+1. Go to the **OmniDiscount** menu in your WordPress admin.
+2. Click **+ Crear regla**.
 3. Set a **title**, **priority**, and the **discount type** (Percentage, Fixed, Bulk, BOGO, Bundle, Free Shipping).
 4. Under **Apply To**, choose all products, specific products, or specific categories. Use **Exclusions** to carve out exceptions.
 5. Add **Conditions** as needed (user role, cart subtotal, etc.).
@@ -197,6 +197,13 @@ Contributions are welcome. Please open an issue first to discuss significant cha
 ---
 
 ## Changelog
+
+### 1.5.0
+- Rebranded the visible plugin name to **OmniDiscount** with a dedicated top-level admin menu
+- Added promotions engine (coupons & promotions) backed by a dedicated `drw_promos` table, with automatic migration from the legacy options storage
+- Added analytics page (discount totals, orders with discounts, free-shipping orders)
+- Added rules import/export (admin page + REST endpoints)
+- Spanish admin interface copy
 
 ### 1.2.1
 - Fixed scheduled rules and dynamic sale shortcode discovery
