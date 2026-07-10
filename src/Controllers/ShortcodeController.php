@@ -2,6 +2,9 @@
 
 namespace Drw\App\Controllers;
 
+use Drw\App\Models\PromoModel;
+use Drw\App\Models\PromoTypeRegistry;
+
 if (!defined('ABSPATH')) {
     exit;
 }
@@ -32,6 +35,7 @@ class ShortcodeController
             add_shortcode('drw_sale_items_list', [$this, 'render_sale_items_list']);
             add_shortcode('awdr_sale_items_list', [$this, 'render_sale_items_list']);
             add_shortcode('on_sale', [$this, 'render_sale_items_list']);
+            add_shortcode('drw_featured_promos', [$this, 'render_featured_promos']);
         }
 
         if (function_exists('add_action')) {
@@ -56,6 +60,14 @@ class ShortcodeController
         wp_enqueue_script(
             'drw-shortcode',
             DRW_PLUGIN_URL . 'assets/js/drw-shortcode.js',
+            [],
+            DRW_VERSION,
+            true
+        );
+
+        wp_enqueue_script(
+            'drw-featured-promos',
+            DRW_PLUGIN_URL . 'assets/js/drw-featured-promos.js',
             [],
             DRW_VERSION,
             true
@@ -133,6 +145,199 @@ class ShortcodeController
             $loader,
             $sentinel
         );
+    }
+
+    /**
+     * Render the promos flagged "Mostrar en portada" (home=1) wherever the
+     * merchant drops the shortcode.
+     *
+     * PUBLIC / unauthenticated. Every value is read server-side straight from the
+     * promos table via PromoModel::get_home_promos() and printed through esc_*().
+     * It deliberately makes NO REST or AJAX call to /drw/v1/promos — those routes
+     * require manage_woocommerce and would return 401/403 for an anonymous
+     * visitor. The only client-side JS is the copy-code button
+     * (drw-featured-promos.js); there is no pagination or lazy loading (unlike
+     * drw_sale_items_list) because this is a short, directly-rendered list.
+     *
+     * Supported examples:
+     * [drw_featured_promos]
+     * [drw_featured_promos limit="8" columns="4" class="mi-seccion"]
+     *
+     * @param array $atts Shortcode attributes.
+     * @return string Escaped HTML.
+     */
+    public function render_featured_promos($atts = [])
+    {
+        $atts = shortcode_atts([
+            'limit'   => 6,
+            'columns' => 3,
+            'class'   => '',
+        ], (array)$atts, 'drw_featured_promos');
+
+        $limit   = min(12, max(1, absint($atts['limit'])));
+        $columns = min(4, max(1, absint($atts['columns'])));
+        $class   = sanitize_text_field($atts['class']);
+
+        $this->enqueue_public_assets();
+        // Type icons reuse WP core dashicons, which core does not load on the
+        // storefront for anonymous visitors; enqueue it only when this shortcode
+        // actually renders so the sale-items shortcode never pays for it.
+        wp_enqueue_style('dashicons');
+
+        $promos = PromoModel::get_home_promos($limit);
+
+        if (empty($promos)) {
+            return '<div class="drw-featured-promos-empty">'
+                . esc_html__('No hay promociones destacadas en este momento.', 'discount-rules-woo')
+                . '</div>';
+        }
+
+        $cards = '';
+        foreach ($promos as $promo) {
+            $cards .= $this->render_featured_promo_card($promo);
+        }
+
+        return sprintf(
+            '<div class="drw-featured-promos %s"><div class="drw-featured-promos-grid" style="--drw-featured-columns:%d;">%s</div></div>',
+            esc_attr($class),
+            $columns,
+            $cards
+        );
+    }
+
+    /**
+     * Render one featured-promo card. Every dynamic value is escaped on output.
+     *
+     * @param array $promo Formatted promo row from PromoModel.
+     * @return string Escaped HTML.
+     */
+    private function render_featured_promo_card(array $promo)
+    {
+        $type_id  = isset($promo['type']) ? (string)$promo['type'] : '';
+        $type_def = PromoTypeRegistry::get($type_id);
+
+        // Neutral fallbacks keep an unknown/legacy type from breaking the card.
+        $icon  = ($type_def && !empty($type_def['icon']))  ? $type_def['icon']  : 'tag';
+        $color = ($type_def && !empty($type_def['color'])) ? $type_def['color'] : '#5b7b41';
+        $label = ($type_def && !empty($type_def['label'])) ? $type_def['label'] : $type_id;
+
+        $name        = isset($promo['name']) ? $promo['name'] : '';
+        $value_badge = $this->format_promo_value_badge($promo, $type_def); // pre-escaped / safe HTML
+        $code        = isset($promo['code']) ? (string)$promo['code'] : '';
+
+        if ($code !== '') {
+            $footer = sprintf(
+                '<button type="button" class="drw-featured-promo-copy" data-code="%1$s" data-copied-label="%2$s" aria-label="%3$s">'
+                    . '<span class="drw-featured-promo-code">%4$s</span>'
+                    . '<span class="dashicons dashicons-clipboard" aria-hidden="true"></span>'
+                    . '</button>',
+                esc_attr($code),
+                esc_attr__('¡Copiado!', 'discount-rules-woo'),
+                /* translators: %s: the promo code the merchant configured. */
+                esc_attr(sprintf(__('Copiar código %s', 'discount-rules-woo'), $code)),
+                esc_html($code)
+            );
+        } else {
+            $footer = '<span class="drw-featured-promo-auto">'
+                . esc_html__('Automática', 'discount-rules-woo')
+                . '</span>';
+        }
+
+        return sprintf(
+            '<article class="drw-featured-promo">'
+                . '<div class="drw-featured-promo-head">'
+                    . '<span class="drw-featured-promo-icon" style="--drw-featured-color:%1$s"><span class="dashicons dashicons-%2$s" aria-hidden="true"></span></span>'
+                    . '<div class="drw-featured-promo-heading">'
+                        . '<span class="drw-featured-promo-name">%3$s</span>'
+                        . '<span class="drw-featured-promo-type">%4$s</span>'
+                    . '</div>'
+                . '</div>'
+                . '<div class="drw-featured-promo-value" style="--drw-featured-color:%1$s">%5$s</div>'
+                . '<div class="drw-featured-promo-footer">%6$s</div>'
+            . '</article>',
+            esc_attr($color),
+            esc_attr($icon),
+            esc_html($name),
+            esc_html($label),
+            $value_badge,
+            $footer
+        );
+    }
+
+    /**
+     * Build the value badge for a promo, mirroring the admin catalogue's
+     * promoValueLabel() (admin-promos.js) so a promo reads the same in the
+     * storefront as in the admin list.
+     *
+     * @param array      $promo    Formatted promo row.
+     * @param array|null $type_def Type definition from PromoTypeRegistry::get().
+     * @return string Escaped / safe HTML.
+     */
+    private function format_promo_value_badge(array $promo, $type_def)
+    {
+        $type_id    = isset($promo['type']) ? (string)$promo['type'] : '';
+        $value      = isset($promo['value']) ? (float)$promo['value'] : 0.0;
+        $value_type = ($type_def && !empty($type_def['valueType'])) ? $type_def['valueType'] : 'none';
+
+        if ($type_id === 'free_ship' || $type_id === 'free_ship_threshold') {
+            return esc_html__('Envío gratis', 'discount-rules-woo');
+        }
+        if ($type_id === '2x1') {
+            return '2&times;1';
+        }
+        if ($type_id === '3x2') {
+            return '3&times;2';
+        }
+
+        if ($value_type === 'percent') {
+            /* translators: %s: discount percentage, e.g. "10". */
+            return esc_html(sprintf(__('%s%% OFF', 'discount-rules-woo'), $this->format_promo_number($value)));
+        }
+
+        if ($value_type === 'currency') {
+            // wc_price() returns WooCommerce-generated, already-escaped price markup.
+            $amount = function_exists('wc_price')
+                ? wc_price($value)
+                : esc_html($this->format_promo_number($value));
+
+            // bundle / launch express an absolute price; other currency types are a
+            // discount amount, so they carry a leading minus like the admin does.
+            if ($type_id === 'bundle' || $type_id === 'launch') {
+                return $amount;
+            }
+            return '<span class="drw-featured-promo-minus" aria-hidden="true">&minus;</span>' . $amount;
+        }
+
+        if ($value_type === 'text') {
+            // Gift text is stored as gift_config { text: ... }.
+            $gift = isset($promo['gift_config']['text']) ? (string)$promo['gift_config']['text'] : '';
+            if ($gift !== '') {
+                return esc_html($gift);
+            }
+        }
+
+        // none / unknown → the catalogue short label (e.g. "Cashback", "Combo").
+        if ($type_def && !empty($type_def['short'])) {
+            return esc_html($type_def['short']);
+        }
+
+        return esc_html($type_id);
+    }
+
+    /**
+     * Format a numeric promo value for display: trim trailing zeros so a stored
+     * DECIMAL like 10.0000 renders as "10" and 12.5000 as "12.5".
+     *
+     * @param float $value Raw value.
+     * @return string
+     */
+    private function format_promo_number($value)
+    {
+        $value = (float)$value;
+        if ($value === (float)(int)$value) {
+            return (string)(int)$value;
+        }
+        return rtrim(rtrim(number_format($value, 4, '.', ''), '0'), '.');
     }
 
     /**

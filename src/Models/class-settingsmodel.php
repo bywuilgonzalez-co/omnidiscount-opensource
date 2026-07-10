@@ -86,11 +86,12 @@ class SettingsModel {
 				'exclusive_override'       => true,
 			),
 			'features'       => array(
-				'enable_scheduling'    => true,
-				'enable_usage_limits'  => true,
-				'enable_debug_mode'    => false,
-				'show_discount_labels' => true,
-				'round_prices'         => 'standard',
+				'enable_scheduling'     => true,
+				'enable_usage_limits'   => true,
+				'enable_debug_mode'     => false,
+				'show_discount_labels'  => true,
+				'show_minicart_promos'  => true,
+				'round_prices'          => 'standard',
 			),
 		);
 	}

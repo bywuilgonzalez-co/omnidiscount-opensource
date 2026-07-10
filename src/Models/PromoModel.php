@@ -32,6 +32,58 @@ class PromoModel
     }
 
     /**
+     * Get active promos flagged for the storefront homepage ("Mostrar en portada"),
+     * newest first, capped at $limit rows.
+     *
+     * The visibility gate is deliberately strict so the public shortcode only ever
+     * surfaces promos a shopper is actually allowed to see right now: flagged
+     * `home`, `active`, not soft-deleted, and — when a date window is set — inside
+     * it. A promo with home=1 but paused (active=0) or already expired
+     * (date_to < now) is filtered out at the SQL level and never reaches the render.
+     *
+     * The two "now" comparisons use current_time('mysql') (site-local) rather than
+     * the MySQL server's NOW(), matching how this plugin writes every DATETIME
+     * (created_at/modified_at/date_from/date_to are all site-local), so the window
+     * check stays correct regardless of the DB server timezone.
+     *
+     * @param int $limit Maximum number of promos to return (caller already clamps).
+     * @return array Array of formatted promos.
+     */
+    public static function get_home_promos($limit)
+    {
+        global $wpdb;
+        $table = $wpdb->prefix . 'drw_promos';
+
+        $limit = max(1, (int)$limit);
+        $now   = current_time('mysql');
+
+        $query = $wpdb->prepare(
+            "SELECT * FROM $table
+             WHERE home = 1
+               AND active = 1
+               AND deleted_at IS NULL
+               AND (date_from IS NULL OR date_from <= %s)
+               AND (date_to IS NULL OR date_to >= %s)
+             ORDER BY created_at DESC
+             LIMIT %d",
+            $now,
+            $now,
+            $limit
+        );
+
+        $results = $wpdb->get_results($query, ARRAY_A);
+        $promos = [];
+
+        if (!empty($results)) {
+            foreach ($results as $row) {
+                $promos[] = self::format_promo($row);
+            }
+        }
+
+        return $promos;
+    }
+
+    /**
      * Find a single promo by ID.
      */
     public static function get_promo($id)

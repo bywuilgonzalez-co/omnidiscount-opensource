@@ -67,6 +67,150 @@ class CartController
         add_filter('woocommerce_get_formatted_order_total', [$this, 'format_order_total'], 20, 4);
         add_filter('woocommerce_order_formatted_line_subtotal', [$this, 'format_order_line_subtotal'], 20, 3);
         add_action('woocommerce_admin_order_totals_after_total', [$this, 'display_admin_order_totals_after_total'], 20, 1);
+
+        // Classic mini-cart promos. woocommerce_widget_shopping_cart_before_buttons
+        // is a core hook fired inside WooCommerce's templates/cart/mini-cart.php
+        // (the markup woocommerce_mini_cart() renders for the Cart widget and the
+        // [woocommerce_cart] classic mini-cart), just before the buttons row. The
+        // add_to_cart_fragments filter keeps that output in sync on AJAX refresh.
+        add_action('woocommerce_widget_shopping_cart_before_buttons', [$this, 'render_minicart_promos'], 20);
+        add_filter('woocommerce_add_to_cart_fragments', [$this, 'add_minicart_promos_fragment'], 20, 1);
+    }
+
+    /**
+     * Echo the classic mini-cart promo badges inside the Cart widget /
+     * [woocommerce_cart] mini-cart (woocommerce_widget_shopping_cart_before_buttons).
+     *
+     * The whole widget body is already the AJAX-refreshed
+     * div.widget_shopping_cart_content fragment, so this output stays current on
+     * add-to-cart without any extra wiring; add_minicart_promos_fragment() below
+     * is a belt-and-suspenders refresh of the promos node on its own.
+     *
+     * Prints nothing (zero DOM footprint) when the toggle is off or when there
+     * is no applicable promo — render_minicart_promos_html() returns '' there.
+     */
+    public function render_minicart_promos()
+    {
+        if (!$this->minicart_promos_enabled()) {
+            return;
+        }
+
+        $cart = (function_exists('WC') && WC()) ? WC()->cart : null;
+
+        // render_minicart_promos_html() fully escapes every dynamic value it
+        // interpolates (esc_html on copy, esc_attr on the state class); the rest
+        // is a static, hard-coded markup skeleton, so the assembled string is
+        // safe to echo as-is.
+        echo $this->render_minicart_promos_html($cart); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped
+    }
+
+    /**
+     * Refresh the mini-cart promos node on AJAX add-to-cart.
+     *
+     * WooCommerce replaces each fragment's matched element via
+     * jQuery(selector).replaceWith(html); the rendered HTML is itself wrapped in
+     * the .drw-minicart-promos node so the selector keeps matching across
+     * refreshes, and an empty string cleanly removes a stale node (keeping the
+     * zero-DOM-footprint promise when no promo applies). Uses the exact same
+     * render_minicart_promos_html() as the direct hook so the two never drift.
+     *
+     * @param array $fragments Selector => HTML map WooCommerce swaps into the DOM.
+     * @return array
+     */
+    public function add_minicart_promos_fragment($fragments)
+    {
+        if (!$this->minicart_promos_enabled()) {
+            return $fragments;
+        }
+
+        $cart = (function_exists('WC') && WC()) ? WC()->cart : null;
+
+        $fragments['.drw-minicart-promos'] = $this->render_minicart_promos_html($cart);
+
+        return $fragments;
+    }
+
+    /**
+     * Build the classic mini-cart promo markup for the given cart.
+     *
+     * Shared by render_minicart_promos() (direct hook) and
+     * add_minicart_promos_fragment() (AJAX refresh) so the HTML lives in one
+     * place. Returns '' — the caller then prints nothing / clears the node —
+     * whenever there is no cart or no applicable promo.
+     *
+     * "Applicable" mirrors StoreApiController::emit_promo_cart_notices() so the
+     * classic mini-cart, the Block Cart notices and the Store API payload all
+     * agree on what to surface: a free-ship-threshold promo nudges only while
+     * still locked (progress present, not yet applied, something left to spend),
+     * every other promo announces itself once it is actually applied, and a row
+     * is skipped when it has no copy to show.
+     *
+     * @param \WC_Cart|null $cart
+     * @return string Escaped HTML, or '' when there is nothing to show.
+     */
+    private function render_minicart_promos_html($cart)
+    {
+        if (!$cart) {
+            return '';
+        }
+
+        $badges = \Drw\App\Models\PromoBadgeHelper::collect($cart);
+        if (empty($badges)) {
+            return '';
+        }
+
+        $rows = '';
+        foreach ($badges as $badge) {
+            $is_threshold = (null !== $badge['progress']);
+            $remaining    = $is_threshold ? (float)$badge['progress']['remaining'] : 0.0;
+            $applied      = !empty($badge['applied']);
+
+            $should_show = $is_threshold
+                ? (!$applied && $remaining > 0)
+                : $applied;
+            if (!$should_show) {
+                continue;
+            }
+
+            // Prefer the merchant's cart_message; fall back to the rule title so
+            // an applied promo with no copy still names itself rather than
+            // rendering an empty pill.
+            $text = ('' !== $badge['message']) ? $badge['message'] : $badge['title'];
+            if ('' === $text) {
+                continue;
+            }
+
+            $state_class = $applied ? 'is-applied' : 'is-progress';
+
+            $rows .= '<div class="drw-minicart-promo ' . esc_attr($state_class) . '">'
+                . '<span class="drw-minicart-promo__mark" aria-hidden="true"></span>'
+                . '<span class="drw-minicart-promo__text">' . esc_html($text) . '</span>'
+                . '</div>';
+        }
+
+        if ('' === $rows) {
+            return '';
+        }
+
+        return '<div class="drw-minicart-promos">' . $rows . '</div>';
+    }
+
+    /**
+     * Whether the classic mini-cart promos feature is enabled.
+     *
+     * Honours the features.show_minicart_promos setting (default true), so a
+     * merchant can silence the mini-cart badges without affecting the Block Cart
+     * / Store API surfaces. Defaults to enabled if SettingsModel is unavailable.
+     *
+     * @return bool
+     */
+    private function minicart_promos_enabled()
+    {
+        if (!class_exists('\\Drw\\App\\Models\\SettingsModel')) {
+            return true;
+        }
+
+        return (bool) \Drw\App\Models\SettingsModel::get_setting('features.show_minicart_promos', true);
     }
 
     /**

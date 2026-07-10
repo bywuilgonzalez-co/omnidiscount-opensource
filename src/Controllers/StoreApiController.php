@@ -16,6 +16,12 @@ class StoreApiController {
     public function register_hooks() {
         // Only register when Store API is available (WC 6.9+)
         add_action('woocommerce_blocks_loaded', [$this, 'register_store_api_integration']);
+
+        // Mini-Cart (Bloques) promo badge — frontend-only, conditional on the
+        // Mini-Cart block being present. See enqueue_minicart_blocks_assets()
+        // and assets/js/drw-minicart-blocks.js for the full contract and its
+        // "NO VERIFICADO EN NAVEGADOR REAL" caveats.
+        add_action('wp_enqueue_scripts', [$this, 'enqueue_minicart_blocks_assets']);
     }
 
     public function register_store_api_integration() {
@@ -151,6 +157,53 @@ class StoreApiController {
     }
 
     /**
+     * Conditionally enqueue assets/js/drw-minicart-blocks.js — a vanilla,
+     * no-build-step script that reads the 'promos' Store API extension data
+     * (get_cart_extension_data() above) from the 'wc/store/cart' @wordpress/data
+     * store and injects a read-only badge into the WooCommerce Blocks Mini-Cart
+     * drawer, mirroring the classic mini-cart badges from
+     * CartController::render_minicart_promos_html() on a surface those hooks
+     * don't reach.
+     *
+     * Gated on has_block('woocommerce/mini-cart') to keep the footprint minimal
+     * — the script itself is a no-op (it simply never finds its drawer selector)
+     * on any page where the block isn't rendered, so this guard is a loading
+     * optimization, not a correctness requirement.
+     *
+     * KNOWN LIMITATION (not verified live, flagging explicitly): has_block()
+     * with no explicit $post argument only inspects the CURRENT POST/PAGE
+     * CONTENT. When the Mini-Cart block lives in a block-theme TEMPLATE PART
+     * (e.g. header.html via the Site Editor) rather than in page content, this
+     * check will return false even though the block renders on every page —
+     * the script simply won't be enqueued there. Confirm on the target site
+     * whether Mini-Cart is placed in content or in a template part before
+     * relying on this gate; if it's template-part-only, this condition needs
+     * to be broadened (e.g. also check the active template's parsed blocks).
+     */
+    public function enqueue_minicart_blocks_assets() {
+        if (!function_exists('has_block') || !has_block('woocommerce/mini-cart')) {
+            return;
+        }
+
+        // 'wp-data' ships with WordPress core (same script-loader family as
+        // 'wp-element', already a dependency of admin-app.js/drw-promo-wizard.js)
+        // since WP 5.0; declared explicitly so it's guaranteed enqueued even if
+        // nothing else on the page already pulled it in.
+        wp_enqueue_script(
+            'drw-minicart-blocks',
+            DRW_PLUGIN_URL . 'assets/js/drw-minicart-blocks.js',
+            ['wp-data'],
+            DRW_VERSION,
+            true
+        );
+
+        // Reuses the sitewide stylesheet ShortcodeController::enqueue_public_assets()
+        // already enqueues on every frontend request, which is where the
+        // '.drw-minicart-blocks-promo*' rules live (see public-style.css) — no
+        // separate stylesheet needed here.
+    }
+
+    /**
      * Build badge/progress/message data for every Vía B (automatic) promo
      * whose compiled wp_drw_rules row (source='promo') is currently active,
      * so Cart/Checkout Blocks can render a badge, a progress bar
@@ -159,95 +212,17 @@ class StoreApiController {
      * emit_promo_cart_notices() (Cart Notice) so both stay in sync from a
      * single source of truth.
      *
-     * NOTE on "applied": for the free_shipping/min_subtotal case it is the
-     * authoritative FreeShipping::is_free_shipping_unlocked() result (same
-     * check CartController/RulesEngine use for the real discount). For every
-     * other promo type it is a best-effort signal from
-     * RulesEngine::is_rule_matched() (conditions only) — it does not
-     * re-verify line-item targeting for bogo/bundle_set adjustments, so a
-     * promo can show as "applied" slightly ahead of the exact item that
-     * triggers it appearing in the cart.
+     * The logic now lives in PromoBadgeHelper::collect() so the classic
+     * mini-cart widget (CartController) can render the exact same badges
+     * without duplicating it; this thin wrapper keeps the existing internal
+     * call sites unchanged. See PromoBadgeHelper::collect() for the full
+     * behaviour contract, including the "applied" caveat.
      *
      * @param \WC_Cart $cart
      * @return array List of badge descriptors.
      */
     private function collect_promo_badges($cart) {
-        if (!$cart || $cart->is_empty()) {
-            return [];
-        }
-
-        $engine = RulesEngine::instance();
-        $rules  = $engine->get_active_rules();
-        if (empty($rules)) {
-            return [];
-        }
-
-        $badges      = [];
-        $promo_cache = [];
-
-        foreach ($rules as $rule) {
-            $promo_id = !empty($rule['promo_id']) ? (int)$rule['promo_id'] : 0;
-            // Only Vía B promo-compiled rules carry marketing copy; hand-authored
-            // "Reglas avanzadas" (source !== 'promo') have no promo to look up.
-            if ($promo_id <= 0 || (isset($rule['source']) && $rule['source'] !== 'promo')) {
-                continue;
-            }
-
-            if (!array_key_exists($promo_id, $promo_cache)) {
-                $promo_cache[$promo_id] = \Drw\App\Models\PromoModel::get_promo($promo_id);
-            }
-            $promo = $promo_cache[$promo_id];
-            if (!$promo) {
-                continue;
-            }
-
-            $adjustments = !empty($rule['adjustments']) ? (array)$rule['adjustments'] : [];
-            $type        = !empty($adjustments['type']) ? $adjustments['type'] : '';
-
-            $progress = null;
-            $applied  = false;
-
-            if ($type === 'free_shipping' && !empty($adjustments['min_subtotal'])) {
-                // free_ship_threshold: evaluate progress independently of
-                // is_rule_matched() — the compiled cart_subtotal condition only
-                // becomes true once the threshold is already reached, which
-                // would make a "you need $X more" progress bar impossible.
-                $target    = (float)$adjustments['min_subtotal'];
-                $current   = (float)$cart->get_subtotal();
-                $remaining = max(0.0, $target - $current);
-                $percent   = $target > 0 ? (int)min(100, round(($current / $target) * 100)) : 100;
-
-                $shipping_engine = new \Drw\App\Adjustments\FreeShipping();
-                $applied = $shipping_engine->is_free_shipping_unlocked($adjustments, $cart);
-
-                $progress = [
-                    'current'   => wc_format_decimal($current, 2),
-                    'target'    => wc_format_decimal($target, 2),
-                    'remaining' => wc_format_decimal($remaining, 2),
-                    'percent'   => $percent,
-                ];
-            } else {
-                $applied = $engine->is_rule_matched($rule, $cart);
-            }
-
-            $message = isset($promo['cart_message']) ? (string)$promo['cart_message'] : '';
-            if ('' !== $message && null !== $progress) {
-                $plain_amount = wp_strip_all_tags(wc_price((float)$progress['remaining']));
-                $message      = str_replace('{monto}', $plain_amount, $message);
-            }
-
-            $badges[] = [
-                'promo_id' => $promo_id,
-                'rule_id'  => (int)$rule['id'],
-                'type'     => isset($promo['type']) ? (string)$promo['type'] : $type,
-                'title'    => isset($rule['title']) ? (string)$rule['title'] : '',
-                'message'  => $message,
-                'applied'  => $applied,
-                'progress' => $progress,
-            ];
-        }
-
-        return $badges;
+        return \Drw\App\Models\PromoBadgeHelper::collect($cart);
     }
 
     /**
