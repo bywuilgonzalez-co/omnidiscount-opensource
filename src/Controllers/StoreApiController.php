@@ -157,34 +157,33 @@ class StoreApiController {
     }
 
     /**
-     * Conditionally enqueue assets/js/drw-minicart-blocks.js — a vanilla,
-     * no-build-step script that reads the 'promos' Store API extension data
-     * (get_cart_extension_data() above) from the 'wc/store/cart' @wordpress/data
-     * store and injects a read-only badge into the WooCommerce Blocks Mini-Cart
-     * drawer, mirroring the classic mini-cart badges from
-     * CartController::render_minicart_promos_html() on a surface those hooks
-     * don't reach.
+     * Unconditionally enqueue assets/js/drw-minicart-blocks.js — a vanilla,
+     * no-build-step script that fetches wc/store/v1/cart directly (the same
+     * Store API endpoint WooCommerce Blocks itself consumes) to read the
+     * 'promos' extension data (get_cart_extension_data() above) and injects a
+     * read-only badge into the WooCommerce Blocks Mini-Cart drawer, mirroring
+     * the classic mini-cart badges from CartController::render_minicart_promos_html()
+     * on a surface those hooks don't reach.
      *
-     * Gated on has_block('woocommerce/mini-cart') to keep the footprint minimal
-     * — the script itself is a no-op (it simply never finds its drawer selector)
-     * on any page where the block isn't rendered, so this guard is a loading
-     * optimization, not a correctness requirement.
+     * No has_block('woocommerce/mini-cart') gate: verified live on a real
+     * Storefront site that has_block() with no explicit $post argument only
+     * inspects the CURRENT POST/PAGE CONTENT, so it returns false — and the
+     * script never loads — when the Mini-Cart block is placed via
+     * Appearance > Widgets (a classic widget area holding a block widget) or in
+     * a block-theme template part, which is how this block is placed on the
+     * large majority of real sites. The script itself is a no-op (it simply
+     * never finds its drawer selector) on any page where the block isn't
+     * rendered, so always enqueueing it trades a few KB of idle JS for actually
+     * working on every real placement instead of only the narrow page-content
+     * case.
      *
-     * KNOWN LIMITATION (not verified live, flagging explicitly): has_block()
-     * with no explicit $post argument only inspects the CURRENT POST/PAGE
-     * CONTENT. When the Mini-Cart block lives in a block-theme TEMPLATE PART
-     * (e.g. header.html via the Site Editor) rather than in page content, this
-     * check will return false even though the block renders on every page —
-     * the script simply won't be enqueued there. Confirm on the target site
-     * whether Mini-Cart is placed in content or in a template part before
-     * relying on this gate; if it's template-part-only, this condition needs
-     * to be broadened (e.g. also check the active template's parsed blocks).
+     * No 'wp-data' dependency: also verified live that this script cannot read
+     * WooCommerce Blocks' cart data via wp.data.select('wc/store/cart') — the
+     * frontend Mini-Cart bundle does not register its store on the shared
+     * window.wp.data instance (window.wp.data.stores is empty there), so the
+     * script fetches the Store API endpoint directly instead.
      */
     public function enqueue_minicart_blocks_assets() {
-        if (!function_exists('has_block') || !has_block('woocommerce/mini-cart')) {
-            return;
-        }
-
         // Honour the same features.show_minicart_promos toggle the classic
         // mini-cart badges respect (CartController::minicart_promos_enabled()).
         // The Blocks Mini-Cart drawer badge is the direct visual analog of the
@@ -198,14 +197,10 @@ class StoreApiController {
             return;
         }
 
-        // 'wp-data' ships with WordPress core (same script-loader family as
-        // 'wp-element', already a dependency of admin-app.js/drw-promo-wizard.js)
-        // since WP 5.0; declared explicitly so it's guaranteed enqueued even if
-        // nothing else on the page already pulled it in.
         wp_enqueue_script(
             'drw-minicart-blocks',
             DRW_PLUGIN_URL . 'assets/js/drw-minicart-blocks.js',
-            ['wp-data'],
+            [],
             DRW_VERSION,
             true
         );

@@ -11,70 +11,53 @@
  * Fuente de datos: el campo 'promos' que StoreApiController::get_cart_extension_data()
  * ya expone en el Store API bajo el namespace 'discount-rules-woo' (registrado vía
  * woocommerce_store_api_register_endpoint_data() — ver
- * src/Controllers/StoreApiController.php). No se cambia nada del lado servidor;
- * este script solo LEE ese dato desde el data store 'wc/store/cart' de
- * @wordpress/data, donde WooCommerce Blocks lo copia bajo
- * cart.extensions['discount-rules-woo'].
+ * src/Controllers/StoreApiController.php).
  *
- * Enfoque deliberado: en vez de un slot-fill oficial de @woocommerce/blocks-checkout
- * (registerPlugin + ExperimentalOrderMeta/Fragments), que exigiría fijar una
- * versión exacta del paquete @woocommerce/blocks-checkout como dependencia de
- * script — algo frágil sin poder probarlo en un sitio real — este archivo observa
- * el DOM con MutationObserver y, cuando encuentra el drawer del bloque Mini-Cart,
- * inyecta/actualiza un badge de solo lectura directamente. No usa
- * wp.plugins/registerPlugin.
+ * VERIFICADO EN NAVEGADOR REAL (sitio Local, Storefront + WooCommerce Blocks):
+ * el selector del drawer '.wc-block-mini-cart__drawer' es correcto y el drawer sí
+ * se abre con datos reales. PERO el intento original de leer los datos vía
+ * wp.data.select('wc/store/cart') falló en vivo: en el frontend de este sitio,
+ * `window.wp.data.stores` está vacío — el bundle de WooCommerce Blocks para el
+ * frontend NO comparte su registro interno de @wordpress/data con la instancia
+ * global `wp.data` que este script recibe como dependencia. Por eso la fuente de
+ * datos se cambió a leer directamente el mismo endpoint REST que WooCommerce
+ * Blocks consume internamente (wc/store/v1/cart), vía fetch — evita por completo
+ * la incertidumbre del registro de módulos y no depende de 'wp-data'.
  *
- * ─────────────────────────────────────────────────────────────────────────────
- * NO VERIFICADO EN NAVEGADOR REAL. Este entorno no tiene acceso a un WordPress +
- * WooCommerce real con el bloque Mini-Cart activo, así que NADA de lo siguiente
- * fue confirmado en vivo — es la mejor estimación posible basada en convenciones
- * conocidas de WordPress core / WooCommerce Blocks. Antes de confiar en este
- * archivo en producción, en un sitio real con el bloque Mini-Cart:
+ * Enfoque: MutationObserver detecta cuando el drawer del Mini-Cart está en el DOM
+ * y lo abre el usuario; en ese momento (y cuando cambia el carrito) se hace un
+ * fetch a wc/store/v1/cart y se inyecta/actualiza un badge de solo lectura dentro
+ * de '.wc-block-components-drawer__content' (ver findInsertionPoint()), justo
+ * antes de la lista de productos. No usa wp.plugins/registerPlugin ni ningún
+ * slot-fill oficial de @woocommerce/blocks-checkout.
  *
- *   1. Selector del drawer — DRAWER_SELECTORS abajo asume '.wc-block-mini-cart__drawer'
- *      siguiendo el patrón 'wc-block-{nombre-de-bloque}' que usan los demás bloques
- *      de WooCommerce, pero no hay confirmación de que sea la clase real, ni de
- *      qué versión de WooCommerce/WooCommerce Blocks se probó.
- *   2. Selector/API del data store — se asume que
- *      wp.data.select('wc/store/cart').getCartData() existe y expone las
- *      extensiones de Store API bajo '.extensions["discount-rules-woo"]' (el
- *      patrón documentado de ExtendSchema de WooCommerce Blocks); el nombre exacto
- *      del selector y el shape del objeto deben confirmarse ejecutando
- *      `wp.data.select('wc/store/cart').getCartData()` en la consola del navegador.
- *   3. Si los notices de wc_add_notice() (StoreApiController::emit_promo_cart_notices())
- *      YA se muestran solos dentro del Mini-Cart Block (WooCommerce podría
- *      suprimirlos deliberadamente en esa UI compacta) — no se investigó ni se
- *      asume nada al respecto aquí. Este badge es una vía independiente y
- *      complementaria, no depende de esa respuesta.
- *   4. Punto de inserción dentro del drawer — se inyecta como PRIMER hijo del nodo
- *      del drawer por ser la opción menos dependiente de sub-clases internas; la
- *      ubicación visualmente ideal (p. ej. junto al botón de checkout) puede
- *      requerir un selector más específico una vez confirmado en vivo.
- *   5. Riesgo de reconciliación de React — el drawer del Mini-Cart Block es un
- *      árbol React; React podría remover el nodo inyectado en su siguiente render.
- *      El MutationObserver reinserta el badge cuando eso ocurre, pero el efecto
- *      visual (¿parpadeo?) no fue probado en vivo.
- * ─────────────────────────────────────────────────────────────────────────────
+ * También verificado en vivo: insertar como primer hijo del DRAWER en sí (en vez
+ * de su wrapper '__content') deja el badge flotando por encima del título y el
+ * botón de cerrar, fuera del panel con padding — de ahí findInsertionPoint().
+ *
+ * También verificado en vivo: el debounce de scheduleSync() usa setTimeout, no
+ * requestAnimationFrame — rAF nunca se ejecuta mientras la pestaña está en
+ * segundo plano (document.hidden=true), comportamiento estándar de todo
+ * navegador, y el badge debe poder aparecer aunque el carrito cambie con la
+ * pestaña sin foco.
+ *
+ * Riesgo de reconciliación de React: el drawer del Mini-Cart Block es un árbol
+ * React; React podría remover el nodo inyectado en su siguiente render. El
+ * MutationObserver reinserta el badge cuando eso ocurre.
  */
 (function () {
 	'use strict';
 
-	// wp-data es un script core de WordPress desde 5.0 (misma familia que
-	// wp-element, ya usado por admin-app.js/drw-promo-wizard.js). AdminController
-	// declara 'wp-data' como dependencia al encolar este archivo (ver
-	// StoreApiController::enqueue_minicart_blocks_assets()); este guard solo evita
-	// un error si por lo que sea no está disponible.
-	if (typeof wp === 'undefined' || !wp.data || typeof wp.data.select !== 'function' || typeof wp.data.subscribe !== 'function') {
-		return;
-	}
-	if (typeof MutationObserver === 'undefined' || typeof document.querySelector !== 'function') {
+	if (typeof MutationObserver === 'undefined' || typeof document.querySelector !== 'function' || typeof fetch !== 'function') {
 		return;
 	}
 
-	var STORE_NAME = 'wc/store/cart';
+	var STORE_API_CART_URL = (window.wc && window.wc.wcSettings && typeof window.wc.wcSettings.getSetting === 'function' && window.wc.wcSettings.getSetting('storeApiUrl'))
+		? window.wc.wcSettings.getSetting('storeApiUrl').replace(/\/$/, '') + '/cart'
+		: '/wp-json/wc/store/v1/cart';
 	var EXTENSION_NS = 'discount-rules-woo';
 
-	// Ver punto 1 del bloque "NO VERIFICADO EN NAVEGADOR REAL" arriba.
+	// Confirmado en vivo: coincide con la clase real que renderiza WooCommerce Blocks.
 	var DRAWER_SELECTORS = [
 		'.wc-block-mini-cart__drawer'
 	];
@@ -93,19 +76,63 @@
 	}
 
 	/**
-	 * Lee 'promos' desde el data store del Store API. Devuelve null (no [])
-	 * cuando el store 'wc/store/cart' todavía no está registrado/listo, para
-	 * distinguir "sin datos todavía" de "carrito sin promos" — ver punto 2 del
-	 * bloque "NO VERIFICADO" arriba.
+	 * El drawer en sí solo tiene DOS hijos directos: el título/botón de cerrar
+	 * viven dentro de '.wc-block-components-drawer__content' (confirmado en
+	 * vivo) — insertar como primer hijo del DRAWER (en vez de ese wrapper de
+	 * contenido) deja el badge flotando por ENCIMA del título y el botón de
+	 * cerrar, fuera del padding del panel.
+	 *
+	 * También confirmado en vivo: '.wc-block-mini-cart__items' NO es hijo
+	 * DIRECTO de '.wc-block-components-drawer__content' (hay un nivel intermedio,
+	 * '.wc-block-mini-cart__template-part') — insertBefore(nodo, ancla) exige que
+	 * `ancla` sea hijo directo del contenedor en el que se llama, así que usar
+	 * '__content' como contenedor con la lista de productos como ancla lanza
+	 * DOMException (silenciosa: no hay .catch() en la promesa) y el badge nunca
+	 * aparece. El contenedor correcto es el PADRE REAL de la lista de productos,
+	 * sea cual sea su profundidad de anidamiento.
+	 */
+	function findInsertionPoint(drawer) {
+		var content = drawer.querySelector('.wc-block-components-drawer__content') || drawer;
+		var itemsBlock = content.querySelector(
+			'.wc-block-mini-cart__items, .wp-block-woocommerce-mini-cart-items-block'
+		);
+		if (itemsBlock && itemsBlock.parentNode) {
+			return { container: itemsBlock.parentNode, anchor: itemsBlock };
+		}
+		return { container: content, anchor: content.firstChild };
+	}
+
+	// Evita golpear el endpoint en cada mutación del DOM (el drawer del Mini-Cart
+	// re-renderiza seguido); una promesa en vuelo se reutiliza y el resultado se
+	// cachea por FETCH_MIN_INTERVAL_MS.
+	var FETCH_MIN_INTERVAL_MS = 800;
+	var lastFetchAt = 0;
+	var lastFetchPromise = null;
+
+	/**
+	 * Lee 'promos' desde el mismo endpoint REST del Store API que WooCommerce
+	 * Blocks consume para pintar el drawer (wc/store/v1/cart), no desde un data
+	 * store de @wordpress/data — ver la nota "VERIFICADO EN NAVEGADOR REAL" al
+	 * inicio del archivo sobre por qué se abandonó ese enfoque. Devuelve una
+	 * Promise<Array>; en caso de error de red devuelve [] (no rompe el resto del
+	 * carrito, que ya se pintó por su cuenta).
 	 */
 	function getPromos() {
-		var store = wp.data.select(STORE_NAME);
-		if (!store || typeof store.getCartData !== 'function') {
-			return null;
+		var now = Date.now();
+		if (lastFetchPromise && (now - lastFetchAt) < FETCH_MIN_INTERVAL_MS) {
+			return lastFetchPromise;
 		}
-		var cartData = store.getCartData();
-		var ext = cartData && cartData.extensions ? cartData.extensions[EXTENSION_NS] : null;
-		return (ext && Object.prototype.toString.call(ext.promos) === '[object Array]') ? ext.promos : [];
+		lastFetchAt = now;
+		lastFetchPromise = fetch(STORE_API_CART_URL, { credentials: 'same-origin', headers: { Accept: 'application/json' } })
+			.then(function (res) { return res.ok ? res.json() : null; })
+			.then(function (cartData) {
+				var ext = cartData && cartData.extensions ? cartData.extensions[EXTENSION_NS] : null;
+				return (ext && Object.prototype.toString.call(ext.promos) === '[object Array]') ? ext.promos : [];
+			})
+			['catch'](function () {
+				return [];
+			});
+		return lastFetchPromise;
 	}
 
 	/**
@@ -182,68 +209,83 @@
 			return;
 		}
 
-		var promos = getPromos();
-		if (promos === null) {
-			// Store todavía no listo; el siguiente subscribe()/MutationObserver
-			// reintentará automáticamente.
-			return;
-		}
-
-		var rows = visibleRows(promos);
-		var existingWrap = drawer.querySelector('.' + WRAP_CLASS);
-
-		if (rows.length === 0) {
-			// Mismo criterio "cero huella en el DOM" que
-			// CartController::render_minicart_promos_html(): sin promo aplicable,
-			// no queda ningún nodo del badge.
-			if (existingWrap && existingWrap.parentNode) {
-				existingWrap.parentNode.removeChild(existingWrap);
+		getPromos().then(function (promos) {
+			// El drawer puede haberse cerrado/desmontado mientras el fetch estaba
+			// en vuelo; volver a resolverlo en vez de asumir que sigue en el DOM.
+			var currentDrawer = findDrawer();
+			if (!currentDrawer) {
+				return;
 			}
-			return;
-		}
 
-		var signature = rowsSignature(rows);
-		if (existingWrap && existingWrap.getAttribute('data-drw-sig') === signature) {
-			// Mismo contenido: no reescribir el DOM (evita reflow/parpadeo
-			// innecesario en cada tick de wp.data.subscribe()).
-			return;
-		}
+			var rows = visibleRows(promos);
+			var existingWrap = currentDrawer.querySelector('.' + WRAP_CLASS);
 
-		var wrap = buildWrap(rows);
-		wrap.setAttribute('data-drw-sig', signature);
+			if (rows.length === 0) {
+				// Mismo criterio "cero huella en el DOM" que
+				// CartController::render_minicart_promos_html(): sin promo aplicable,
+				// no queda ningún nodo del badge.
+				if (existingWrap && existingWrap.parentNode) {
+					existingWrap.parentNode.removeChild(existingWrap);
+				}
+				return;
+			}
 
-		if (existingWrap && existingWrap.parentNode) {
-			existingWrap.parentNode.replaceChild(wrap, existingWrap);
-			return;
-		}
+			var signature = rowsSignature(rows);
+			if (existingWrap && existingWrap.getAttribute('data-drw-sig') === signature) {
+				// Mismo contenido: no reescribir el DOM (evita reflow/parpadeo
+				// innecesario en cada mutación observada).
+				return;
+			}
 
-		// Punto 4 del bloque "NO VERIFICADO EN NAVEGADOR REAL" arriba: primer hijo
-		// del drawer, la posición menos dependiente de sub-clases internas.
-		wrap.setAttribute('data-drw-entering', '');
-		drawer.insertBefore(wrap, drawer.firstChild);
-		window.requestAnimationFrame(function () {
-			wrap.removeAttribute('data-drw-entering');
+			var wrap = buildWrap(rows);
+			wrap.setAttribute('data-drw-sig', signature);
+
+			if (existingWrap && existingWrap.parentNode) {
+				existingWrap.parentNode.replaceChild(wrap, existingWrap);
+				return;
+			}
+
+			var target = findInsertionPoint(currentDrawer);
+			wrap.setAttribute('data-drw-entering', '');
+			target.container.insertBefore(wrap, target.anchor);
+			window.setTimeout(function () {
+				wrap.removeAttribute('data-drw-entering');
+			}, 16);
+		})['catch'](function (e) {
+			// Una excepción aquí (p. ej. un futuro cambio de marcado de WooCommerce
+			// Blocks que rompa un supuesto de findInsertionPoint()) no debe tumbar
+			// el resto del carrito — pero tampoco debe desaparecer en silencio como
+			// pasó con el bug real de insertBefore() encontrado en pruebas: sin
+			// esta rama, la promesa rechazada quedaba como "unhandled rejection" y
+			// el badge simplemente nunca aparecía, sin ninguna pista en consola.
+			if (window.console && console.error) {
+				console.error('[OmniDiscount] mini-cart blocks badge sync failed:', e);
+			}
 		});
 	}
 
+	// setTimeout, no requestAnimationFrame: verificado en vivo que rAF nunca se
+	// ejecuta mientras la pestaña está en segundo plano (document.hidden=true) —
+	// comportamiento estándar de todos los navegadores, no un artefacto de
+	// pruebas. El badge debe aparecer aunque el carrito cambie con la pestaña sin
+	// foco (p. ej. abierta desde otra pestaña), así que el debounce no puede
+	// depender de una API atada al ciclo de pintado visual.
 	var syncQueued = false;
 	function scheduleSync() {
 		if (syncQueued) {
 			return;
 		}
 		syncQueued = true;
-		window.requestAnimationFrame(function () {
+		window.setTimeout(function () {
 			syncQueued = false;
 			sync();
-		});
+		}, 50);
 	}
 
-	// Reacciona a cambios del carrito (cantidades, promos, etc.) vía @wordpress/data.
-	wp.data.subscribe(scheduleSync);
-
-	// Reacciona a la apertura/cierre del drawer (montaje/desmontaje del bloque) y,
-	// en el mismo movimiento, a un posible re-render de React que haya quitado el
-	// badge inyectado — ver punto 5 del bloque "NO VERIFICADO" arriba.
+	// Reacciona a la apertura/cierre del drawer (montaje/desmontaje del bloque),
+	// a cambios de cantidades y a un posible re-render de React que haya quitado
+	// el badge inyectado. getPromos() se autolimita (FETCH_MIN_INTERVAL_MS), así
+	// que observar todo document.body es seguro pese a ser una superficie amplia.
 	var observer = new MutationObserver(scheduleSync);
 	observer.observe(document.body, { childList: true, subtree: true });
 
