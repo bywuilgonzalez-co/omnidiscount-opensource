@@ -4,6 +4,7 @@ namespace Drw\App\Controllers;
 
 use Drw\App\Models\PromoTypeRegistry;
 use Drw\App\Models\RuleTemplateRegistry;
+use Drw\App\Models\SettingsModel;
 
 if (!defined('ABSPATH')) {
     exit;
@@ -319,6 +320,12 @@ class AdminController
             // Used by LivePreviewPanel/PromoStatsPanel/NaturalLanguageSummary to
             // format money in the store's real currency instead of a bare number.
             'currencySymbol'  => get_woocommerce_currency_symbol(),
+            // Map of settings.conditions (key => ['enabled' => bool]) so the Rule
+            // Editor can hide condition types the merchant disabled in
+            // Configuración Global → "Condiciones y Filtros Habilitados". Seeds
+            // DrwApp's conditionsSettings state; GlobalSettings refreshes it live
+            // in-session after a save. See RuleEditor's condition-type filtering.
+            'conditionsSettings' => SettingsModel::get_setting('conditions', []),
             // Which SPA view to open on load, derived from the submenu slug the
             // merchant clicked ($_GET['page']). admin-app.js reads this and falls
             // back to 'list' when absent.

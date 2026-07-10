@@ -9,16 +9,57 @@
     // Safely retrieve WordPress React globals
     const { createElement: el, useState, useEffect } = wp.element;
     const { render } = wp.element;
-    const { 
-        Button, 
-        TextControl, 
-        SelectControl, 
-        ToggleControl, 
-        Notice, 
-        Spinner 
+    const {
+        Button,
+        TextControl,
+        SelectControl,
+        ToggleControl,
+        Notice,
+        Spinner,
+        TabPanel
     } = wp.components;
-    
+
     const apiFetch = wp.apiFetch;
+
+    // ------------------------------------------------------------------
+    // Condition-type catalogue shared by the Rule Editor and Configuración
+    // Global. `value` is the type slug RulesEngine.php maps to a Condition
+    // class; `settingsKey` links it to settings.conditions[...] so the
+    // "Condiciones y Filtros Habilitados" tab can hide a type from the editor.
+    // The value/label pairs are unchanged from the editor's original inline
+    // dropdown — only the settingsKey column and the enable-filtering are new.
+    // ------------------------------------------------------------------
+    const CONDITION_TYPE_OPTIONS = [
+        { label: 'Subtotal del carrito', value: 'subtotal', settingsKey: 'cart_subtotal' },
+        { label: 'Cantidad de artículos del carrito', value: 'items_count', settingsKey: 'cart_line_items_count' },
+        { label: 'Rol de usuario', value: 'user_role', settingsKey: 'user_role' },
+        { label: 'Correo del usuario', value: 'user_email', settingsKey: 'user_email' },
+        { label: 'Dirección de envío', value: 'shipping_location', settingsKey: 'shipping_location' },
+        { label: 'Cupón aplicado en el carrito', value: 'cart_coupon', settingsKey: 'cart_coupon' },
+        { label: 'Cantidad total de artículos del carrito', value: 'cart_items_quantity', settingsKey: 'cart_items_quantity' },
+        { label: 'Peso total del carrito', value: 'cart_items_weight', settingsKey: 'cart_items_weight' },
+        { label: 'Estado de productos en oferta', value: 'onsale_products', settingsKey: 'cart_item_product_onsale' },
+        { label: 'Combinación de productos/categorías', value: 'product_combination', settingsKey: 'cart_item_product_combination' },
+        { label: 'Estado de sesión del usuario', value: 'user_logged_in', settingsKey: 'user_logged_in' },
+        { label: 'Lista de usuarios (IDs específicos)', value: 'user_list', settingsKey: 'user_list' },
+        { label: 'Ciudad de facturación', value: 'billing_city', settingsKey: 'billing_city' },
+        { label: 'Programación (fechas/horas/días)', value: 'order_date', settingsKey: 'order_date' },
+        { label: 'Historial de compras del cliente', value: 'purchase_history', settingsKey: 'purchase_history' }
+    ];
+
+    // A condition type is available in the editor unless Configuración Global
+    // explicitly disabled it. Missing map / missing key ⇒ enabled (fail-open),
+    // so a stale or absent settings payload never hides expected options.
+    const isConditionTypeEnabled = (conditionsSettings, settingsKey) => {
+        if (!conditionsSettings || typeof conditionsSettings !== 'object') {
+            return true;
+        }
+        const entry = conditionsSettings[settingsKey];
+        if (!entry || typeof entry !== 'object') {
+            return true;
+        }
+        return entry.enabled !== false;
+    };
 
     // Initial localized data passed from PHP
     const adminData = window.drwAdminData || {
@@ -178,6 +219,15 @@
         const [loading, setLoading] = useState(true);
         const [errorMsg, setErrorMsg] = useState('');
         const [successMsg, setSuccessMsg] = useState('');
+
+        // Shared, session-live copy of settings.conditions (key => {enabled}).
+        // Seeded from the PHP localize (window.drwAdminData.conditionsSettings)
+        // so the Rule Editor can filter its condition-type dropdown on first
+        // paint; GlobalSettings refreshes it via onConditionsChange after a save
+        // so toggling a condition on/off takes effect without a page reload.
+        const [conditionsSettings, setConditionsSettings] = useState(
+            (window.drwAdminData && window.drwAdminData.conditionsSettings) || null
+        );
 
         // Fetch rules on mount
         useEffect(() => {
@@ -343,14 +393,14 @@
 
             // Screens
             screen === 'settings'
-                ? el(GlobalSettings, { onBack: () => setScreen('list') })
+                ? el(GlobalSettings, { onBack: () => setScreen('list'), onConditionsChange: setConditionsSettings })
                 : screen === 'promos'
                     ? (window.DrwPromosPage ? el(window.DrwPromosPage, { onBack: () => setScreen('list') }) : el('p', null, 'Cargando promociones...'))
                     : screen === 'list'
                         ? el(RulesList, { rules, onEdit: handleEditRule, onDelete: handleDeleteRule, onToggle: handleToggleStatus })
                         : screen === 'templates'
                             ? el(RuleTemplatePicker, { onSelectTemplate: handleSelectTemplate, onStartBlank: handleStartBlank, onCancel: () => setScreen('list') })
-                            : el(RuleEditor, { rule: editingRule, setRule: setEditingRule, onSave: handleSaveRule, onCancel: () => setScreen('list') })
+                            : el(RuleEditor, { rule: editingRule, setRule: setEditingRule, onSave: handleSaveRule, onCancel: () => setScreen('list'), conditionsSettings: conditionsSettings })
         );
     }
 
@@ -492,7 +542,27 @@
     /**
      * Rule Editor Screen
      */
-    function RuleEditor({ rule, setRule, onSave, onCancel }) {
+    function RuleEditor({ rule, setRule, onSave, onCancel, conditionsSettings }) {
+        // Condition types the merchant left enabled in Configuración Global →
+        // "Condiciones y Filtros Habilitados". This is the real wiring: a
+        // disabled condition disappears from the "+ Agregar condición" dropdown
+        // instead of only being stored server-side.
+        const enabledConditionOptions = CONDITION_TYPE_OPTIONS.filter((opt) =>
+            isConditionTypeEnabled(conditionsSettings, opt.settingsKey)
+        );
+
+        // Options for a specific row. A row whose already-saved type was later
+        // disabled still shows that type (appended) so an existing rule never
+        // loses data or renders a SelectControl with a value outside its list.
+        const optionsForCondition = (currentType) => {
+            const base = enabledConditionOptions.map((o) => ({ label: o.label, value: o.value }));
+            if (base.some((o) => o.value === currentType)) {
+                return base;
+            }
+            const current = CONDITION_TYPE_OPTIONS.find((o) => o.value === currentType);
+            return current ? base.concat([{ label: current.label + ' (deshabilitada)', value: current.value }]) : base;
+        };
+
         const updateRuleField = (field, val) => {
             setRule({ ...rule, [field]: val });
         };
@@ -517,11 +587,17 @@
             });
         };
 
-        // Add a new condition
+        // Add a new condition. Defaults to the first ENABLED type so we never
+        // seed a row with a condition the merchant disabled (falls back to
+        // 'subtotal' when everything is enabled, matching the old behaviour).
         const addCondition = () => {
+            if (enabledConditionOptions.length === 0) {
+                return;
+            }
+            const defaultType = enabledConditionOptions[0].value;
             const conditions = [...(rule.conditions || [])];
             conditions.push({
-                type: 'subtotal', // subtotal, items_count, user_role, user_email, shipping_location
+                type: defaultType, // subtotal, items_count, user_role, user_email, shipping_location…
                 operator: 'greater_than_or_equal',
                 value: 100,
                 location_type: 'country',
@@ -827,26 +903,13 @@
             el(Collapsible, { title: 'Lista de condiciones' },
                 (rule.conditions || []).map((cond, idx) => {
                     return el('div', { key: idx, className: 'drw-condition-row' },
-                        // Condition type selector
+                        // Condition type selector. Options come from the shared
+                        // CONDITION_TYPE_OPTIONS filtered by Configuración Global's
+                        // enabled/disabled toggles (optionsForCondition keeps the
+                        // row's own already-saved type visible even if disabled).
                         el(SelectControl, {
                             value: cond.type,
-                            options: [
-                                { label: 'Subtotal del carrito', value: 'subtotal' },
-                                { label: 'Cantidad de artículos del carrito', value: 'items_count' },
-                                { label: 'Rol de usuario', value: 'user_role' },
-                                { label: 'Correo del usuario', value: 'user_email' },
-                                { label: 'Dirección de envío', value: 'shipping_location' },
-                                { label: 'Cupón aplicado en el carrito', value: 'cart_coupon' },
-                                { label: 'Cantidad total de artículos del carrito', value: 'cart_items_quantity' },
-                                { label: 'Peso total del carrito', value: 'cart_items_weight' },
-                                { label: 'Estado de productos en oferta', value: 'onsale_products' },
-                                { label: 'Combinación de productos/categorías', value: 'product_combination' },
-                                { label: 'Estado de sesión del usuario', value: 'user_logged_in' },
-                                { label: 'Lista de usuarios (IDs específicos)', value: 'user_list' },
-                                { label: 'Ciudad de facturación', value: 'billing_city' },
-                                { label: 'Programación (fechas/horas/días)', value: 'order_date' },
-                                { label: 'Historial de compras del cliente', value: 'purchase_history' }
-                            ],
+                            options: optionsForCondition(cond.type),
                             onChange: (val) => updateCondition(idx, 'type', val)
                         }),
 
@@ -1276,7 +1339,13 @@
                         el(Button, { className: 'drw-remove-btn', onClick: () => removeCondition(idx) }, 'Eliminar')
                     );
                 }),
-                el(Button, { className: 'drw-secondary-btn', onClick: addCondition }, '+ Agregar condición')
+                el(Button, {
+                    className: 'drw-secondary-btn',
+                    onClick: addCondition,
+                    disabled: enabledConditionOptions.length === 0
+                }, '+ Agregar condición'),
+                enabledConditionOptions.length === 0 && el('p', { className: 'drw-help-text', style: { marginTop: '8px' } },
+                    'Todas las condiciones están deshabilitadas en Configuración Global → Condiciones y Filtros Habilitados.')
             ),
 
             // Save / Cancel Actions
@@ -1288,13 +1357,44 @@
     }
 
     /**
-     * Global Settings Screen
+     * Color swatch for the theme-preset preview. Decorative + informative:
+     * role="img" + aria-label so the hex is announced, title for the tooltip.
      */
-    function GlobalSettings({ onBack }) {
-        const [settings, setSettings] = useState(null);
-        const [loading, setLoading]   = useState(true);
-        const [saving, setSaving]     = useState(false);
-        const [notice, setNotice]     = useState(null);
+    function ThemeSwatch({ name, hex }) {
+        return el('span', {
+            className: 'drw-swatch',
+            role: 'img',
+            title: name + ': ' + hex,
+            'aria-label': name + ' ' + hex,
+            style: { background: hex }
+        });
+    }
+
+    /**
+     * Global Settings Screen.
+     *
+     * Reorganised from one long vertical scroll into a wp.components TabPanel
+     * with five tabs (Tipos de descuento / Comportamiento / Características /
+     * Apariencia / Condiciones y Filtros Habilitados). The per-tab CONTENT is
+     * the same as the old sections — only the layout changed — except the new
+     * Condiciones tab, which drives the Rule Editor's condition-type filtering
+     * (see onConditionsChange / RuleEditor.conditionsSettings), and the
+     * Apariencia tab, which now previews theme palettes and edits the storefront
+     * badge colours that public-style.css consumes via CSS variables.
+     */
+    function GlobalSettings({ onBack, onConditionsChange }) {
+        const [settings, setSettings]           = useState(null);
+        const [loading, setLoading]             = useState(true);
+        const [saving, setSaving]               = useState(false);
+        const [notice, setNotice]               = useState(null);
+        // JSON snapshot of the last-saved settings — powers the "Cambios sin
+        // guardar" indicator (compare against the live `settings`).
+        const [savedSnapshot, setSavedSnapshot] = useState('');
+        // Palettes for the swatch preview (GET /settings/themes). null = loading.
+        const [themePresets, setThemePresets]   = useState(null);
+        // [{id,label,enabled}] for the Condiciones tab (GET /settings/conditions,
+        // labels already localised to Spanish server-side). null = loading.
+        const [conditionMeta, setConditionMeta] = useState(null);
 
         // Derive REST path from localized URL
         const settingsPath = (adminData.settingsApiRoot || '')
@@ -1302,11 +1402,23 @@
 
         useEffect(() => {
             apiFetch({ path: settingsPath })
-                .then((data) => { setSettings(data); setLoading(false); })
+                .then((data) => {
+                    setSettings(data);
+                    setSavedSnapshot(JSON.stringify(data));
+                    setLoading(false);
+                })
                 .catch((err) => {
                     setNotice({ type: 'error', msg: err.message || 'Error al cargar la configuración.' });
                     setLoading(false);
                 });
+            // Theme palettes for the Apariencia swatch preview.
+            apiFetch({ path: '/drw/v1/settings/themes' })
+                .then((data) => setThemePresets(data && typeof data === 'object' ? data : {}))
+                .catch(() => setThemePresets({}));
+            // Condition labels for the "Condiciones y Filtros Habilitados" tab.
+            apiFetch({ path: '/drw/v1/settings/conditions' })
+                .then((data) => setConditionMeta(Array.isArray(data) ? data : []))
+                .catch(() => setConditionMeta([]));
         }, []);
 
         // Immutable deep-set via dot-path
@@ -1319,17 +1431,39 @@
         const updateSetting = (path, value) =>
             setSettings((prev) => updateNested(JSON.parse(JSON.stringify(prev)), path.split('.'), value));
 
+        // Push the freshly-persisted conditions map up to DrwApp so the Rule
+        // Editor's filtering reflects the save without a page reload.
+        const syncConditions = (fresh) => {
+            if (typeof onConditionsChange === 'function' && fresh && fresh.conditions) {
+                onConditionsChange(fresh.conditions);
+            }
+        };
+
         const handleSave = () => {
             setSaving(true);
             apiFetch({ path: settingsPath, method: 'POST', data: settings })
-                .then(() => { setNotice({ type: 'success', msg: 'Configuración guardada exitosamente.' }); setSaving(false); })
+                .then((data) => {
+                    const fresh = data && typeof data === 'object' && data.discount_types ? data : settings;
+                    setSettings(fresh);
+                    setSavedSnapshot(JSON.stringify(fresh));
+                    syncConditions(fresh);
+                    setNotice({ type: 'success', msg: 'Configuración guardada exitosamente.' });
+                    setSaving(false);
+                })
                 .catch((err) => { setNotice({ type: 'error', msg: err.message || 'Error al guardar.' }); setSaving(false); });
         };
 
         const handleReset = () => {
-            if (!confirm('¿Restaurar toda la configuración a valores por defecto? Esta acción no se puede deshacer.')) return;
+            // Two-step confirmation for a destructive, irreversible action.
+            if (!confirm('¿Restaurar TODA la configuración a los valores por defecto?\n\nSe descartarán tus tipos de descuento, condiciones, comportamiento y apariencia personalizados. Esta acción no se puede deshacer.')) return;
+            if (!confirm('Confirmación final: se restaurarán todos los valores por defecto ahora.')) return;
             apiFetch({ path: settingsPath + '/reset', method: 'POST' })
-                .then((data) => { setSettings(data); setNotice({ type: 'success', msg: 'Configuración restaurada a valores por defecto.' }); })
+                .then((data) => {
+                    setSettings(data);
+                    setSavedSnapshot(JSON.stringify(data));
+                    syncConditions(data);
+                    setNotice({ type: 'success', msg: 'Configuración restaurada a valores por defecto.' });
+                })
                 .catch((err) => { setNotice({ type: 'error', msg: err.message || 'Error al restaurar.' }); });
         };
 
@@ -1349,149 +1483,227 @@
         const ty = th.typography            || {};
         const sp = th.spacing               || {};
 
+        // Unsaved-changes detection: live settings vs. last-saved snapshot.
+        const isDirty = !!savedSnapshot && JSON.stringify(settings) !== savedSnapshot;
+
+        // Selected preset's palette + one-click "apply to custom colors".
+        const activePreset = (themePresets && themePresets[th.preset || 'default']) || null;
+        const applyPreset = () => {
+            if (!activePreset || !activePreset.colors) return;
+            setSettings((prev) => {
+                const copy = JSON.parse(JSON.stringify(prev));
+                copy.theme = copy.theme || {};
+                copy.theme.custom_colors = Object.assign({}, copy.theme.custom_colors || {}, activePreset.colors);
+                return copy;
+            });
+        };
+
+        /* ── Panel: Tipos de descuento ─────────────────────────────── */
+        const typesPanel = el('div', { className: 'drw-form-section' },
+            el('p', { className: 'drw-help-text', style: { marginTop: 0 } }, 'Activa solo los tipos de descuento que quieres ofrecer al crear reglas.'),
+            el('div', { className: 'drw-settings-toggles' },
+                el(ToggleControl, { label: 'Porcentaje (% Off)',                  checked: !!(dt.percentage  && dt.percentage.enabled),  onChange: (v) => updateSetting('discount_types.percentage.enabled',  v) }),
+                el(ToggleControl, { label: 'Precio Fijo ($ Off)',                 checked: !!(dt.fixed       && dt.fixed.enabled),        onChange: (v) => updateSetting('discount_types.fixed.enabled',       v) }),
+                el(ToggleControl, { label: 'Bulk / Escalonado por cantidad',      checked: !!(dt.bulk        && dt.bulk.enabled),         onChange: (v) => updateSetting('discount_types.bulk.enabled',        v) }),
+                el(ToggleControl, { label: 'BOGO – Compra X, Lleva Y',           checked: !!(dt.bogo        && dt.bogo.enabled),         onChange: (v) => updateSetting('discount_types.bogo.enabled',        v) }),
+                el(ToggleControl, { label: 'Bundle / Paquete a precio especial', checked: !!(dt.bundle_set  && dt.bundle_set.enabled),   onChange: (v) => updateSetting('discount_types.bundle_set.enabled',  v) }),
+                el(ToggleControl, { label: 'Envío Gratis',                        checked: !!(dt.free_shipping && dt.free_shipping.enabled), onChange: (v) => updateSetting('discount_types.free_shipping.enabled', v) })
+            ),
+            dt.bulk && dt.bulk.enabled && el('div', { style: { marginTop: '8px', maxWidth: '200px' } },
+                el(TextControl, {
+                    label: 'Máximo de niveles Bulk',
+                    type: 'number',
+                    value: String(dt.bulk.max_tiers || 10),
+                    onChange: (v) => updateSetting('discount_types.bulk.max_tiers', parseInt(v, 10) || 10)
+                })
+            )
+        );
+
+        /* ── Panel: Comportamiento ─────────────────────────────────── */
+        const behaviorPanel = el('div', { className: 'drw-form-section' },
+            el(ToggleControl, {
+                label: 'Permitir múltiples descuentos en el mismo carrito',
+                checked: !!rb.allow_multiple_discounts,
+                onChange: (v) => updateSetting('rules_behavior.allow_multiple_discounts', v)
+            }),
+            el(SelectControl, {
+                label: 'Estrategia de combinación',
+                value: rb.combination_strategy || 'sum_best',
+                options: [
+                    { label: 'Usar el mejor descuento',       value: 'sum_best'       },
+                    { label: 'Sumar todos los descuentos',    value: 'sum_all'        },
+                    { label: 'Solo el descuento más alto',    value: 'highest_single' }
+                ],
+                onChange: (v) => updateSetting('rules_behavior.combination_strategy', v)
+            }),
+            el(SelectControl, {
+                label: 'Orden de aplicación de reglas',
+                value: rb.apply_order || 'priority',
+                options: [
+                    { label: 'Por prioridad asignada',  value: 'priority'      },
+                    { label: 'Por fecha de creación',   value: 'creation_date' }
+                ],
+                onChange: (v) => updateSetting('rules_behavior.apply_order', v)
+            }),
+            el(ToggleControl, {
+                label: 'Una regla exclusiva cancela las demás reglas activas',
+                checked: !!rb.exclusive_override,
+                onChange: (v) => updateSetting('rules_behavior.exclusive_override', v)
+            })
+        );
+
+        /* ── Panel: Características ──────────────────────────────────── */
+        const featuresPanel = el('div', { className: 'drw-form-section' },
+            el('div', { className: 'drw-settings-toggles' },
+                el(ToggleControl, { label: 'Habilitar programación por fechas (date_from / date_to)', checked: !!ft.enable_scheduling,    onChange: (v) => updateSetting('features.enable_scheduling',    v) }),
+                el(ToggleControl, { label: 'Habilitar límites de uso por regla',                      checked: !!ft.enable_usage_limits,  onChange: (v) => updateSetting('features.enable_usage_limits',  v) }),
+                el(ToggleControl, { label: 'Mostrar etiquetas de descuento en el catálogo',           checked: !!ft.show_discount_labels, onChange: (v) => updateSetting('features.show_discount_labels', v) }),
+                el(ToggleControl, { label: 'Modo debug (registrar en consola del navegador)',          checked: !!ft.enable_debug_mode,    onChange: (v) => updateSetting('features.enable_debug_mode',    v) })
+            ),
+            el(SelectControl, {
+                label: 'Redondeo de precios calculados',
+                value: ft.round_prices || 'standard',
+                options: [
+                    { label: 'Estándar (al más cercano)', value: 'standard' },
+                    { label: 'Siempre hacia abajo',       value: 'down'     },
+                    { label: 'Siempre hacia arriba',      value: 'up'       },
+                    { label: 'Half-up (0.5 sube)',        value: 'half_up'  }
+                ],
+                onChange: (v) => updateSetting('features.round_prices', v)
+            })
+        );
+
+        /* ── Panel: Apariencia ──────────────────────────────────────── */
+        const appearancePanel = el('div', { className: 'drw-form-section' },
+            el(SelectControl, {
+                label: 'Tema predefinido',
+                value: th.preset || 'default',
+                options: [
+                    { label: 'Default (Azul moderno)', value: 'default'  },
+                    { label: 'Dark (Oscuro)',           value: 'dark'     },
+                    { label: 'Colorful (Multicolor)',   value: 'colorful' },
+                    { label: 'Minimal (Negro/Blanco)',  value: 'minimal'  }
+                ],
+                onChange: (v) => updateSetting('theme.preset', v)
+            }),
+            activePreset && el('div', { className: 'drw-theme-preview' },
+                el('div', { className: 'drw-swatch-row' },
+                    Object.keys(activePreset.colors || {}).map((k) =>
+                        el(ThemeSwatch, { key: k, name: k, hex: activePreset.colors[k] })
+                    )
+                ),
+                el(Button, { className: 'drw-secondary-btn drw-apply-preset-btn', onClick: applyPreset },
+                    'Aplicar esta paleta a los colores personalizados')
+            ),
+            el('p', { className: 'drw-settings-label' }, 'Colores personalizados (formato hex: #RRGGBB)'),
+            el('div', { className: 'drw-colors-grid' },
+                el(TextControl, { label: 'Primario',        value: cc.primary   || '#3b82f6', onChange: (v) => updateSetting('theme.custom_colors.primary',   v) }),
+                el(TextControl, { label: 'Secundario',      value: cc.secondary || '#475569', onChange: (v) => updateSetting('theme.custom_colors.secondary', v) }),
+                el(TextControl, { label: 'Éxito',           value: cc.success   || '#16a34a', onChange: (v) => updateSetting('theme.custom_colors.success',   v) }),
+                el(TextControl, { label: 'Advertencia',     value: cc.warning   || '#ea580c', onChange: (v) => updateSetting('theme.custom_colors.warning',   v) }),
+                el(TextControl, { label: 'Peligro / Error', value: cc.danger    || '#dc2626', onChange: (v) => updateSetting('theme.custom_colors.danger',    v) })
+            ),
+            el('p', { className: 'drw-settings-label' }, 'Insignias del escaparate (mini-cart y promos destacadas)'),
+            el('p', { className: 'drw-help-text', style: { marginTop: 0 } }, 'Estos colores se emiten como variables CSS y los usan las insignias del mini-cart y el shortcode de promociones destacadas en la tienda.'),
+            el('div', { className: 'drw-badge-preview' },
+                el('span', { className: 'drw-badge-preview-pill', style: { background: cc.badge_enabled_bg || '#dcfce7', color: cc.badge_enabled_text || '#166534' } }, 'Promo activa'),
+                el('span', { className: 'drw-badge-preview-pill', style: { background: cc.badge_disabled_bg || '#f1f5f9', color: cc.badge_disabled_text || '#64748b' } }, 'Promo inactiva')
+            ),
+            el('div', { className: 'drw-colors-grid' },
+                el(TextControl, { label: 'Fondo insignia activa',  value: cc.badge_enabled_bg    || '#dcfce7', onChange: (v) => updateSetting('theme.custom_colors.badge_enabled_bg',    v) }),
+                el(TextControl, { label: 'Texto insignia activa',  value: cc.badge_enabled_text  || '#166534', onChange: (v) => updateSetting('theme.custom_colors.badge_enabled_text',  v) }),
+                el(TextControl, { label: 'Fondo insignia inactiva',value: cc.badge_disabled_bg   || '#f1f5f9', onChange: (v) => updateSetting('theme.custom_colors.badge_disabled_bg',   v) }),
+                el(TextControl, { label: 'Texto insignia inactiva',value: cc.badge_disabled_text || '#64748b', onChange: (v) => updateSetting('theme.custom_colors.badge_disabled_text', v) })
+            ),
+            el('p', { className: 'drw-settings-label' }, 'Tipografía'),
+            el('div', { className: 'drw-colors-grid' },
+                el(SelectControl, {
+                    label: 'Familia tipográfica',
+                    value: ty.font_family || 'system-ui',
+                    options: [
+                        { label: 'System UI (por defecto)', value: 'system-ui'           },
+                        { label: 'Arial',                   value: 'Arial, sans-serif'   },
+                        { label: 'Inter',                   value: "'Inter', sans-serif"  },
+                        { label: 'Roboto',                  value: "'Roboto', sans-serif" }
+                    ],
+                    onChange: (v) => updateSetting('theme.typography.font_family', v)
+                }),
+                el(TextControl, { label: 'Tamaño fuente base (px)',   type: 'number', value: String(ty.base_size    || 14), onChange: (v) => updateSetting('theme.typography.base_size',    parseInt(v, 10) || 14) }),
+                el(TextControl, { label: 'Tamaño fuente título (px)', type: 'number', value: String(ty.heading_size || 20), onChange: (v) => updateSetting('theme.typography.heading_size', parseInt(v, 10) || 20) })
+            ),
+            el('p', { className: 'drw-settings-label' }, 'Espaciado'),
+            el('div', { className: 'drw-colors-grid' },
+                el(TextControl, { label: 'Padding base (px)',  type: 'number', value: String(sp.padding_base  || 16), onChange: (v) => updateSetting('theme.spacing.padding_base',  parseInt(v, 10) || 16) }),
+                el(TextControl, { label: 'Border radius (px)', type: 'number', value: String(sp.border_radius || 8),  onChange: (v) => updateSetting('theme.spacing.border_radius', parseInt(v, 10) || 8)  }),
+                el(SelectControl, {
+                    label: 'Nivel de sombra',
+                    value: sp.shadow_level || 'medium',
+                    options: [
+                        { label: 'Sin sombra',   value: 'none'   },
+                        { label: 'Suave',        value: 'light'  },
+                        { label: 'Medio',        value: 'medium' },
+                        { label: 'Pronunciado',  value: 'heavy'  }
+                    ],
+                    onChange: (v) => updateSetting('theme.spacing.shadow_level', v)
+                })
+            )
+        );
+
+        /* ── Panel: Condiciones y Filtros Habilitados ──────────────── */
+        const conditionsMap = settings.conditions || {};
+        const conditionsPanel = el('div', { className: 'drw-form-section' },
+            el('p', { className: 'drw-help-text', style: { marginTop: 0 } }, 'Desactiva una condición para ocultarla del selector al crear o editar reglas. Las reglas que ya la usan la conservan.'),
+            conditionMeta === null
+                ? el('div', { style: { display: 'flex', alignItems: 'center', gap: '8px' } },
+                    el(Spinner), el('span', null, 'Cargando condiciones...'))
+                : el('div', { className: 'drw-settings-toggles' },
+                    conditionMeta.map((c) => el(ToggleControl, {
+                        key: c.id,
+                        label: c.label,
+                        checked: !!(conditionsMap[c.id] && conditionsMap[c.id].enabled),
+                        onChange: (v) => updateSetting('conditions.' + c.id + '.enabled', v)
+                    }))
+                )
+        );
+
+        const panels = {
+            types:      typesPanel,
+            behavior:   behaviorPanel,
+            features:   featuresPanel,
+            appearance: appearancePanel,
+            conditions: conditionsPanel
+        };
+
         return el('div', { className: 'drw-settings-wrap' },
 
             notice && el(Notice, { status: notice.type, isDismissible: true, onDismiss: () => setNotice(null) }, notice.msg),
 
-            /* ── 1. Tipos de Descuento ─────────────────────────────── */
-            el('div', { className: 'drw-form-section' },
-                el('h3', null, '1. Tipos de Descuento Habilitados'),
-                el('div', { className: 'drw-settings-toggles' },
-                    el(ToggleControl, { label: 'Porcentaje (% Off)',                  checked: !!(dt.percentage  && dt.percentage.enabled),  onChange: (v) => updateSetting('discount_types.percentage.enabled',  v) }),
-                    el(ToggleControl, { label: 'Precio Fijo ($ Off)',                 checked: !!(dt.fixed       && dt.fixed.enabled),        onChange: (v) => updateSetting('discount_types.fixed.enabled',       v) }),
-                    el(ToggleControl, { label: 'Bulk / Escalonado por cantidad',      checked: !!(dt.bulk        && dt.bulk.enabled),         onChange: (v) => updateSetting('discount_types.bulk.enabled',        v) }),
-                    el(ToggleControl, { label: 'BOGO – Compra X, Lleva Y',           checked: !!(dt.bogo        && dt.bogo.enabled),         onChange: (v) => updateSetting('discount_types.bogo.enabled',        v) }),
-                    el(ToggleControl, { label: 'Bundle / Paquete a precio especial', checked: !!(dt.bundle_set  && dt.bundle_set.enabled),   onChange: (v) => updateSetting('discount_types.bundle_set.enabled',  v) }),
-                    el(ToggleControl, { label: 'Envío Gratis',                        checked: !!(dt.free_shipping && dt.free_shipping.enabled), onChange: (v) => updateSetting('discount_types.free_shipping.enabled', v) })
-                ),
-                dt.bulk && dt.bulk.enabled && el('div', { style: { marginTop: '8px', maxWidth: '200px' } },
-                    el(TextControl, {
-                        label: 'Máximo de niveles Bulk',
-                        type: 'number',
-                        value: String(dt.bulk.max_tiers || 10),
-                        onChange: (v) => updateSetting('discount_types.bulk.max_tiers', parseInt(v, 10) || 10)
-                    })
-                )
-            ),
-
-            /* ── 2. Comportamiento de Reglas ───────────────────────── */
-            el('div', { className: 'drw-form-section' },
-                el('h3', null, '2. Comportamiento de Reglas'),
-                el(ToggleControl, {
-                    label: 'Permitir múltiples descuentos en el mismo carrito',
-                    checked: !!rb.allow_multiple_discounts,
-                    onChange: (v) => updateSetting('rules_behavior.allow_multiple_discounts', v)
-                }),
-                el(SelectControl, {
-                    label: 'Estrategia de combinación',
-                    value: rb.combination_strategy || 'sum_best',
-                    options: [
-                        { label: 'Usar el mejor descuento',       value: 'sum_best'       },
-                        { label: 'Sumar todos los descuentos',    value: 'sum_all'        },
-                        { label: 'Solo el descuento más alto',    value: 'highest_single' }
-                    ],
-                    onChange: (v) => updateSetting('rules_behavior.combination_strategy', v)
-                }),
-                el(SelectControl, {
-                    label: 'Orden de aplicación de reglas',
-                    value: rb.apply_order || 'priority',
-                    options: [
-                        { label: 'Por prioridad asignada',  value: 'priority'      },
-                        { label: 'Por fecha de creación',   value: 'creation_date' }
-                    ],
-                    onChange: (v) => updateSetting('rules_behavior.apply_order', v)
-                }),
-                el(ToggleControl, {
-                    label: 'Una regla exclusiva cancela las demás reglas activas',
-                    checked: !!rb.exclusive_override,
-                    onChange: (v) => updateSetting('rules_behavior.exclusive_override', v)
-                })
-            ),
-
-            /* ── 3. Características Generales ──────────────────────── */
-            el('div', { className: 'drw-form-section' },
-                el('h3', null, '3. Características Generales'),
-                el('div', { className: 'drw-settings-toggles' },
-                    el(ToggleControl, { label: 'Habilitar programación por fechas (date_from / date_to)', checked: !!ft.enable_scheduling,    onChange: (v) => updateSetting('features.enable_scheduling',    v) }),
-                    el(ToggleControl, { label: 'Habilitar límites de uso por regla',                      checked: !!ft.enable_usage_limits,  onChange: (v) => updateSetting('features.enable_usage_limits',  v) }),
-                    el(ToggleControl, { label: 'Mostrar etiquetas de descuento en el catálogo',           checked: !!ft.show_discount_labels, onChange: (v) => updateSetting('features.show_discount_labels', v) }),
-                    el(ToggleControl, { label: 'Modo debug (registrar en consola del navegador)',          checked: !!ft.enable_debug_mode,    onChange: (v) => updateSetting('features.enable_debug_mode',    v) })
-                ),
-                el(SelectControl, {
-                    label: 'Redondeo de precios calculados',
-                    value: ft.round_prices || 'standard',
-                    options: [
-                        { label: 'Estándar (al más cercano)', value: 'standard' },
-                        { label: 'Siempre hacia abajo',       value: 'down'     },
-                        { label: 'Siempre hacia arriba',      value: 'up'       },
-                        { label: 'Half-up (0.5 sube)',        value: 'half_up'  }
-                    ],
-                    onChange: (v) => updateSetting('features.round_prices', v)
-                })
-            ),
-
-            /* ── 4. Tema y Colores ─────────────────────────────────── */
-            el('div', { className: 'drw-form-section' },
-                el('h3', null, '4. Tema y Personalización Visual'),
-                el(SelectControl, {
-                    label: 'Tema predefinido',
-                    value: th.preset || 'default',
-                    options: [
-                        { label: 'Default (Azul moderno)', value: 'default'  },
-                        { label: 'Dark (Oscuro)',           value: 'dark'     },
-                        { label: 'Colorful (Multicolor)',   value: 'colorful' },
-                        { label: 'Minimal (Negro/Blanco)',  value: 'minimal'  }
-                    ],
-                    onChange: (v) => updateSetting('theme.preset', v)
-                }),
-                el('p', { className: 'drw-settings-label' }, 'Colores personalizados (formato hex: #RRGGBB)'),
-                el('div', { className: 'drw-colors-grid' },
-                    el(TextControl, { label: 'Primario',        value: cc.primary   || '#3b82f6', onChange: (v) => updateSetting('theme.custom_colors.primary',   v) }),
-                    el(TextControl, { label: 'Secundario',      value: cc.secondary || '#475569', onChange: (v) => updateSetting('theme.custom_colors.secondary', v) }),
-                    el(TextControl, { label: 'Éxito',           value: cc.success   || '#16a34a', onChange: (v) => updateSetting('theme.custom_colors.success',   v) }),
-                    el(TextControl, { label: 'Advertencia',     value: cc.warning   || '#ea580c', onChange: (v) => updateSetting('theme.custom_colors.warning',   v) }),
-                    el(TextControl, { label: 'Peligro / Error', value: cc.danger    || '#dc2626', onChange: (v) => updateSetting('theme.custom_colors.danger',    v) })
-                ),
-                el('p', { className: 'drw-settings-label' }, 'Tipografía'),
-                el('div', { className: 'drw-colors-grid' },
-                    el(SelectControl, {
-                        label: 'Familia tipográfica',
-                        value: ty.font_family || 'system-ui',
-                        options: [
-                            { label: 'System UI (por defecto)', value: 'system-ui'           },
-                            { label: 'Arial',                   value: 'Arial, sans-serif'   },
-                            { label: 'Inter',                   value: "'Inter', sans-serif"  },
-                            { label: 'Roboto',                  value: "'Roboto', sans-serif" }
-                        ],
-                        onChange: (v) => updateSetting('theme.typography.font_family', v)
-                    }),
-                    el(TextControl, { label: 'Tamaño fuente base (px)',   type: 'number', value: String(ty.base_size    || 14), onChange: (v) => updateSetting('theme.typography.base_size',    parseInt(v, 10) || 14) }),
-                    el(TextControl, { label: 'Tamaño fuente título (px)', type: 'number', value: String(ty.heading_size || 20), onChange: (v) => updateSetting('theme.typography.heading_size', parseInt(v, 10) || 20) })
-                ),
-                el('p', { className: 'drw-settings-label' }, 'Espaciado'),
-                el('div', { className: 'drw-colors-grid' },
-                    el(TextControl, { label: 'Padding base (px)',  type: 'number', value: String(sp.padding_base  || 16), onChange: (v) => updateSetting('theme.spacing.padding_base',  parseInt(v, 10) || 16) }),
-                    el(TextControl, { label: 'Border radius (px)', type: 'number', value: String(sp.border_radius || 8),  onChange: (v) => updateSetting('theme.spacing.border_radius', parseInt(v, 10) || 8)  }),
-                    el(SelectControl, {
-                        label: 'Nivel de sombra',
-                        value: sp.shadow_level || 'medium',
-                        options: [
-                            { label: 'Sin sombra',   value: 'none'   },
-                            { label: 'Suave',        value: 'light'  },
-                            { label: 'Medio',        value: 'medium' },
-                            { label: 'Pronunciado',  value: 'heavy'  }
-                        ],
-                        onChange: (v) => updateSetting('theme.spacing.shadow_level', v)
-                    })
-                )
-            ),
+            el(TabPanel, {
+                className: 'drw-settings-tabs',
+                activeClass: 'is-active',
+                tabs: [
+                    { name: 'types',      title: 'Tipos de descuento' },
+                    { name: 'behavior',   title: 'Comportamiento' },
+                    { name: 'features',   title: 'Características' },
+                    { name: 'appearance', title: 'Apariencia' },
+                    { name: 'conditions', title: 'Condiciones y Filtros Habilitados' }
+                ]
+            }, (tab) => panels[tab.name] || null),
 
             /* ── Acciones ──────────────────────────────────────────── */
             el('div', { className: 'drw-settings-actions' },
-                el(Button, { className: 'drw-primary-btn', onClick: handleSave, disabled: saving },
-                    saving ? 'Guardando...' : 'Guardar Cambios'),
-                el(Button, { className: 'drw-secondary-btn', onClick: handleReset }, 'Restaurar Defaults'),
-                el(Button, { className: 'drw-secondary-btn', onClick: onBack }, '← Volver a Reglas')
+                el('div', { className: 'drw-settings-actions-main' },
+                    el(Button, { className: 'drw-primary-btn', onClick: handleSave, disabled: saving || !isDirty },
+                        saving ? 'Guardando...' : 'Guardar cambios'),
+                    el(Button, { className: 'drw-secondary-btn', onClick: onBack }, '← Volver a Reglas'),
+                    isDirty && el('span', { className: 'drw-unsaved-indicator', role: 'status' },
+                        el('span', { className: 'drw-unsaved-dot', 'aria-hidden': 'true' }),
+                        'Cambios sin guardar')
+                ),
+                el('div', { className: 'drw-settings-danger-zone' },
+                    el('span', { className: 'drw-danger-zone-label' }, 'Zona de riesgo'),
+                    el(Button, { className: 'drw-danger-btn', onClick: handleReset }, 'Restaurar valores por defecto')
+                )
             )
         );
     }

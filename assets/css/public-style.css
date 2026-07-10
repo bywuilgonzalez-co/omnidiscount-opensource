@@ -13,7 +13,10 @@
     min-width: 48px;
     padding: 5px 10px;
     border-radius: 999px;
-    background: #e53935;
+    /* Colour driven by Configuración Global → Apariencia (theme.custom_colors.danger),
+       emitted as --drw-color-danger by ShortcodeController; falls back to the
+       original red when settings are unavailable. */
+    background: var(--drw-color-danger, #e53935);
     color: #ffffff !important;
     font-size: 12px;
     font-weight: 800;
@@ -440,8 +443,11 @@
     padding: 6px 10px;
     border: 1px solid #e0e0e0;
     border-radius: 4px;
-    background: #fafafa;
-    color: #555;
+    /* Idle-promo colours come from Configuración Global → Apariencia
+       (theme.custom_colors.badge_disabled_*), emitted as CSS variables by
+       ShortcodeController; the hex fallbacks are the original values. */
+    background: var(--drw-badge-disabled-bg, #fafafa);
+    color: var(--drw-badge-disabled-text, #555);
     font-size: 0.9em;
     line-height: 1.3;
 }
@@ -457,13 +463,15 @@
     min-width: 0;
 }
 .drw-minicart-promo.is-applied {
-    border-color: #4caf50;
-    background: #f1f8f2;
-    color: #2e7d32;
+    /* Unlocked/applied promo → the merchant's "enabled badge" colours
+       (theme.custom_colors.badge_enabled_* + success accent). */
+    border-color: var(--drw-color-success, #4caf50);
+    background: var(--drw-badge-enabled-bg, #f1f8f2);
+    color: var(--drw-badge-enabled-text, #2e7d32);
     font-weight: 600;
 }
 .drw-minicart-promo.is-applied .drw-minicart-promo__mark {
-    background: #4caf50;
+    background: var(--drw-color-success, #4caf50);
 }
 
 /* ===== DRW Mini-Cart BLOCKS Promos (bloque woocommerce/mini-cart) ===== */
@@ -492,8 +500,10 @@
     padding: 6px 10px;
     border: 1px solid #e0e0e0;
     border-radius: 4px;
-    background: #fafafa;
-    color: #555;
+    /* Same theme variables as the classic mini-cart above, so both surfaces
+       track Configuración Global → Apariencia identically. */
+    background: var(--drw-badge-disabled-bg, #fafafa);
+    color: var(--drw-badge-disabled-text, #555);
     font-size: 0.9em;
     line-height: 1.3;
     opacity: 1;
@@ -514,13 +524,13 @@
     min-width: 0;
 }
 .drw-minicart-blocks-promo.is-applied {
-    border-color: #4caf50;
-    background: #f1f8f2;
-    color: #2e7d32;
+    border-color: var(--drw-color-success, #4caf50);
+    background: var(--drw-badge-enabled-bg, #f1f8f2);
+    color: var(--drw-badge-enabled-text, #2e7d32);
     font-weight: 600;
 }
 .drw-minicart-blocks-promo.is-applied .drw-minicart-blocks-promo__mark {
-    background: #4caf50;
+    background: var(--drw-color-success, #4caf50);
 }
 @media (prefers-reduced-motion: reduce) {
     .drw-minicart-blocks-promo {
@@ -704,13 +714,16 @@
    progress bar and mini-cart promos so success reads the same across surfaces. */
 .drw-featured-promo-copy.is-copied {
     border-style: solid;
-    border-color: #4caf50;
-    background: #f1f8f2;
-    color: #2e7d32;
+    /* "¡Copiado!" success state shares the merchant's storefront badge colours
+       (Configuración Global → Apariencia) with the mini-cart, so success reads
+       the same across surfaces. Fallbacks keep the original green. */
+    border-color: var(--drw-color-success, #4caf50);
+    background: var(--drw-badge-enabled-bg, #f1f8f2);
+    color: var(--drw-badge-enabled-text, #2e7d32);
 }
 
 .drw-featured-promo-copy.is-copied .dashicons {
-    color: #2e7d32;
+    color: var(--drw-badge-enabled-text, #2e7d32);
 }
 
 .drw-featured-promo-auto {
