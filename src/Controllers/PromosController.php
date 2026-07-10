@@ -1031,7 +1031,7 @@ class PromosController {
 		// (b) Duplicate code -- same lookup validate_promo() uses to hard-fail,
 		// here surfaced as a warning instead of aborting the request.
 		if ( '' !== $code ) {
-			$duplicate = $this->find_duplicate_code( $code, $exclude_id );
+			$duplicate = $this->find_duplicate_code( $code, $promo_exclude_id );
 			if ( $duplicate ) {
 				$warnings[] = array(
 					'severity' => 'warning',

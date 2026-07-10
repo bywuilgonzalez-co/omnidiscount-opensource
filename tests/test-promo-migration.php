@@ -371,5 +371,29 @@ namespace {
 	assert_same( array(), $completed['rejected'], 'No entry should remain rejected after the fix.' );
 	assert_same( 3, count( PromoModel::$inserted ), 'Only the previously-rejected B should be inserted by the retry — A and C must not be duplicated.' );
 
+	// --- (g) two legacy entries sharing the same non-null code -----------------
+	// Import mode skips validate_promo()'s duplicate_code hard-fail, so both
+	// entries pass validation. The first inserts; the second collides on the
+	// wp_drw_promos `code_unique` index (PromoModel::insert() would return 0).
+	// Regression: without the pre-insert code_exists() guard the second row was
+	// dropped SILENTLY (never inserted, never counted, never in $rejected),
+	// leaving the migration permanently 'incomplete' with no trace. It must now
+	// surface under 'rejected' so the admin can see and resolve the collision.
+	reset_world();
+	$dupes = array(
+		legacy_promo( array( 'id' => 1, 'code' => 'DUPE', 'name' => 'Original' ) ),
+		legacy_promo( array( 'id' => 2, 'code' => 'DUPE', 'name' => 'Copia con código repetido' ) ),
+	);
+	$GLOBALS['wp_options']['drw_promos'] = wp_json_encode( $dupes );
+
+	$dup_result = PromoMigrationController::migrate_legacy_promos();
+
+	assert_same( 1, count( PromoModel::$inserted ), 'Only the first of two same-code entries can be inserted.' );
+	assert_same( 'incomplete', $dup_result['status'], 'A colliding-code entry leaves the batch incomplete, not ok.' );
+	assert_same( 1, $dup_result['migrated'], 'migrated counts only the row that actually landed.' );
+	assert_same( 1, count( $dup_result['rejected'] ), 'The colliding second entry must be surfaced under rejected, not lost silently.' );
+	assert_same( '2', $dup_result['rejected'][0]['legacy_id'], 'The duplicate-code entry (id 2) is the rejected one.' );
+	assert_same( 'This code is already used by another promo.', $dup_result['rejected'][0]['reason'], 'The rejection reason must name the duplicate-code collision.' );
+
 	echo "Promo migration OK\n";
 }

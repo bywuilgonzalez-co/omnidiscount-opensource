@@ -197,15 +197,19 @@ class SettingsController {
 
 	/**
 	 * Get human-readable label for discount type.
+	 *
+	 * Labels are returned in Spanish to match the rest of the OmniDiscount admin
+	 * UI. Wording mirrors the Rule Editor's "Tipo de descuento" dropdown
+	 * (admin-app.js) so a discount type reads the same in both places.
 	 */
 	private function type_label( $type ) {
 		$labels = array(
-			'percentage'    => 'Percentage Discount',
-			'fixed'         => 'Fixed Price Discount',
-			'bulk'          => 'Bulk Tiered Discount',
-			'bogo'          => 'Buy One Get One',
-			'bundle_set'    => 'Bundle Set Pricing',
-			'free_shipping' => 'Free Shipping',
+			'percentage'    => __( 'Descuento porcentual', 'discount-rules-woo' ),
+			'fixed'         => __( 'Descuento de precio fijo', 'discount-rules-woo' ),
+			'bulk'          => __( 'Descuento escalonado por cantidad', 'discount-rules-woo' ),
+			'bogo'          => __( 'BOGO Compra X Lleva Y', 'discount-rules-woo' ),
+			'bundle_set'    => __( 'Precio de paquete (bundle)', 'discount-rules-woo' ),
+			'free_shipping' => __( 'Envío gratis', 'discount-rules-woo' ),
 		);
 
 		return isset( $labels[ $type ] ) ? $labels[ $type ] : ucfirst( str_replace( '_', ' ', $type ) );

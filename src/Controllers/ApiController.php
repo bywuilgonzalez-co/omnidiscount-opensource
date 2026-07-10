@@ -234,7 +234,7 @@ class ApiController
         }
 
         if (empty($params['title'])) {
-            return new \WP_REST_Response(['message' => __('Title is required', 'discount-rules-woo')], 400);
+            return new \WP_REST_Response(['message' => __('El título es obligatorio.', 'discount-rules-woo')], 400);
         }
 
         $id = RuleModel::save_rule($params);
@@ -263,7 +263,7 @@ class ApiController
         // Clear engine cache
         \Drw\App\Controllers\RulesEngine::instance()->clear_cache();
 
-        return new \WP_REST_Response(['success' => true, 'message' => __('Rule deleted', 'discount-rules-woo')], 200);
+        return new \WP_REST_Response(['success' => true, 'message' => __('Regla eliminada.', 'discount-rules-woo')], 200);
     }
 
     /**

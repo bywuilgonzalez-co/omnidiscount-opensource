@@ -130,6 +130,27 @@ class PromoMigrationController {
 				continue;
 			}
 
+			// Import mode deliberately skips validate_promo()'s duplicate_code
+			// hard-fail (a code that merely collides with a WooCommerce coupon
+			// must NOT drop a legitimate legacy discount). But a code that
+			// duplicates another PROMO already in the table -- an earlier legacy
+			// entry inserted in this same run, or a pre-existing promo row -- can
+			// never be inserted: the wp_drw_promos `code_unique` index rejects it
+			// and PromoModel::insert() would return 0, silently dropping the row
+			// with no trace in $rejected and leaving the migration permanently
+			// 'incomplete'. Surface that unrecoverable collision here (same reason
+			// string find_duplicate_code() uses) so the admin can rename/merge the
+			// duplicate instead of losing a discount without knowing.
+			$validated_code = isset( $validated['code'] ) ? (string) $validated['code'] : '';
+			if ( '' !== $validated_code && PromoModel::code_exists( $validated_code ) ) {
+				$rejected[] = array(
+					'legacy_id' => $legacy_id,
+					'name'      => isset( $legacy['name'] ) ? (string) $legacy['name'] : '',
+					'reason'    => __( 'This code is already used by another promo.', 'discount-rules-woo' ),
+				);
+				continue;
+			}
+
 			$columns = \Drw\App\Controllers\PromosController::instance()->to_columns( $validated );
 			$new_id  = PromoModel::insert( $columns );
 
