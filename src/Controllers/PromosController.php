@@ -940,6 +940,21 @@ class PromosController {
 
 		$exclude_id = ( isset( $data['id'] ) && is_numeric( $data['id'] ) ) ? (int) $data['id'] : null;
 
+		// Which editor is calling. Default 'promo' keeps the promo wizard's
+		// behaviour byte-identical (it never sends `context`): only other promos
+		// are scanned and `id` excludes the promo being edited. 'rule' is sent by
+		// the Reglas editor, where `id` refers to a wp_drw_rules row instead, so it
+		// must NOT be treated as a promo id (a rule id could coincide with a real
+		// promo id and wrongly exclude it), and the overlap scan is widened to
+		// hand-authored rules as well.
+		$context = ( isset( $data['context'] ) && 'rule' === sanitize_key( $data['context'] ) ) ? 'rule' : 'promo';
+
+		// Self-exclusion is per context: a promo id only excludes a promo, a rule
+		// id only excludes a manual rule. Cross-excluding would let one id silently
+		// suppress an unrelated row that merely shares the same numeric value.
+		$promo_exclude_id = ( 'rule' === $context ) ? null : $exclude_id;
+		$rule_exclude_id  = ( 'rule' === $context ) ? $exclude_id : null;
+
 		$type  = isset( $data['type'] ) ? sanitize_text_field( $data['type'] ) : '';
 		$value = isset( $data['value'] ) ? floatval( $data['value'] ) : 0;
 		$code  = isset( $data['code'] ) ? strtoupper( sanitize_text_field( $data['code'] ) ) : '';
@@ -1018,7 +1033,7 @@ class PromosController {
 		// overlapping date range. Skipped while the dates themselves are
 		// malformed (already flagged by (c) above).
 		if ( $start_valid && $end_valid ) {
-			foreach ( $this->find_scope_overlaps( $scope, $start, $end, $exclude_id ) as $other_label ) {
+			foreach ( $this->find_scope_overlaps( $scope, $start, $end, $promo_exclude_id ) as $other_label ) {
 				$warnings[] = array(
 					'severity' => 'warning',
 					'field'    => 'scope',
@@ -1028,6 +1043,25 @@ class PromosController {
 						$other_label
 					),
 				);
+			}
+
+			// Hand-authored rules live in wp_drw_rules with a NULL / non-'promo'
+			// source. Only the Reglas editor (context='rule') asks for them, so the
+			// promo wizard's warning set stays exactly as before. A rule draft can
+			// still collide with an active promo (scanned just above) AND with
+			// another manual rule (scanned here).
+			if ( 'rule' === $context ) {
+				foreach ( $this->find_rule_overlaps( $scope, $start, $end, $rule_exclude_id ) as $other_label ) {
+					$warnings[] = array(
+						'severity' => 'warning',
+						'field'    => 'scope',
+						'message'  => sprintf(
+							/* translators: %s: title of the conflicting discount rule */
+							__( 'Overlaps with the active rule "%s" on the same products/categories and dates.', 'discount-rules-woo' ),
+							$other_label
+						),
+					);
+				}
 			}
 		}
 
@@ -1109,6 +1143,156 @@ class PromosController {
 		}
 
 		return $conflicts;
+	}
+
+	/**
+	 * Find active MANUAL rules -- hand-authored wp_drw_rules rows, i.e. NOT the
+	 * bridge-compiled source='promo' rows -- whose scope and date range overlap a
+	 * draft's. This is the manual-rule counterpart of find_scope_overlaps(),
+	 * which only looks at promos; together they let a rule draft be checked
+	 * against every kind of live discount.
+	 *
+	 * Only enabled, non-deleted rows are considered, mirroring the "active" gate
+	 * find_scope_overlaps() applies to promos. Deliberately advisory and
+	 * structural only (same simple scope/date model), never the discount engine's
+	 * full product resolver.
+	 *
+	 * @param array|string $scope           Sanitised draft scope ({target, ids} or legacy string).
+	 * @param string       $start           Draft start date (Y-m-d or '').
+	 * @param string       $end             Draft end date (Y-m-d or '').
+	 * @param int|null     $exclude_rule_id Rule id to exclude (the draft's own id, when editing a rule).
+	 * @return string[] Display titles (falling back to #id) of conflicting rules.
+	 */
+	private function find_rule_overlaps( $scope, $start, $end, $exclude_rule_id ) {
+		if ( ! is_array( $scope ) ) {
+			// Legacy free-form string scope can't be compared structurally.
+			return array();
+		}
+
+		global $wpdb;
+		$table = $wpdb->prefix . 'drw_rules';
+
+		// Every value in the WHERE clause is a literal -- no user input is
+		// interpolated -- so this needs no $wpdb->prepare(), matching the pattern
+		// in RuleModel::get_all_rules(). source='promo' rows are excluded on
+		// purpose: those are compiled promos, already covered by
+		// find_scope_overlaps() via PromoModel, and one of them could be this very
+		// draft when a promo is being edited.
+		$rows = $wpdb->get_results(
+			"SELECT id, title, apply_to, filters, date_from, date_to
+			 FROM {$table}
+			 WHERE enabled = 1 AND deleted = 0 AND ( source IS NULL OR source <> 'promo' )",
+			ARRAY_A
+		);
+		if ( ! is_array( $rows ) ) {
+			return array();
+		}
+
+		$conflicts = array();
+		foreach ( $rows as $row ) {
+			if ( ! $this->rule_row_overlaps_draft( $row, $scope, $start, $end, $exclude_rule_id ) ) {
+				continue;
+			}
+
+			$title       = isset( $row['title'] ) ? trim( (string) $row['title'] ) : '';
+			$conflicts[] = '' !== $title ? $title : '#' . (int) $row['id'];
+		}
+
+		return $conflicts;
+	}
+
+	/**
+	 * Pure per-row overlap test for a single manual rule -- no DB, no
+	 * WooCommerce, no other collaborators -- so the mapping from a raw
+	 * wp_drw_rules row to the advisory overlap decision is unit-testable in
+	 * isolation. Reuses the exact dates_overlap()/scopes_overlap() helpers the
+	 * promo path uses, after normalising the rule's storage shape:
+	 *
+	 *   - dates: date_from/date_to are UNIX timestamps (seconds), reduced to
+	 *     Y-m-d (empty/NULL = open-ended), which is what dates_overlap() expects.
+	 *   - scope: apply_to + filters is projected onto the engine-native
+	 *     { target, product_ids, category_ids } envelope scopes_overlap() reads.
+	 *
+	 * @param array    $row             Raw drw_rules row (id, apply_to, filters, date_from, date_to).
+	 * @param array    $scope           Sanitised draft scope ({target, ids}).
+	 * @param string   $start           Draft start date (Y-m-d or '').
+	 * @param string   $end             Draft end date (Y-m-d or '').
+	 * @param int|null $exclude_rule_id Rule id to exclude (the draft's own id).
+	 * @return bool
+	 */
+	private function rule_row_overlaps_draft( $row, $scope, $start, $end, $exclude_rule_id ) {
+		if ( ! is_array( $scope ) || ! is_array( $row ) ) {
+			return false;
+		}
+		if ( null !== $exclude_rule_id && isset( $row['id'] ) && (int) $row['id'] === (int) $exclude_rule_id ) {
+			return false;
+		}
+
+		$rule_start = ! empty( $row['date_from'] ) ? gmdate( 'Y-m-d', (int) $row['date_from'] ) : '';
+		$rule_end   = ! empty( $row['date_to'] ) ? gmdate( 'Y-m-d', (int) $row['date_to'] ) : '';
+		if ( ! $this->dates_overlap( $start, $end, $rule_start, $rule_end ) ) {
+			return false;
+		}
+
+		$draft_target = isset( $scope['target'] ) ? (string) $scope['target'] : 'all';
+		$draft_ids    = ( isset( $scope['ids'] ) && is_array( $scope['ids'] ) ) ? $scope['ids'] : array();
+
+		return $this->scopes_overlap( $draft_target, $draft_ids, $this->rule_scope_envelope( $row ) );
+	}
+
+	/**
+	 * Project a manual rule's apply_to + filters onto the engine-native
+	 * { target, product_ids, category_ids } scope envelope that scopes_overlap()
+	 * already understands. `filters` may arrive as a JSON string (the raw DB
+	 * column) or an already-decoded array (RuleModel::format_rule()); both work.
+	 *
+	 *   all_products        -> target 'all'        (touches everything)
+	 *   specific_products   -> target 'products'   (filters.product_ids)
+	 *   specific_categories -> target 'categories' (filters.category_ids)
+	 *
+	 * @param array $row Raw drw_rules row.
+	 * @return array Engine-native scope envelope.
+	 */
+	private function rule_scope_envelope( $row ) {
+		$apply_to = isset( $row['apply_to'] ) ? (string) $row['apply_to'] : 'all_products';
+
+		$filters = isset( $row['filters'] ) ? $row['filters'] : array();
+		if ( is_string( $filters ) ) {
+			$decoded = json_decode( $filters, true );
+			$filters = is_array( $decoded ) ? $decoded : array();
+		}
+		if ( ! is_array( $filters ) ) {
+			$filters = array();
+		}
+
+		$product_ids  = ( isset( $filters['product_ids'] ) && is_array( $filters['product_ids'] ) )
+			? array_values( array_map( 'intval', $filters['product_ids'] ) )
+			: array();
+		$category_ids = ( isset( $filters['category_ids'] ) && is_array( $filters['category_ids'] ) )
+			? array_values( array_map( 'intval', $filters['category_ids'] ) )
+			: array();
+
+		if ( 'specific_products' === $apply_to ) {
+			return array(
+				'target'       => 'products',
+				'product_ids'  => $product_ids,
+				'category_ids' => array(),
+			);
+		}
+
+		if ( 'specific_categories' === $apply_to ) {
+			return array(
+				'target'       => 'categories',
+				'product_ids'  => array(),
+				'category_ids' => $category_ids,
+			);
+		}
+
+		return array(
+			'target'       => 'all',
+			'product_ids'  => array(),
+			'category_ids' => array(),
+		);
 	}
 
 	/**

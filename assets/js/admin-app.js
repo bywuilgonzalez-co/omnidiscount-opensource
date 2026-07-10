@@ -539,6 +539,70 @@
         );
     }
 
+    // ------------------------------------------------------------------
+    // Conflict pre-check helpers (Reglas editor)
+    //
+    // Build the promo-draft-equivalent that the shared conflict endpoint
+    // (POST /drw/v1/promos/check-conflicts, driven by window.DrwConflictChecker)
+    // expects, from a manual rule's own fields — so the Rule Editor gets the
+    // same non-blocking advisory "traffic light" the promo wizard already has.
+    // ------------------------------------------------------------------
+
+    // UNIX timestamp (seconds) → 'YYYY-MM-DD' in UTC, mirroring the endpoint's
+    // gmdate('Y-m-d', ts) for stored rules. Returns '' for empty/invalid input.
+    const drwTsToYmd = (ts) => {
+        const n = parseInt(ts, 10);
+        if (!n || n <= 0) {
+            return '';
+        }
+        const d = new Date(n * 1000);
+        const pad = (x) => (x < 10 ? '0' + x : '' + x);
+        return d.getUTCFullYear() + '-' + pad(d.getUTCMonth() + 1) + '-' + pad(d.getUTCDate());
+    };
+
+    // Accept either a UNIX timestamp or an ISO-ish date string and reduce it to
+    // the leading 'YYYY-MM-DD' (the endpoint validates the format itself).
+    const drwNormalizeYmd = (val) => {
+        if (val === undefined || val === null || val === '') {
+            return '';
+        }
+        if (/^\d+$/.test(String(val))) {
+            return drwTsToYmd(val);
+        }
+        const match = String(val).trim().match(/^(\d{4}-\d{2}-\d{2})/);
+        return match ? match[1] : '';
+    };
+
+    // Map a rule's apply_to + filters onto the compact { target, ids } scope the
+    // endpoint understands. Mirrors PromosController::rule_scope_envelope() so
+    // both ends agree on how a rule's scope compares against a promo's.
+    const drwRuleScopeForConflicts = (rule) => {
+        const filters = (rule && rule.filters) || {};
+        if (rule && rule.apply_to === 'specific_products') {
+            return { target: 'products', ids: Array.isArray(filters.product_ids) ? filters.product_ids : [] };
+        }
+        if (rule && rule.apply_to === 'specific_categories') {
+            return { target: 'category', ids: Array.isArray(filters.category_ids) ? filters.category_ids : [] };
+        }
+        return { target: 'all', ids: [] };
+    };
+
+    // Derive the rule's effective start/end. Prefer the top-level schedule
+    // (date_from/date_to, stored as UNIX seconds); fall back to an order_date
+    // condition's own date window when the rule itself is open-ended.
+    const drwRuleDatesForConflicts = (rule) => {
+        let start = drwTsToYmd(rule && rule.date_from);
+        let end = drwTsToYmd(rule && rule.date_to);
+        if ((!start || !end) && rule && Array.isArray(rule.conditions)) {
+            const od = rule.conditions.find((c) => c && c.type === 'order_date');
+            if (od) {
+                if (!start) { start = drwNormalizeYmd(od.date_from !== undefined ? od.date_from : od.start_date); }
+                if (!end) { end = drwNormalizeYmd(od.date_to !== undefined ? od.date_to : od.end_date); }
+            }
+        }
+        return { start: start, end: end };
+    };
+
     /**
      * Rule Editor Screen
      */
@@ -646,7 +710,64 @@
             updateAdjustments('tiers', tiers);
         };
 
+        // "Probar en mi tienda" (sandbox mode). Local/ephemeral — not part of
+        // the saved rule, just feedback for the click. Mirrors the Promos
+        // wizard's identical feature (drw-promo-wizard.js) so the affordance
+        // looks and behaves the same regardless of which screen it's used from.
+        const [sandbox, setSandbox] = useState({ status: 'idle', message: '' }); // idle | loading | ok | error
+
+        // Only meaningful for an already-saved rule (needs a real id) — see
+        // ApiController::activate_rule_sandbox() for the same guard enforced
+        // server-side. Unlike Promos (gated on PromoTypeRegistry::needs_code()),
+        // there is no equivalent type-based restriction for rules: every
+        // wp_drw_rules row is matched and applied automatically by
+        // RulesEngine, never redeemed via a typed code, so a saved id is the
+        // only precondition.
+        const doRuleSandbox = () => {
+            if (!rule || !rule.id || sandbox.status === 'loading') { return; }
+            setSandbox({ status: 'loading', message: '' });
+            apiFetch({ path: `/drw/v1/rules/${rule.id}/sandbox`, method: 'POST' })
+                .then((res) => {
+                    setSandbox({ status: 'ok', message: (res && res.message) || 'Activado solo para tu sesión de administrador.' });
+                })
+                .catch((err) => {
+                    setSandbox({ status: 'error', message: (err && err.message) || 'No se pudo activar el modo sandbox.' });
+                });
+        };
+
+        // Same component the Promos wizard uses in its review step, here fed
+        // the RULE shape (see build_rule in drw-natural-language-summary.js).
+        // It sits above the fold so the merchant can read what the 700-line
+        // form below actually does, in one sentence, while editing. Resolved
+        // lazily per render because that script loads after admin-app.js.
+        const NLSummary = window.DrwNaturalLanguageSummary;
+
+        // Advisory conflict "traffic light" component, resolved lazily per render
+        // (same reason as NLSummary above: its script loads after admin-app.js).
+        const ConflictChecker = window.DrwConflictChecker;
+
+        // Promo-draft-equivalent for the shared conflict endpoint, shaped from
+        // this rule's own fields. context:'rule' tells
+        // POST /drw/v1/promos/check-conflicts to ALSO scan other manual rules
+        // (not only promos) and to treat `id` as a rule id for self-exclusion.
+        // Recomputed each render — harmless: the checker debounces and keys off
+        // JSON.stringify, so an unchanged draft triggers no new request.
+        const conflictDates = drwRuleDatesForConflicts(rule);
+        const conflictDraft = {
+            id: rule.id || null,
+            context: 'rule',
+            name: rule.title || '',
+            scope: drwRuleScopeForConflicts(rule),
+            start: conflictDates.start,
+            end: conflictDates.end
+        };
+
         return el('div', null,
+            // Live natural-language recap of the whole rule.
+            typeof NLSummary === 'function' && el('div', { style: { marginBottom: '16px' } },
+                el(NLSummary, { rule: rule })
+            ),
+
             // Section 1: Basic Config
             el(Collapsible, { title: 'Configuración General' },
                 el(TextControl, {
@@ -1346,6 +1467,34 @@
                 }, '+ Agregar condición'),
                 enabledConditionOptions.length === 0 && el('p', { className: 'drw-help-text', style: { marginTop: '8px' } },
                     'Todas las condiciones están deshabilitadas en Configuración Global → Condiciones y Filtros Habilitados.')
+            ),
+
+            // "Probar en mi tienda" (sandbox mode) — only for an already-saved
+            // rule (needs a real id). No needsCode-equivalent restriction
+            // applies here; see doRuleSandbox() above for why.
+            rule && rule.id && el('div', { className: 'drw-sandbox-box', style: { marginTop: '16px', padding: '12px 14px', border: '1px dashed var(--drw-border, #d8dcd3)', borderRadius: 8 } },
+                el('div', { style: { display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10, flexWrap: 'wrap' } },
+                    el('div', null,
+                        el('div', { style: { fontWeight: 600, fontSize: 13 } }, 'Probar en mi tienda'),
+                        el('div', { className: 'drw-field-hint' }, 'Actívala solo para tu sesión de administrador, sin publicarla a clientes reales.')
+                    ),
+                    el('button', {
+                        type: 'button',
+                        className: 'drw-btn drw-btn-ghost drw-btn-sm',
+                        disabled: sandbox.status === 'loading',
+                        onClick: doRuleSandbox
+                    }, sandbox.status === 'loading' ? 'Activando…' : 'Probar en mi tienda')
+                ),
+                sandbox.status === 'ok' && el('p', { style: { marginTop: 8, marginBottom: 0, fontSize: 12.5, color: 'var(--drw-success, #10b981)' } }, sandbox.message),
+                sandbox.status === 'error' && el('p', { style: { marginTop: 8, marginBottom: 0, fontSize: 12.5, color: 'var(--drw-error, #ef4444)' } }, sandbox.message)
+            ),
+
+            // Advisory conflict "traffic light" (non-blocking), mounted right by
+            // the save button so overlaps against active promos AND other manual
+            // rules surface exactly where the merchant commits. It never blocks
+            // the save; onSave stays the only real gate, same as in the wizard.
+            typeof ConflictChecker === 'function' && el('div', { className: 'drw-rule-conflict-check', style: { marginTop: '20px' } },
+                el(ConflictChecker, { promoDraft: conflictDraft })
             ),
 
             // Save / Cancel Actions

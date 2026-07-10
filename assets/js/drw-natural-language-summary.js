@@ -15,13 +15,21 @@
  * built from its label in the shared catalogue (PromoTypeRegistry, delivered
  * to the browser as window.drwAdminData.promoTypes).
  *
+ * Also understands the RULE shape used by the RuleEditor in admin-app.js
+ * (title, apply_to, filters, adjustments {type: percentage/fixed/bulk/bogo/
+ * free_shipping/bundle_set}, conditions[]), via a parallel pure builder:
+ * window.DrwNaturalLanguageSummary.build_rule(rule). Example output:
+ *   "2x1 en la categoría Camisetas, solo si el carrito lleva 3 artículos
+ *    o más, y no se combina con otras reglas."
+ *
  * Uses WordPress core React (wp-element), same as the other window.Drw*
  * components. Exposes window.DrwNaturalLanguageSummary (the component) and
  * window.DrwNaturalLanguageSummary.build(promoDraft) (the pure phrase
  * builder, handy for tests or plain-text contexts).
  *
  * Usage:
- *   el(window.DrwNaturalLanguageSummary, { promoDraft: f })
+ *   el(window.DrwNaturalLanguageSummary, { promoDraft: f })   // Promos wizard
+ *   el(window.DrwNaturalLanguageSummary, { rule: r })         // Rule editor
  */
 (function () {
 	'use strict';
@@ -30,6 +38,7 @@
 
 	var PROMO_TYPES = (window.drwAdminData && window.drwAdminData.promoTypes) || [];
 	var CATEGORIES = (window.drwAdminData && window.drwAdminData.categories) || [];
+	var ROLES = (window.drwAdminData && window.drwAdminData.roles) || [];
 
 	var MONTHS = [
 		'enero', 'febrero', 'marzo', 'abril', 'mayo', 'junio',
@@ -271,18 +280,305 @@
 	}
 
 	// =======================================================================
+	// Rule phrase fragments (RuleEditor shape — parallel to the promo ones,
+	// never shared, so build() stays byte-for-byte untouched)
+	// =======================================================================
+
+	function roleName(id) {
+		for (var i = 0; i < ROLES.length; i++) {
+			if (ROLES[i].id === id) { return ROLES[i].name; }
+		}
+		return id;
+	}
+
+	function plural(n, one, many) {
+		return n === 1 ? one : many;
+	}
+
+	/**
+	 * What the rule DOES — opening phrase from adjustments.type.
+	 */
+	function ruleBasePhrase(adj) {
+		var type = adj.type || '';
+		var value = Number(adj.value) || 0;
+
+		switch (type) {
+			case 'percentage':
+				return value > 0 ? value + '% de descuento' : 'Un descuento porcentual';
+
+			case 'fixed':
+				return value > 0 ? fmtMoney(value) + ' de descuento' : 'Un descuento fijo';
+
+			case 'bulk':
+				// The tier detail reads better AFTER the scope, so build_rule()
+				// appends it as its own fragment (see bulkTiersPhrase).
+				return 'Un descuento escalonado por cantidad';
+
+			case 'bogo': {
+				var buy = Number(adj.buy_qty) || 1;
+				var get = Number(adj.get_qty) || 1;
+				var dType = adj.discount_type || adj.bogo_discount_type || 'free';
+				var dVal = Number(adj.discount_value || adj.bogo_value) || 0;
+				var gifts = Array.isArray(adj.get_products) ? adj.get_products.length : 0;
+				if (dType === 'free') {
+					if (gifts > 0) {
+						return 'Compra ' + buy + ' y lleva ' + get + ' gratis de los productos de regalo elegidos';
+					}
+					// Classic same-product combos read better as "2x1" / "3x2".
+					return (buy + get) + 'x' + buy;
+				}
+				var rebate = dType === 'percentage' ? dVal + '%' : fmtMoney(dVal);
+				return 'Compra ' + buy + ' y lleva ' + get + ' con ' + rebate + ' de descuento';
+			}
+
+			case 'free_shipping':
+				return 'Envío gratis';
+
+			case 'bundle_set':
+			case 'bundle': {
+				var price = Number(adj.bundle_price || adj.set_price) || 0;
+				return price > 0
+					? 'Un paquete de productos por ' + fmtMoney(price)
+					: 'Un paquete de productos a precio especial';
+			}
+
+			default:
+				return 'Un descuento';
+		}
+	}
+
+	/**
+	 * The best bulk tier as a follow-up fragment ("sube hasta 20% llevando
+	 * 12 unidades o más"), placed after the scope so the sentence flows.
+	 */
+	function bulkTiersPhrase(adj) {
+		var tiers = Array.isArray(adj.tiers) ? adj.tiers : [];
+		var best = null;
+		tiers.forEach(function (t) {
+			if (t.type === 'percentage' && (Number(t.value) || 0) > (best ? Number(best.value) : 0)) { best = t; }
+		});
+		if (best) {
+			var from = Number(best.min) || 0;
+			return 'sube hasta ' + Number(best.value) + '%' +
+				(from > 1 ? ' llevando ' + from + ' unidades o más' : '');
+		}
+		return 'cuanto más lleva tu cliente, más ahorra';
+	}
+
+	/**
+	 * Where the rule applies — from apply_to + filters, plus exclusions.
+	 */
+	function ruleScopePhrase(rule) {
+		var filters = rule.filters || {};
+
+		if (rule.apply_to === 'specific_products') {
+			var np = Array.isArray(filters.product_ids) ? filters.product_ids.length : 0;
+			if (np === 0) { return 'en los productos que elijas'; }
+			return 'en ' + np + plural(np, ' producto seleccionado', ' productos seleccionados');
+		}
+
+		if (rule.apply_to === 'specific_categories') {
+			var cats = Array.isArray(filters.category_ids) ? filters.category_ids : [];
+			if (cats.length === 1) {
+				var name = categoryName(cats[0]);
+				return name ? 'en la categoría ' + name : 'en 1 categoría seleccionada';
+			}
+			if (cats.length === 0) { return 'en las categorías que elijas'; }
+			return 'en ' + cats.length + ' categorías seleccionadas';
+		}
+
+		return 'en toda la tienda';
+	}
+
+	/**
+	 * Excluded products/categories, phrased as one gentle aside.
+	 */
+	function ruleExclusionsPhrase(rule) {
+		var filters = rule.filters || {};
+		var xp = Array.isArray(filters.exclude_product_ids) ? filters.exclude_product_ids.length : 0;
+		var xc = Array.isArray(filters.exclude_category_ids) ? filters.exclude_category_ids.length : 0;
+		var parts = [];
+		if (xp > 0) { parts.push(xp + plural(xp, ' producto', ' productos')); }
+		if (xc > 0) { parts.push(xc + plural(xc, ' categoría', ' categorías')); }
+		return parts.length ? 'excluyendo ' + parts.join(' y ') : '';
+	}
+
+	function listPreview(v) {
+		var arr = Array.isArray(v) ? v : (typeof v === 'string' && v !== '' ? [v] : []);
+		arr = arr.filter(function (s) { return String(s).trim() !== ''; });
+		if (arr.length === 0) { return ''; }
+		if (arr.length <= 2) { return arr.join(' o '); }
+		return arr.slice(0, 2).join(', ') + ' y ' + (arr.length - 2) + ' más';
+	}
+
+	/**
+	 * One warm fragment per condition row ("solo si..."). Unknown types are
+	 * skipped rather than guessed, so the sentence never lies to the merchant.
+	 */
+	function ruleConditionPhrase(cond) {
+		var op = cond.operator || '';
+		var val = cond.value;
+
+		switch (cond.type) {
+			case 'subtotal': {
+				var amount = fmtMoney(val);
+				if (op === 'less_than_or_equal' || op === 'less_than') { return 'solo para compras de hasta ' + amount; }
+				return 'solo para compras desde ' + amount;
+			}
+
+			case 'items_count':
+			case 'cart_items_quantity': {
+				var n = Number(val) || 0;
+				if (op === 'less_than_or_equal' || op === 'less_than') {
+					return 'solo si el carrito lleva ' + n + plural(n, ' artículo', ' artículos') + ' o menos';
+				}
+				return 'solo si el carrito lleva ' + n + plural(n, ' artículo', ' artículos') + ' o más';
+			}
+
+			case 'user_role': {
+				var roles = Array.isArray(val) ? val : [];
+				if (roles.length === 0) { return null; }
+				var names = roles.map(roleName);
+				if (op === 'not_in_list') { return 'excepto para clientes ' + listPreview(names); }
+				return 'solo para clientes ' + listPreview(names);
+			}
+
+			case 'user_email': {
+				var mails = listPreview(val);
+				if (!mails) { return null; }
+				return (op === 'not_in_list' ? 'excepto correos como ' : 'solo para correos como ') + mails;
+			}
+
+			case 'shipping_location': {
+				var places = listPreview(val);
+				if (!places) { return null; }
+				return (op === 'not_in_list' ? 'excepto envíos a ' : 'solo para envíos a ') + places;
+			}
+
+			case 'billing_city': {
+				if (!val) { return null; }
+				return (op === 'not_in_list' ? 'excepto para clientes de ' : 'solo para clientes de ') + val;
+			}
+
+			case 'cart_coupon': {
+				var code = String(val || '').trim();
+				if (op === 'not_applied') {
+					return code ? 'solo si el cupón ' + code.toUpperCase() + ' no está aplicado' : 'solo sin cupones aplicados';
+				}
+				return code ? 'solo con el cupón ' + code.toUpperCase() + ' aplicado' : null;
+			}
+
+			case 'cart_items_weight': {
+				var kg = Number(val) || 0;
+				if (op === 'less_than_or_equal' || op === 'less_than') { return 'solo si el carrito pesa hasta ' + kg; }
+				return 'solo si el carrito pesa ' + kg + ' o más';
+			}
+
+			case 'onsale_products':
+				return val === 'only'
+					? 'solo en productos que ya están en oferta'
+					: 'sin tocar productos que ya están en oferta';
+
+			case 'product_combination':
+				return op === 'contains_none'
+					? 'solo si el carrito no incluye ciertos productos'
+					: 'solo si el carrito incluye ciertos productos';
+
+			case 'user_logged_in':
+				return val === 'no' ? 'solo para visitantes sin cuenta' : 'solo para clientes con sesión iniciada';
+
+			case 'user_list':
+				return 'solo para una lista específica de clientes';
+
+			case 'order_date': {
+				var from = parseYmd(cond.start_date);
+				var to = parseYmd(cond.end_date);
+				var thisYear = new Date().getFullYear();
+				if (from && to) {
+					if (from.y === to.y && from.m === to.m) { return 'del ' + from.d + ' al ' + fmtDay(to, to.y !== thisYear); }
+					return 'del ' + fmtDay(from, from.y !== to.y) + ' al ' + fmtDay(to, from.y !== to.y || to.y !== thisYear);
+				}
+				if (from) { return 'desde el ' + fmtDay(from, from.y !== thisYear); }
+				if (to) { return 'hasta el ' + fmtDay(to, to.y !== thisYear); }
+				if (Array.isArray(cond.weekdays) && cond.weekdays.length > 0) { return 'solo ciertos días de la semana'; }
+				return null;
+			}
+
+			case 'purchase_history': {
+				var metric = cond.history_metric || 'orders_count';
+				if (metric === 'revenue') { return 'solo para clientes que ya han gastado ' + fmtMoney(val) + ' o más'; }
+				if (metric === 'products_bought') { return 'solo para clientes que ya compraron ciertos productos'; }
+				var orders = Number(val) || 0;
+				return 'solo para clientes con ' + orders + plural(orders, ' pedido o más', ' pedidos o más');
+			}
+
+			default:
+				return null;
+		}
+	}
+
+	/**
+	 * Build the full sentence for a RULE (RuleEditor form / REST rules shape).
+	 *
+	 * Pure and parallel to build(): same rule in, same phrase out, same warm
+	 * advisor voice. Example:
+	 *   "2x1 en la categoría Camisetas, solo si el carrito lleva 3 artículos
+	 *    o más, y no se combina con otras reglas."
+	 *
+	 * @param {Object} rule RuleEditor draft.
+	 * @return {string}
+	 */
+	function build_rule(rule) {
+		var r = rule || {};
+		var adj = r.adjustments || {};
+
+		// Free shipping is order-level: "envío gratis en toda la tienda" reads
+		// clumsy, so store-wide shipping keeps just the base (same trick as
+		// build() uses for free_ship_threshold).
+		var scope = ruleScopePhrase(r);
+		var opening = (adj.type === 'free_shipping' && scope === 'en toda la tienda')
+			? ruleBasePhrase(adj)
+			: ruleBasePhrase(adj) + ' ' + scope;
+
+		var parts = [opening];
+
+		if (adj.type === 'bulk') { parts.push(bulkTiersPhrase(adj)); }
+
+		var excl = ruleExclusionsPhrase(r);
+		if (excl !== '') { parts.push(excl); }
+
+		// First 3 conditions verbatim; the rest folded into one honest count
+		// so a heavily-conditioned rule still reads as one calm sentence.
+		var fragments = (Array.isArray(r.conditions) ? r.conditions : [])
+			.map(ruleConditionPhrase)
+			.filter(function (f) { return typeof f === 'string' && f !== ''; });
+		fragments.slice(0, 3).forEach(function (f) { parts.push(f); });
+		if (fragments.length > 3) {
+			var rest = fragments.length - 3;
+			parts.push('y ' + rest + plural(rest, ' condición más', ' condiciones más'));
+		}
+
+		if (r.exclusive) { parts.push('y no se combina con otras reglas'); }
+
+		var sentence = parts.join(', ') + '.';
+		return sentence.charAt(0).toUpperCase() + sentence.slice(1);
+	}
+
+	// =======================================================================
 	// Component
 	// =======================================================================
 
 	/**
 	 * Renders the phrase in a soft highlight box, prefixed with a small lead
-	 * so the merchant knows this is how the promo will behave.
+	 * so the merchant knows this is how the promo (or rule) will behave.
 	 *
-	 * @param {Object} props { promoDraft }
+	 * @param {Object} props { promoDraft } for the Promos wizard, or { rule }
+	 *                       for the RuleEditor. `rule` wins when both exist.
 	 */
 	function NaturalLanguageSummary(props) {
-		var draft = props.promoDraft || {};
-		var phrase = build(draft);
+		var isRule = !!props.rule;
+		var phrase = isRule ? build_rule(props.rule) : build(props.promoDraft || {});
+		var lead = isRule ? 'Así funcionará tu regla' : 'Así funcionará tu promoción';
 
 		return el('div', {
 			className: 'drw-nl-summary',
@@ -304,7 +600,7 @@
 			el('div', null,
 				el('div', {
 					style: { fontSize: '11px', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.04em', opacity: 0.7, marginBottom: '2px' }
-				}, 'Así funcionará tu promoción'),
+				}, lead),
 				el('div', {
 					style: { fontSize: '14px', lineHeight: 1.5 }
 				}, phrase)
@@ -313,6 +609,7 @@
 	}
 
 	window.DrwNaturalLanguageSummary = NaturalLanguageSummary;
-	// Pure builder, exposed for tests and plain-text consumers.
+	// Pure builders, exposed for tests and plain-text consumers.
 	window.DrwNaturalLanguageSummary.build = build;
+	window.DrwNaturalLanguageSummary.build_rule = build_rule;
 })();
