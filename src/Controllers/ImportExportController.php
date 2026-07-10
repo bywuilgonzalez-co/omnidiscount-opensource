@@ -111,8 +111,10 @@ class ImportExportController {
     }
 
     public function add_import_export_submenu() {
+        // Consolidated under the OmniDiscount top-level menu ('drw-discount-rules')
+        // instead of WooCommerce. Capability stays 'manage_woocommerce' unchanged.
         add_submenu_page(
-            'woocommerce',
+            'drw-discount-rules',
             __('Importar / Exportar', 'discount-rules-woo'),
             __('Importar / Exportar', 'discount-rules-woo'),
             'manage_woocommerce',

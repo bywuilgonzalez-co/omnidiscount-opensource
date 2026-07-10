@@ -145,8 +145,11 @@ class AnalyticsController {
     }
 
     public function add_analytics_submenu() {
+        // Consolidated under the OmniDiscount top-level menu ('drw-discount-rules')
+        // instead of WooCommerce. permission_callback / capability stays
+        // 'manage_woocommerce' unchanged.
         add_submenu_page(
-            'woocommerce',
+            'drw-discount-rules',
             __('Analytics', 'discount-rules-woo'),
             __('Analytics', 'discount-rules-woo'),
             'manage_woocommerce',

@@ -167,7 +167,12 @@
      * Main App Component
      */
     function DrwApp() {
-        const [screen, setScreen] = useState('list'); // 'list', 'edit', 'settings', 'promos'
+        // Open the SPA on the screen the merchant navigated to. Each OmniDiscount
+        // submenu (Reglas / Cupones y Promociones / Configuración) sets
+        // window.drwAdminData.initialScreen server-side from $_GET['page']; fall
+        // back to 'list' when absent. Valid: 'list', 'edit', 'settings', 'promos'.
+        var drwInitialScreen = (window.drwAdminData && window.drwAdminData.initialScreen) || 'list';
+        const [screen, setScreen] = useState(drwInitialScreen);
         const [rules, setRules] = useState([]);
         const [editingRule, setEditingRule] = useState(null);
         const [loading, setLoading] = useState(true);

@@ -13,6 +13,17 @@ class AdminController
     private static $instance = null;
 
     /**
+     * Hook suffixes for every OmniDiscount admin screen, captured verbatim from
+     * the return value of add_menu_page()/add_submenu_page() in add_admin_menu().
+     * enqueue_admin_assets() matches $hook against this list. Captured (not
+     * hardcoded) on purpose — see the note in enqueue_admin_assets() about the
+     * sanitize_title() hook-suffix gotcha.
+     *
+     * @var string[]
+     */
+    private $hook_suffixes = [];
+
+    /**
      * Singleton instance.
      */
     public static function instance()
@@ -44,11 +55,18 @@ class AdminController
     }
 
     /**
-     * Add menu under WooCommerce section.
+     * Register the OmniDiscount top-level menu and its submenus.
+     *
+     * Everything lives under the single 'drw-discount-rules' parent so the whole
+     * plugin is consolidated in one menu instead of being scattered between an
+     * OmniDiscount top-level and the WooCommerce menu. add_menu_page() and
+     * add_submenu_page() each RETURN the hook suffix WordPress will later hand to
+     * admin_enqueue_scripts(); we stash every one in $this->hook_suffixes so the
+     * asset guard can compare against the real values (see enqueue_admin_assets()).
      */
     public function add_admin_menu()
     {
-        add_menu_page(
+        $this->hook_suffixes[] = add_menu_page(
             __('OmniDiscount', 'discount-rules-woo'),
             __('OmniDiscount', 'discount-rules-woo'),
             'manage_woocommerce',
@@ -57,6 +75,45 @@ class AdminController
             'dashicons-tag',
             56
         );
+
+        // First submenu deliberately shares its slug with the parent. This is the
+        // standard WordPress idiom to control the label of the auto-generated first
+        // submenu entry: without it WP labels that entry with the parent page_title
+        // ('OmniDiscount'); with it we get the more specific 'Reglas'. Because the
+        // slug equals the parent slug, WordPress keeps this entry's hook suffix
+        // identical to the parent's ('toplevel_page_drw-discount-rules') — it does
+        // NOT gain a '..._page_...' suffix. Capturing the return value keeps us
+        // correct either way.
+        $this->hook_suffixes[] = add_submenu_page(
+            'drw-discount-rules',
+            __('OmniDiscount — Reglas', 'discount-rules-woo'),
+            __('Reglas', 'discount-rules-woo'),
+            'manage_woocommerce',
+            'drw-discount-rules',
+            [$this, 'render_admin_page']
+        );
+
+        // Cupones y Promociones + Configuración are the SAME single-page React app
+        // (render_admin_page); the SPA decides which view to show. The desired
+        // opening screen is passed to JS via drwAdminData.initialScreen, computed
+        // from $_GET['page'] in enqueue_admin_assets().
+        $this->hook_suffixes[] = add_submenu_page(
+            'drw-discount-rules',
+            __('OmniDiscount — Cupones y Promociones', 'discount-rules-woo'),
+            __('Cupones y Promociones', 'discount-rules-woo'),
+            'manage_woocommerce',
+            'drw-promos',
+            [$this, 'render_admin_page']
+        );
+
+        $this->hook_suffixes[] = add_submenu_page(
+            'drw-discount-rules',
+            __('OmniDiscount — Configuración', 'discount-rules-woo'),
+            __('Configuración', 'discount-rules-woo'),
+            'manage_woocommerce',
+            'drw-settings',
+            [$this, 'render_admin_page']
+        );
     }
 
     /**
@@ -64,9 +121,33 @@ class AdminController
      */
     public function enqueue_admin_assets($hook)
     {
-        // Only load on our custom admin page
-        if ($hook !== 'toplevel_page_drw-discount-rules') {
+        // Only load on OmniDiscount's own screens. $this->hook_suffixes holds the
+        // exact strings add_menu_page()/add_submenu_page() returned, i.e. exactly
+        // what WordPress passes here as $hook, so this matches all four entries
+        // (top-level + Reglas + Cupones/Promociones + Configuración).
+        //
+        // WHY captured instead of a hardcoded array: WordPress does NOT build a
+        // submenu hook suffix as '{parent_slug}_page_{submenu_slug}'. Per
+        // wp-admin/includes/plugin.php::get_plugin_page_hookname(), the prefix is
+        // sanitize_title( <PARENT menu_title> ), not the parent slug. Our parent
+        // menu_title is 'OmniDiscount', so the real suffixes are
+        // 'omnidiscount_page_drw-promos' / 'omnidiscount_page_drw-settings' — NOT
+        // 'drw-discount-rules_page_drw-promos'. The first submenu (slug == parent
+        // slug) instead keeps 'toplevel_page_drw-discount-rules'. Matching on the
+        // captured return values is correct regardless of the menu title or locale.
+        if (!in_array($hook, $this->hook_suffixes, true)) {
             return;
+        }
+
+        // Which SPA screen to open on load, derived from the submenu slug. Read-only
+        // use of $_GET['page'] purely to pick a view; the React app falls back to
+        // 'list'. URL/history.pushState sync is intentionally out of scope here.
+        $current_page = isset($_GET['page']) ? sanitize_key(wp_unslash($_GET['page'])) : '';
+        $initial_screen = 'list';
+        if ('drw-promos' === $current_page) {
+            $initial_screen = 'promos';
+        } elseif ('drw-settings' === $current_page) {
+            $initial_screen = 'settings';
         }
 
         // Enqueue WP core dependencies
@@ -233,6 +314,10 @@ class AdminController
             // Used by LivePreviewPanel/PromoStatsPanel/NaturalLanguageSummary to
             // format money in the store's real currency instead of a bare number.
             'currencySymbol'  => get_woocommerce_currency_symbol(),
+            // Which SPA view to open on load, derived from the submenu slug the
+            // merchant clicked ($_GET['page']). admin-app.js reads this and falls
+            // back to 'list' when absent.
+            'initialScreen'   => $initial_screen,
         ]);
     }
 
