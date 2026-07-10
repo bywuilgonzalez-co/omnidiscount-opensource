@@ -425,10 +425,29 @@
 			setMigrating(true);
 			apiFetch({ path: '/drw/v1/promos/legacy-migration', method: 'POST' })
 				.then(function (result) {
+					var rejected = (result && result.rejected) || [];
 					if (result.status === 'ok') {
 						showToast('Migradas ' + result.migrated + ' promociones antiguas.');
 					} else if (result.status === 'incomplete') {
-						showToast('Se migraron ' + result.migrated + ' de ' + result.expected + '. Puedes reintentar sin duplicar nada.');
+						if (rejected.length > 0) {
+							// These entries failed the same validation gate the
+							// editor uses (bad dates, duplicate code, percentage
+							// > 100, …) and are NEVER inserted, so the migration
+							// can never reach `expected` — retrying will not
+							// recover them. Say so, and surface the first reason,
+							// instead of implying a retry would finish the job.
+							var n = rejected.length;
+							var reason = (rejected[0] && rejected[0].reason) ? ' Motivo: ' + rejected[0].reason : '';
+							showToast(
+								'Se migraron ' + result.migrated + ' de ' + result.expected + '. ' +
+								(n === 1
+									? '1 promoción antigua no se pudo migrar por datos inválidos y no se recuperará al reintentar.'
+									: n + ' promociones antiguas no se pudieron migrar por datos inválidos y no se recuperarán al reintentar.') +
+								reason
+							);
+						} else {
+							showToast('Se migraron ' + result.migrated + ' de ' + result.expected + '. Puedes reintentar sin duplicar nada.');
+						}
 					} else {
 						showToast('No había promociones antiguas por migrar.');
 					}
@@ -453,7 +472,14 @@
 						});
 					});
 				})
-				.catch(function () { showToast('Error al cambiar estado'); });
+				.catch(function (err) {
+					// Activating re-validates the stored row (toggle_promo →
+					// validate_promo); a rejected activation returns a specific
+					// {message} explaining why (duplicate code, inverted dates,
+					// percentage > 100, …). Surface it instead of a generic
+					// "Error al cambiar estado" so the merchant knows what to fix.
+					showToast('Error: ' + ((err && err.message) || 'No se pudo cambiar el estado'));
+				});
 		}
 
 		function handleDelete(id) {

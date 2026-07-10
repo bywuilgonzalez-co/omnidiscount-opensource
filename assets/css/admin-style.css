@@ -129,6 +129,81 @@
     margin-bottom: 16px;
 }
 
+/* Collapsible form section (Rule Editor).
+   The section keeps its .drw-form-section shell; the heading holds a full-width
+   toggle button (WAI-ARIA disclosure pattern). The divider under the heading
+   only shows while the section is open, so a collapsed section reads as a
+   single clean row. */
+.drw-collapsible .drw-collapsible-heading {
+    margin: 0;
+    padding: 0;
+    border-bottom: none;
+}
+
+.drw-collapsible.is-open .drw-collapsible-heading {
+    padding-bottom: 10px;
+    margin-bottom: 16px;
+    border-bottom: 1px solid #e2e8f0;
+}
+
+.drw-collapsible-toggle {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    width: 100%;
+    margin: 0;
+    padding: 0;
+    background: transparent;
+    border: none;
+    cursor: pointer;
+    text-align: left;
+    color: inherit;
+    font: inherit;
+}
+
+.drw-collapsible-title {
+    flex: 1;
+    min-width: 0;
+}
+
+.drw-collapsible-toggle:focus-visible {
+    outline: 2px solid #3b82f6;
+    outline-offset: 4px;
+    border-radius: 4px;
+}
+
+.drw-collapsible-chevron {
+    display: inline-flex;
+    flex-shrink: 0;
+    color: #64748b;
+    transition: transform 0.2s cubic-bezier(0.23, 1, 0.32, 1),
+                color 0.15s ease;
+}
+
+.drw-collapsible-toggle:hover .drw-collapsible-chevron {
+    color: #1e293b;
+}
+
+.drw-collapsible.is-open .drw-collapsible-chevron {
+    transform: rotate(180deg);
+}
+
+/* Entry only (the body unmounts when collapsed); ease-out, under 300ms. */
+.drw-collapsible-body {
+    animation: drwCollapseIn 0.2s cubic-bezier(0.23, 1, 0.32, 1);
+}
+
+@keyframes drwCollapseIn {
+    from { opacity: 0; transform: translateY(-4px); }
+    to   { opacity: 1; transform: none; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .drw-collapsible-chevron { transition: color 0.15s ease; }
+    .drw-collapsible-body { animation: none; }
+}
+
 .drw-filter-exclusions {
     margin-top: 18px;
     padding: 16px;
@@ -482,7 +557,178 @@
 
 .drw-settings-actions {
     display: flex;
-    gap: 10px;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
     padding: 16px 0 4px;
     flex-wrap: wrap;
+}
+
+.drw-settings-actions-main {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex-wrap: wrap;
+}
+
+/* Unsaved-changes indicator — never colour-only: an amber dot AND a text label
+   so it reads without relying on hue. */
+.drw-unsaved-indicator {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 12px;
+    font-weight: 600;
+    color: #b45309;
+}
+
+.drw-unsaved-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 999px;
+    background: #f59e0b;
+    box-shadow: 0 0 0 3px rgba(245, 158, 11, 0.18);
+}
+
+/* Danger zone — visually separated from the primary/save actions so a
+   destructive reset is never one stray click away from a routine save. */
+.drw-settings-danger-zone {
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+    padding: 8px 12px;
+    border: 1px dashed #fca5a5;
+    border-radius: 8px;
+    background: #fef2f2;
+}
+
+.drw-danger-zone-label {
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    color: #b91c1c;
+}
+
+.drw-danger-btn {
+    background: #ffffff !important;
+    color: #b91c1c !important;
+    border: 1px solid #ef4444 !important;
+    border-radius: 6px !important;
+    font-weight: 600 !important;
+    padding: 8px 16px !important;
+    cursor: pointer;
+    transition: background 0.15s ease, border-color 0.15s ease, transform 160ms cubic-bezier(0.23, 1, 0.32, 1);
+}
+
+.drw-danger-btn:hover {
+    background: #b91c1c !important;
+    color: #ffffff !important;
+    border-color: #b91c1c !important;
+}
+
+.drw-danger-btn:active {
+    transform: scale(0.97);
+}
+
+.drw-danger-btn:focus-visible {
+    outline: 2px solid #b91c1c;
+    outline-offset: 2px;
+}
+
+/* ── Settings tabs (wp.components TabPanel) ──────────────────────── */
+.drw-settings-tabs .components-tab-panel__tabs {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px;
+    border-bottom: 1px solid #e2e8f0;
+    margin-bottom: 16px;
+}
+
+.drw-settings-tabs .components-tab-panel__tabs-item {
+    position: relative;
+    padding: 10px 14px;
+    border: none;
+    background: transparent;
+    color: #64748b;
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    border-radius: 8px 8px 0 0;
+    transition: color 0.15s ease, background 0.15s ease;
+}
+
+.drw-settings-tabs .components-tab-panel__tabs-item:hover {
+    color: #1e293b;
+    background: #f1f5f9;
+}
+
+.drw-settings-tabs .components-tab-panel__tabs-item.is-active {
+    color: #2563eb;
+}
+
+/* Active-tab underline. ::after sits on the section divider so the active tab
+   reads as connected to its panel. */
+.drw-settings-tabs .components-tab-panel__tabs-item.is-active::after {
+    content: '';
+    position: absolute;
+    left: 10px;
+    right: 10px;
+    bottom: -1px;
+    height: 2px;
+    border-radius: 2px;
+    background: #2563eb;
+}
+
+.drw-settings-tabs .components-tab-panel__tabs-item:focus-visible {
+    outline: 2px solid #2563eb;
+    outline-offset: -2px;
+}
+
+/* ── Theme preset swatch preview (Apariencia tab) ────────────────── */
+.drw-theme-preview {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 12px;
+    margin: 12px 0 4px;
+    padding: 12px;
+    border: 1px solid #e2e8f0;
+    border-radius: 8px;
+    background: #f8fafc;
+}
+
+.drw-swatch-row {
+    display: inline-flex;
+    flex-wrap: wrap;
+    gap: 6px;
+}
+
+.drw-swatch {
+    width: 22px;
+    height: 22px;
+    border-radius: 6px;
+    border: 1px solid rgba(15, 23, 42, 0.12);
+    box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.35);
+}
+
+.drw-apply-preset-btn {
+    margin-left: auto;
+}
+
+/* ── Storefront badge colour preview (Apariencia tab) ────────────── */
+.drw-badge-preview {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin: 4px 0 8px;
+}
+
+.drw-badge-preview-pill {
+    display: inline-flex;
+    align-items: center;
+    padding: 4px 12px;
+    border-radius: 999px;
+    font-size: 12px;
+    font-weight: 600;
 }

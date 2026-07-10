@@ -4,6 +4,7 @@ namespace Drw\App\Controllers;
 
 use Drw\App\Models\PromoModel;
 use Drw\App\Models\PromoTypeRegistry;
+use Drw\App\Models\SettingsModel;
 
 if (!defined('ABSPATH')) {
     exit;
@@ -56,6 +57,23 @@ class ShortcodeController
             [],
             DRW_VERSION
         );
+
+        // Emit the merchant's theme colours as CSS custom properties on :root so
+        // the storefront surfaces styled in public-style.css (mini-cart promo
+        // badges, featured-promos shortcode, sale badge) read live values from
+        // Configuración Global → Apariencia instead of hard-coded hex. Every
+        // value is a sanitize_hex_color()'d string and every property name comes
+        // from a fixed whitelist, so the concatenated declaration block is safe
+        // to inline. When a colour is missing/invalid it is simply omitted and
+        // the stylesheet's var(--x, #fallback) default takes over.
+        $css_vars = SettingsModel::get_theme_css_variables();
+        if (!empty($css_vars)) {
+            $declarations = '';
+            foreach ($css_vars as $name => $value) {
+                $declarations .= $name . ':' . $value . ';';
+            }
+            wp_add_inline_style('drw-public-style', ':root{' . $declarations . '}');
+        }
 
         wp_enqueue_script(
             'drw-shortcode',

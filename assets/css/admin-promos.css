@@ -8,7 +8,12 @@
 /* ----------------------------------------------------------
    1. CSS Custom Properties (scoped to the app root)
    ---------------------------------------------------------- */
-#drw-promos-app {
+/* `.drw-token-scope` lets components styled with these tokens (the shared
+   template gallery, etc.) render correctly OUTSIDE #drw-promos-app — e.g. the
+   one-click rule gallery, which mounts inside #drw-admin-app on the Reglas
+   screen. It inherits the same paper/ink palette so the gallery looks native. */
+#drw-promos-app,
+.drw-token-scope {
     --drw-ink:          #16271d;
     --drw-ink-soft:     #4a4a4a;
     --drw-txt:          #3c3c3c;
@@ -38,8 +43,18 @@
 
 #drw-promos-app *,
 #drw-promos-app *::before,
-#drw-promos-app *::after {
+#drw-promos-app *::after,
+.drw-token-scope *,
+.drw-token-scope *::before,
+.drw-token-scope *::after {
     box-sizing: inherit;
+}
+
+/* The rule gallery panel: a paper-backed card inside the white Reglas dashboard. */
+.drw-rule-template-gallery {
+    padding: 22px 24px;
+    border: 1px solid #ecebe2;
+    border-radius: var(--drw-card-r);
 }
 
 /* ----------------------------------------------------------

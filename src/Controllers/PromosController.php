@@ -523,7 +523,7 @@ class PromosController {
 			// capability, which implies a logged-in user, but a signed
 			// cookie with no owner would be meaningless.
 			return new \WP_REST_Response(
-				array( 'message' => __( 'You must be logged in to use sandbox mode.', 'discount-rules-woo' ) ),
+				array( 'message' => __( 'Debes iniciar sesión para usar el modo sandbox.', 'discount-rules-woo' ) ),
 				401
 			);
 		}
@@ -538,7 +538,7 @@ class PromosController {
 				'success'   => true,
 				'promoId'   => $id,
 				'expiresAt' => $expires_at,
-				'message'   => __( 'Sandbox mode activated for your admin session only. This promo has NOT been published to customers.', 'discount-rules-woo' ),
+				'message'   => __( 'Modo sandbox activado solo para tu sesión de administrador. Esta promoción NO se ha publicado a los clientes.', 'discount-rules-woo' ),
 			),
 			200
 		);
@@ -1014,8 +1014,8 @@ class PromosController {
 				'severity' => $value > 100 ? 'error' : 'warning',
 				'field'    => 'value',
 				'message'  => $value > 100
-					? __( 'A percentage above 100% will be rejected when the promo is saved.', 'discount-rules-woo' )
-					: __( 'A 100% discount gives the product away for free (zero margin).', 'discount-rules-woo' ),
+					? __( 'Un porcentaje superior al 100% será rechazado al guardar la promoción.', 'discount-rules-woo' )
+					: __( 'Un descuento del 100% regala el producto (margen cero).', 'discount-rules-woo' ),
 			);
 		}
 
@@ -1025,7 +1025,7 @@ class PromosController {
 			$warnings[] = array(
 				'severity' => 'warning',
 				'field'    => 'scope',
-				'message'  => __( 'No products or categories are selected -- this promo would not apply to anything.', 'discount-rules-woo' ),
+				'message'  => __( 'No hay productos ni categorías seleccionados: esta promoción no se aplicaría a nada.', 'discount-rules-woo' ),
 			);
 		}
 
@@ -1039,7 +1039,7 @@ class PromosController {
 					'field'    => 'scope',
 					'message'  => sprintf(
 						/* translators: %s: name/code of the conflicting promo */
-						__( 'Overlaps with the active promo "%s" on the same products/categories and dates.', 'discount-rules-woo' ),
+						__( 'Se solapa con la promoción activa "%s" en los mismos productos/categorías y fechas.', 'discount-rules-woo' ),
 						$other_label
 					),
 				);
@@ -1057,7 +1057,7 @@ class PromosController {
 						'field'    => 'scope',
 						'message'  => sprintf(
 							/* translators: %s: title of the conflicting discount rule */
-							__( 'Overlaps with the active rule "%s" on the same products/categories and dates.', 'discount-rules-woo' ),
+							__( 'Se solapa con la regla activa "%s" en los mismos productos/categorías y fechas.', 'discount-rules-woo' ),
 							$other_label
 						),
 					);

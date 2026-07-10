@@ -67,8 +67,20 @@ class PromoBridgeController
     // with no public mutator) — see CartController for the full note on why
     // that boundary was kept intact.
 
-    /** Name of the cookie carrying the signed sandbox token. */
+    /** Name of the cookie carrying the signed promo sandbox token. */
     const SANDBOX_COOKIE_NAME = 'drw_promo_sandbox';
+
+    /**
+     * Name of the cookie carrying the signed MANUAL RULE sandbox token
+     * (ApiController::activate_rule_sandbox(), POST /drw/v1/rules/<id>/sandbox).
+     * Deliberately a SEPARATE cookie/id-space from SANDBOX_COOKIE_NAME: promo
+     * ids (wp_drw_promos.id) and rule ids (wp_drw_rules.id) are independent
+     * auto-increment sequences, so a single shared cookie could resolve the
+     * same numeric id to the wrong entity. Keeping them in separate cookies
+     * removes that ambiguity entirely instead of trying to disambiguate a
+     * shared payload.
+     */
+    const SANDBOX_RULE_COOKIE_NAME = 'drw_rule_sandbox';
 
     /** Sandbox override lifetime in seconds (30 minutes), enforced server-side. */
     const SANDBOX_TTL = 1800;
@@ -96,11 +108,37 @@ class PromoBridgeController
     /**
      * Resolve the sandboxed rule (if any) for the CURRENT request/user.
      *
-     * Returns a formatted wp_drw_rules row (same shape RuleModel::get_rule()
+     * Tries the two independent sandbox mechanisms, in order, and returns
+     * the first one that resolves:
+     *   1. Promo sandbox (resolve_promo_sandbox()) — a promo compiled into a
+     *      wp_drw_rules row via compile_rule(), issued by
+     *      PromosController::activate_sandbox().
+     *   2. Manual rule sandbox (resolve_manual_rule_sandbox()) — a
+     *      wp_drw_rules row edited directly in the Rules screen, issued by
+     *      ApiController::activate_rule_sandbox().
+     *
+     * Both return a formatted wp_drw_rules row (same shape RuleModel::get_rule()
      * returns) that CartController can pass straight into RulesEngine's
      * existing PUBLIC matching helpers (is_rule_matched(),
      * is_product_targeted_by_rule(), is_cart_level_rule()), or null when
-     * there is no valid override to apply.
+     * neither has a valid override to apply. A caller only ever needs to
+     * apply at most one sandboxed rule per request, exactly like the
+     * pre-existing promo-only contract.
+     *
+     * @return array|null
+     */
+    public static function get_sandboxed_rule_for_current_user()
+    {
+        $rule = self::resolve_promo_sandbox();
+        if (null !== $rule) {
+            return $rule;
+        }
+
+        return self::resolve_manual_rule_sandbox();
+    }
+
+    /**
+     * Resolve a PROMO sandbox override for the current request/user.
      *
      * This is a strict allow-list of checks — ANY failure returns null, i.e.
      * "behave exactly as if sandbox mode did not exist":
@@ -125,7 +163,7 @@ class PromoBridgeController
      *
      * @return array|null
      */
-    public static function get_sandboxed_rule_for_current_user()
+    private static function resolve_promo_sandbox()
     {
         if (empty($_COOKIE[self::SANDBOX_COOKIE_NAME]) || !is_string($_COOKIE[self::SANDBOX_COOKIE_NAME])) {
             return null;
@@ -193,6 +231,91 @@ class PromoBridgeController
 
         $rule = RuleModel::get_rule((int) $promo['rule_id']);
         if (null === $rule) {
+            return null;
+        }
+
+        return $rule;
+    }
+
+    /**
+     * Resolve a MANUAL RULE sandbox override for the current request/user.
+     *
+     * Mirrors resolve_promo_sandbox()'s allow-list exactly, but reads the
+     * separate SANDBOX_RULE_COOKIE_NAME cookie and resolves the id embedded
+     * in it DIRECTLY against RuleModel::get_rule() — there is no promo row
+     * in between, because a manually-created rule never had one to begin
+     * with. Every step that isn't specific to that difference (login +
+     * capability re-check, signature verification, owner/expiry checks) is
+     * identical to the promo path:
+     *   1. Cookie present.
+     *   2. Current visitor is logged in AND current_user_can('manage_woocommerce').
+     *   3. Cookie parses into exactly 4 numeric/hex segments.
+     *   4. Signature matches (hash_equals()), so the id/user/expiry embedded
+     *      cannot be forged or extended without the site's secret keys.
+     *   5. embedded user_id === get_current_user_id().
+     *   6. Server-side expiry (signed timestamp) has not passed.
+     *   7. The rule still exists (RuleModel::get_rule() already filters
+     *      deleted=0) and is NOT already `enabled` — an enabled rule is
+     *      already picked up by the normal engine path, so returning it here
+     *      too would double-apply the discount.
+     *
+     * @return array|null
+     */
+    private static function resolve_manual_rule_sandbox()
+    {
+        if (empty($_COOKIE[self::SANDBOX_RULE_COOKIE_NAME]) || !is_string($_COOKIE[self::SANDBOX_RULE_COOKIE_NAME])) {
+            return null;
+        }
+
+        if (!function_exists('is_user_logged_in') || !is_user_logged_in()) {
+            return null;
+        }
+
+        if (!function_exists('current_user_can') || !current_user_can('manage_woocommerce')) {
+            return null;
+        }
+
+        $parts = explode(':', wp_unslash($_COOKIE[self::SANDBOX_RULE_COOKIE_NAME]));
+        if (count($parts) !== 4) {
+            return null;
+        }
+
+        list($rule_id, $user_id, $expires_at, $signature) = $parts;
+
+        if (!ctype_digit($rule_id) || !ctype_digit($user_id) || !ctype_digit($expires_at) || '' === $signature) {
+            return null;
+        }
+
+        $rule_id    = (int) $rule_id;
+        $user_id    = (int) $user_id;
+        $expires_at = (int) $expires_at;
+
+        if ($rule_id <= 0 || $user_id <= 0) {
+            return null;
+        }
+
+        // A sandbox cookie only ever belongs to the user who generated it.
+        if ($user_id !== get_current_user_id()) {
+            return null;
+        }
+
+        if (time() > $expires_at) {
+            return null;
+        }
+
+        $expected = wp_hash(self::sandbox_payload($rule_id, $user_id, $expires_at));
+        if (!hash_equals($expected, (string) $signature)) {
+            return null;
+        }
+
+        $rule = RuleModel::get_rule($rule_id);
+        if (null === $rule) {
+            return null;
+        }
+
+        // Already genuinely enabled: the real engine already includes it,
+        // nothing to force here (also avoids double-applying the discount).
+        if (!empty($rule['enabled'])) {
             return null;
         }
 

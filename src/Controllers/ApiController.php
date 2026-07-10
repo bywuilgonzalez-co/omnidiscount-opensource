@@ -316,7 +316,7 @@ class ApiController
             // Belt-and-braces: check_permission() already requires a
             // capability, which implies a logged-in user, but a signed
             // cookie with no owner would be meaningless.
-            return new \WP_REST_Response(['message' => __('You must be logged in to use sandbox mode.', 'discount-rules-woo')], 401);
+            return new \WP_REST_Response(['message' => __('Debes iniciar sesión para usar el modo sandbox.', 'discount-rules-woo')], 401);
         }
 
         $expires_at = time() + PromoBridgeController::SANDBOX_TTL;
@@ -328,7 +328,7 @@ class ApiController
             'success'   => true,
             'ruleId'    => $id,
             'expiresAt' => $expires_at,
-            'message'   => __('Sandbox mode activated for your admin session only. This rule has NOT been published to customers.', 'discount-rules-woo'),
+            'message'   => __('Modo sandbox activado solo para tu sesión de administrador. Esta regla NO se ha publicado a los clientes.', 'discount-rules-woo'),
         ], 200);
     }
 

@@ -255,6 +255,63 @@ class SettingsModel {
 	}
 
 	/**
+	 * Build the storefront theme CSS custom properties from the saved
+	 * theme.custom_colors, keyed by the CSS variable name each storefront
+	 * surface consumes.
+	 *
+	 * The returned map is emitted verbatim as a `:root { ... }` block by
+	 * ShortcodeController::enqueue_public_assets() (via wp_add_inline_style on
+	 * the 'drw-public-style' handle), so the mini-cart promo badges
+	 * (public-style.css .drw-minicart-promo* / .drw-minicart-blocks-promo*),
+	 * the featured-promos shortcode (.drw-featured-promo-copy.is-copied) and the
+	 * sale badge (.drw-sale-badge) read their colours from merchant settings
+	 * instead of hard-coded hex values.
+	 *
+	 * Every value is re-sanitised with sanitize_hex_color() on the way out
+	 * (defence in depth — save_setting() already stores a clean hex) and any
+	 * field that does not resolve to a valid hex is skipped so the storefront
+	 * simply falls back to the CSS `var(--x, #fallback)` default.
+	 *
+	 * @return array<string,string> Map of CSS variable name => hex colour.
+	 */
+	public static function get_theme_css_variables() {
+		$colors = self::get_setting( 'theme.custom_colors', array() );
+		if ( ! is_array( $colors ) ) {
+			$colors = array();
+		}
+
+		$map = array(
+			'primary'             => '--drw-color-primary',
+			'secondary'           => '--drw-color-secondary',
+			'success'             => '--drw-color-success',
+			'warning'             => '--drw-color-warning',
+			'danger'              => '--drw-color-danger',
+			'badge_enabled_bg'    => '--drw-badge-enabled-bg',
+			'badge_enabled_text'  => '--drw-badge-enabled-text',
+			'badge_disabled_bg'   => '--drw-badge-disabled-bg',
+			'badge_disabled_text' => '--drw-badge-disabled-text',
+		);
+
+		$vars = array();
+		foreach ( $map as $field => $css_var ) {
+			if ( empty( $colors[ $field ] ) ) {
+				continue;
+			}
+
+			$raw   = (string) $colors[ $field ];
+			$clean = function_exists( 'sanitize_hex_color' )
+				? sanitize_hex_color( $raw )
+				: ( preg_match( '/^#([A-Fa-f0-9]{3}|[A-Fa-f0-9]{6})$/', $raw ) ? $raw : null );
+
+			if ( $clean ) {
+				$vars[ $css_var ] = $clean;
+			}
+		}
+
+		return $vars;
+	}
+
+	/**
 	 * Deep merge defaults with overrides.
 	 */
 	private static function deep_merge( $defaults, $overrides ) {
