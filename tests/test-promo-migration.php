@@ -118,7 +118,11 @@ namespace {
 	assert_same( 'Promo A', $first['name'], 'name maps straight across.' );
 	assert_same( 'A1', $first['code'], 'code maps straight across.' );
 	assert_same( array( 'target' => 'legacy', 'raw' => 'Categoría: Zapatos' ), $first['scope'], 'legacy scope string must be wrapped as {target:legacy, raw:<original>}.' );
-	assert_same( 50, $first['min_amount'], 'minAmount maps to min_amount.' );
+	// min_amount is a DECIMAL column; map_legacy_promo() casts to (float) on
+	// purpose (same as 'value'), so the correct expectation is 50.0, not the
+	// int 50 — assert_same is a strict === check and PHP treats int/float as
+	// distinct there even though 50 == 50.0.
+	assert_same( 50.0, $first['min_amount'], 'minAmount maps to min_amount.' );
 	assert_same( 100, $first['limit_global'], 'limitGlobal maps to limit_global.' );
 	assert_same( 1, $first['limit_user'], 'limitUser maps to limit_user.' );
 	assert_same( '2026-01-01', $first['date_from'], 'start maps to date_from.' );
