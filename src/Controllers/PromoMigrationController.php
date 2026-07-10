@@ -34,6 +34,17 @@ class PromoMigrationController {
 	const BACKUP_KEY = 'drw_promos_legacy_backup';
 
 	/**
+	 * wp_options key tracking which legacy entries (by their legacy `id`) have
+	 * already been inserted, so re-running this method is safe: it will never
+	 * insert the same legacy promo twice. Without this, a legacy entry with no
+	 * `code` (NULL is allowed multiple times by the `code_unique` index, unlike
+	 * a real duplicate code) would silently duplicate on every re-run.
+	 *
+	 * @var string
+	 */
+	const MIGRATED_IDS_KEY = 'drw_promos_migrated_legacy_ids';
+
+	/**
 	 * Migrate legacy promos from wp_options into the drw_promos table.
 	 *
 	 * Behaviour contract:
@@ -41,6 +52,10 @@ class PromoMigrationController {
 	 *  - All rows inserted       -> array( 'status' => 'ok', 'migrated' => N ).
 	 *  - Partial insert          -> array( 'status' => 'incomplete', 'migrated' => N, 'expected' => M );
 	 *                               inserted rows are kept so a future admin notice can offer "retry".
+	 *  - Safe to call repeatedly -> a legacy entry already migrated (tracked by its
+	 *                               legacy `id` in self::MIGRATED_IDS_KEY) is never
+	 *                               inserted again; a retry only attempts the ones
+	 *                               still missing, so it can never create duplicates.
 	 *
 	 * The raw legacy JSON is backed up verbatim (self::BACKUP_KEY) exactly once,
 	 * before the first insert, and never overwrites a pre-existing backup.
@@ -64,19 +79,43 @@ class PromoMigrationController {
 			update_option( self::BACKUP_KEY, $raw, false );
 		}
 
-		$expected = count( $decoded );
-		$migrated = 0;
+		$already_migrated = get_option( self::MIGRATED_IDS_KEY, array() );
+		if ( ! is_array( $already_migrated ) ) {
+			$already_migrated = array();
+		}
+
+		$expected      = count( $decoded );
+		$migrated      = count( $already_migrated );
+		$wrote_new_ids = false;
 
 		foreach ( $decoded as $legacy ) {
 			if ( ! is_array( $legacy ) ) {
 				continue;
 			}
 
+			// Legacy entries always carry the id PromosController::next_id()
+			// assigned them. Without one there is no way to track it across
+			// runs, so it is migrated best-effort and cannot be de-duplicated
+			// on a retry -- in practice this never happens for real data.
+			$legacy_id = isset( $legacy['id'] ) ? (string) $legacy['id'] : null;
+
+			if ( null !== $legacy_id && in_array( $legacy_id, $already_migrated, true ) ) {
+				continue; // Already inserted by a previous run -- skip, never duplicate.
+			}
+
 			$new_id = PromoModel::insert( self::map_legacy_promo( $legacy ) );
 
 			if ( $new_id ) {
 				$migrated++;
+				if ( null !== $legacy_id ) {
+					$already_migrated[] = $legacy_id;
+					$wrote_new_ids       = true;
+				}
 			}
+		}
+
+		if ( $wrote_new_ids ) {
+			update_option( self::MIGRATED_IDS_KEY, array_values( array_unique( $already_migrated ) ), false );
 		}
 
 		if ( $migrated === $expected ) {

@@ -14,11 +14,17 @@
 namespace Drw\App\Models {
 
 	/**
-	 * In-memory stand-in for the real PromoModel. Every insert() is recorded so
-	 * the test can assert how many rows were written and inspect the mapping.
+	 * In-memory stand-in for the real PromoModel. Every successful insert() is
+	 * recorded so the test can assert how many rows were written and inspect
+	 * the mapping. Mirrors the real table's UNIQUE(code) constraint: two
+	 * inserts with the same non-null code collide (insert() returns 0, like a
+	 * failed $wpdb->insert()); NULL codes never collide with each other, same
+	 * as MySQL's UNIQUE index semantics. This is what actually reproduces the
+	 * duplicate-row bug found by running the real migration against a real
+	 * MySQL database twice in a row (fixed by MIGRATED_IDS_KEY tracking).
 	 */
 	class PromoModel {
-		/** @var array<int,array> Accumulated insert() payloads. */
+		/** @var array<int,array> Accumulated insert() payloads that succeeded. */
 		public static $inserted = array();
 
 		public static function reset() {
@@ -26,6 +32,14 @@ namespace Drw\App\Models {
 		}
 
 		public static function insert( $data ) {
+			$code = isset( $data['code'] ) ? $data['code'] : null;
+			if ( null !== $code ) {
+				foreach ( self::$inserted as $row ) {
+					if ( isset( $row['code'] ) && $row['code'] === $code ) {
+						return 0; // Simulates a UNIQUE(code) constraint violation.
+					}
+				}
+			}
 			self::$inserted[] = $data;
 			return count( self::$inserted ); // Fake auto-increment id (>0 == success).
 		}
@@ -162,6 +176,59 @@ namespace {
 	assert_same( 'ok', $result['status'], 'Migration still runs even when a prior backup exists.' );
 	assert_same( 2, $result['migrated'], 'Both promos should migrate.' );
 	assert_same( 'PREVIOUS_BACKUP_DO_NOT_TOUCH', get_option( 'drw_promos_legacy_backup' ), 'A pre-existing backup must never be overwritten on repeat runs.' );
+
+	// --- (d) re-running an already-complete migration must NEVER duplicate rows ------
+	// Regression test for a real bug found by running migrate_legacy_promos()
+	// against an actual MySQL database twice: codeless (NULL) legacy promos
+	// don't collide on UNIQUE(code) the way coded ones do, so without
+	// MIGRATED_IDS_KEY tracking a second run silently duplicated them.
+	reset_world();
+	$mixed = array(
+		legacy_promo( array( 'id' => 1, 'code' => 'HASCODE', 'name' => 'Con código' ) ),
+		legacy_promo( array( 'id' => 2, 'code' => '', 'name' => 'Sin código A' ) ),
+		legacy_promo( array( 'id' => 3, 'code' => '', 'name' => 'Sin código B' ) ),
+	);
+	$GLOBALS['wp_options']['drw_promos'] = wp_json_encode( $mixed );
+
+	$first_run = PromoMigrationController::migrate_legacy_promos();
+	assert_same( 'ok', $first_run['status'], 'First run of a clean 3-promo set should be ok.' );
+	assert_same( 3, $first_run['migrated'], 'First run should migrate all 3.' );
+	assert_same( 3, count( PromoModel::$inserted ), 'Exactly 3 rows should exist after the first run.' );
+
+	$second_run = PromoMigrationController::migrate_legacy_promos();
+	assert_same( 'ok', $second_run['status'], 'Re-running an already-complete migration must still report ok.' );
+	assert_same( 3, $second_run['migrated'], 'Re-running must report the same total, not double it.' );
+	assert_same( 3, count( PromoModel::$inserted ), 'A second run must NOT insert any new rows — this is the duplicate-row regression check.' );
+
+	$third_run = PromoMigrationController::migrate_legacy_promos();
+	assert_same( 3, count( PromoModel::$inserted ), 'A third run must also leave the row count untouched.' );
+
+	// --- (e) a genuinely partial migration can still be retried to completion --------
+	reset_world();
+	$broken = array(
+		legacy_promo( array( 'id' => 1, 'code' => 'SHARED', 'name' => 'Promo A' ) ),
+		legacy_promo( array( 'id' => 2, 'code' => 'SHARED', 'name' => 'Promo B (choca con A)' ) ),
+		legacy_promo( array( 'id' => 3, 'code' => '', 'name' => 'Promo C' ) ),
+	);
+	$GLOBALS['wp_options']['drw_promos'] = wp_json_encode( $broken );
+
+	$partial = PromoMigrationController::migrate_legacy_promos();
+	assert_same( 'incomplete', $partial['status'], 'A genuine code collision between two legacy entries must report incomplete.' );
+	assert_same( 2, $partial['migrated'], 'Only A and C should have made it in (B collided with A).' );
+	assert_same( 3, $partial['expected'], 'Expected must reflect the full legacy count.' );
+
+	$retry_without_fix = PromoMigrationController::migrate_legacy_promos();
+	assert_same( 'incomplete', $retry_without_fix['status'], 'Retrying without fixing the data must still report incomplete.' );
+	assert_same( 2, count( PromoModel::$inserted ), 'Retrying without fixing the data must not duplicate A or C.' );
+
+	// Fix the legacy data (as an admin would, e.g. via a "reintentar" flow) and confirm it completes.
+	$broken[1]['code']                   = 'SHARED-FIXED';
+	$GLOBALS['wp_options']['drw_promos'] = wp_json_encode( $broken );
+
+	$completed = PromoMigrationController::migrate_legacy_promos();
+	assert_same( 'ok', $completed['status'], 'After fixing the collision, a retry must complete successfully.' );
+	assert_same( 3, $completed['migrated'], 'All 3 should be migrated once the data is fixed.' );
+	assert_same( 3, count( PromoModel::$inserted ), 'Only the missing promo (B) should have been inserted by the retry — A and C must not be duplicated.' );
 
 	echo "Promo migration OK\n";
 }
