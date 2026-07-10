@@ -217,7 +217,7 @@ class ApiController
         $rule = RuleModel::get_rule($id);
 
         if (!$rule) {
-            return new \WP_REST_Response(['message' => __('Rule not found', 'discount-rules-woo')], 404);
+            return new \WP_REST_Response(['message' => __('No se encontró la regla.', 'discount-rules-woo')], 404);
         }
 
         return new \WP_REST_Response($rule, 200);
@@ -255,7 +255,7 @@ class ApiController
         $rule = RuleModel::get_rule($id);
 
         if (!$rule) {
-            return new \WP_REST_Response(['message' => __('Rule not found', 'discount-rules-woo')], 404);
+            return new \WP_REST_Response(['message' => __('No se encontró la regla.', 'discount-rules-woo')], 404);
         }
 
         RuleModel::delete_rule($id);
@@ -308,7 +308,7 @@ class ApiController
         $rule = RuleModel::get_rule($id);
 
         if (!$rule) {
-            return new \WP_REST_Response(['message' => __('Rule not found', 'discount-rules-woo')], 404);
+            return new \WP_REST_Response(['message' => __('No se encontró la regla.', 'discount-rules-woo')], 404);
         }
 
         $user_id = get_current_user_id();

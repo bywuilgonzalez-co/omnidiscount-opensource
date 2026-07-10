@@ -150,8 +150,8 @@ class AnalyticsController {
         // 'manage_woocommerce' unchanged.
         add_submenu_page(
             'drw-discount-rules',
-            __('Analytics', 'discount-rules-woo'),
-            __('Analytics', 'discount-rules-woo'),
+            __('OmniDiscount — Analíticas', 'discount-rules-woo'),
+            __('Analíticas', 'discount-rules-woo'),
             'manage_woocommerce',
             'drw-analytics',
             [$this, 'render_analytics_page']

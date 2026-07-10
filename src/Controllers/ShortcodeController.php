@@ -128,7 +128,7 @@ class ShortcodeController
         $total     = count($all_cards);
 
         if ($total === 0) {
-            return '<div class="drw-sale-items-empty">' . esc_html__('No sale products found.', 'discount-rules-woo') . '</div>';
+            return '<div class="drw-sale-items-empty">' . esc_html__('No hay productos en oferta.', 'discount-rules-woo') . '</div>';
         }
 
         $first_page = array_slice($all_cards, 0, $per_page);
