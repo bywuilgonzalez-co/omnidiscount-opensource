@@ -1,3 +1,7 @@
+<p align="center">
+  <img src="assets/images/logo.png" alt="Omni Discount — Dynamic Pricing & Discount Rules for WooCommerce" width="280">
+</p>
+
 # OmniDiscount — Dynamic Pricing & Discount Rules for WooCommerce
 
 ![Version](https://img.shields.io/badge/version-1.6.0-4338ca?style=flat-square)
