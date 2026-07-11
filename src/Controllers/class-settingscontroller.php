@@ -197,15 +197,19 @@ class SettingsController {
 
 	/**
 	 * Get human-readable label for discount type.
+	 *
+	 * Labels are returned in Spanish to match the rest of the OmniDiscount admin
+	 * UI. Wording mirrors the Rule Editor's "Tipo de descuento" dropdown
+	 * (admin-app.js) so a discount type reads the same in both places.
 	 */
 	private function type_label( $type ) {
 		$labels = array(
-			'percentage'    => 'Percentage Discount',
-			'fixed'         => 'Fixed Price Discount',
-			'bulk'          => 'Bulk Tiered Discount',
-			'bogo'          => 'Buy One Get One',
-			'bundle_set'    => 'Bundle Set Pricing',
-			'free_shipping' => 'Free Shipping',
+			'percentage'    => __( 'Descuento porcentual', 'discount-rules-woo' ),
+			'fixed'         => __( 'Descuento de precio fijo', 'discount-rules-woo' ),
+			'bulk'          => __( 'Descuento escalonado por cantidad', 'discount-rules-woo' ),
+			'bogo'          => __( 'BOGO Compra X Lleva Y', 'discount-rules-woo' ),
+			'bundle_set'    => __( 'Precio de paquete (bundle)', 'discount-rules-woo' ),
+			'free_shipping' => __( 'Envío gratis', 'discount-rules-woo' ),
 		);
 
 		return isset( $labels[ $type ] ) ? $labels[ $type ] : ucfirst( str_replace( '_', ' ', $type ) );
@@ -213,26 +217,31 @@ class SettingsController {
 
 	/**
 	 * Get human-readable label for condition.
+	 *
+	 * Labels are returned in Spanish to match the rest of the OmniDiscount admin
+	 * UI (this endpoint's only consumer is the "Condiciones y Filtros
+	 * Habilitados" tab in admin-app.js). Wording mirrors the Rule Editor's
+	 * condition-type dropdown so a condition reads the same in both places.
 	 */
 	private function condition_label( $condition ) {
 		$labels = array(
-			'cart_subtotal'                 => 'Cart Subtotal',
-			'cart_items_quantity'           => 'Cart Items Quantity',
-			'cart_items_weight'             => 'Cart Items Weight',
-			'cart_line_items_count'         => 'Cart Line Items Count',
-			'billing_city'                  => 'Billing City',
-			'shipping_location'             => 'Shipping Location',
-			'user_logged_in'                => 'User Logged In',
-			'user_email'                    => 'User Email',
-			'user_role'                     => 'User Role',
-			'user_list'                     => 'User List',
-			'cart_coupon'                   => 'Cart Coupon Applied',
-			'products'                      => 'Products',
-			'categories'                    => 'Categories',
-			'cart_item_product_combination' => 'Product Combination',
-			'cart_item_product_onsale'      => 'Product On Sale',
-			'purchase_history'              => 'Purchase History',
-			'order_date'                    => 'Order Date',
+			'cart_subtotal'                 => __( 'Subtotal del carrito', 'discount-rules-woo' ),
+			'cart_items_quantity'           => __( 'Cantidad total de artículos', 'discount-rules-woo' ),
+			'cart_items_weight'             => __( 'Peso total del carrito', 'discount-rules-woo' ),
+			'cart_line_items_count'         => __( 'Número de líneas de producto', 'discount-rules-woo' ),
+			'billing_city'                  => __( 'Ciudad de facturación', 'discount-rules-woo' ),
+			'shipping_location'             => __( 'Dirección de envío', 'discount-rules-woo' ),
+			'user_logged_in'                => __( 'Estado de sesión del usuario', 'discount-rules-woo' ),
+			'user_email'                    => __( 'Correo del usuario', 'discount-rules-woo' ),
+			'user_role'                     => __( 'Rol de usuario', 'discount-rules-woo' ),
+			'user_list'                     => __( 'Lista de usuarios (IDs específicos)', 'discount-rules-woo' ),
+			'cart_coupon'                   => __( 'Cupón aplicado en el carrito', 'discount-rules-woo' ),
+			'products'                      => __( 'Productos', 'discount-rules-woo' ),
+			'categories'                    => __( 'Categorías', 'discount-rules-woo' ),
+			'cart_item_product_combination' => __( 'Combinación de productos/categorías', 'discount-rules-woo' ),
+			'cart_item_product_onsale'      => __( 'Estado de productos en oferta', 'discount-rules-woo' ),
+			'purchase_history'              => __( 'Historial de compras del cliente', 'discount-rules-woo' ),
+			'order_date'                    => __( 'Programación (fechas/horas/días)', 'discount-rules-woo' ),
 		);
 
 		return isset( $labels[ $condition ] ) ? $labels[ $condition ] : ucfirst( str_replace( '_', ' ', $condition ) );

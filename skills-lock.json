@@ -1,0 +1,77 @@
+{
+  "version": 1,
+  "skills": {
+    "WooCommerce Automation": {
+      "source": "claude-office-skills/skills",
+      "sourceType": "github",
+      "skillPath": "woocommerce-automation/SKILL.md",
+      "computedHash": "079d2f10aaaeb3232dee9737a0067d5bda7bb038535c44062d2bca19d12dee01"
+    },
+    "design-an-interface": {
+      "source": "mattpocock/skills",
+      "sourceType": "github",
+      "skillPath": "skills/deprecated/design-an-interface/SKILL.md",
+      "computedHash": "f3f225914515407b8224e8ec6187db337c5e65bad0703936a0acb3f802947a7d"
+    },
+    "design-taste-frontend": {
+      "source": "leonxlnx/taste-skill",
+      "sourceType": "github",
+      "skillPath": "skills/taste-skill/SKILL.md",
+      "computedHash": "899b84384f74f540ea5284d9b2e9234e050998b42eacc805410b518d4226c0b3"
+    },
+    "emil-design-eng": {
+      "source": "emilkowalski/skills",
+      "sourceType": "github",
+      "skillPath": "skills/emil-design-eng/SKILL.md",
+      "computedHash": "ac3fc5b4e206488ffc408a2806f829bb2e5eaf518fded09be34790685c2b3a0d"
+    },
+    "frontend-design": {
+      "source": "anthropics/skills",
+      "sourceType": "github",
+      "skillPath": "skills/frontend-design/SKILL.md",
+      "computedHash": "93f53fd1c0352d3d7ec17b8f73d7351bf76f4821e55d123c9d2abc2c53ba48e4"
+    },
+    "review-animations": {
+      "source": "emilkowalski/skills",
+      "sourceType": "github",
+      "skillPath": "skills/review-animations/SKILL.md",
+      "computedHash": "57c681344448379fbec8c11b45e355b70799998427240662318d017f292571bd"
+    },
+    "web-design-guidelines": {
+      "source": "vercel-labs/agent-skills",
+      "sourceType": "github",
+      "skillPath": "skills/web-design-guidelines/SKILL.md",
+      "computedHash": "f3bc47f890f42a44db1007ab390709ec368e4b8c089baee6b0007182236ac474"
+    },
+    "woocommerce": {
+      "source": "mindrally/skills",
+      "sourceType": "github",
+      "skillPath": "woocommerce/SKILL.md",
+      "computedHash": "01e503235eae0aecc27f6705464a8fe1a3fbb5e4148b2892c712d8fa6b882523"
+    },
+    "woocommerce-backend-dev": {
+      "source": "woocommerce/woocommerce",
+      "sourceType": "github",
+      "skillPath": ".ai/skills/woocommerce-backend-dev/SKILL.md",
+      "computedHash": "90866d0a82243df444b058a2b6f6610066c59019048d2b25de4c5186601b6884"
+    },
+    "woocommerce-code-review": {
+      "source": "woocommerce/woocommerce",
+      "sourceType": "github",
+      "skillPath": ".ai/skills/woocommerce-code-review/SKILL.md",
+      "computedHash": "cafd9c6bb8838e8378d04869dc99e680666ff320bd17fff194e5bcb0434179b5"
+    },
+    "woocommerce-copy-guidelines": {
+      "source": "woocommerce/woocommerce",
+      "sourceType": "github",
+      "skillPath": ".ai/skills/woocommerce-copy-guidelines/SKILL.md",
+      "computedHash": "bc88bae316a388f00cefebc0c9c3952b122fc05e512eab5e5b58cc16c27970a8"
+    },
+    "woocommerce-dev-cycle": {
+      "source": "woocommerce/woocommerce",
+      "sourceType": "github",
+      "skillPath": ".ai/skills/woocommerce-dev-cycle/SKILL.md",
+      "computedHash": "5563c9e0cfb409b164a12b589e0cd54afc79acff29aac836f747dd90dbe1e917"
+    }
+  }
+}

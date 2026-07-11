@@ -1,0 +1,1146 @@
+<title>Plan 2000% · Cupones y Promociones — OmniDiscount</title>
+<style>
+  :root {
+    --paper: #f6f7f1;
+    --paper-raised: #ffffff;
+    --paper-sunken: #eef0e7;
+    --ink: #171f14;
+    --ink-soft: #48524a;
+    --muted: #7d8676;
+    --line: #e1e4d8;
+    --line-strong: #c7ccba;
+    --forest: #24331e;
+    --forest-2: #33502a;
+    --forest-ink: #eef2e8;
+    --gold: #a97a1f;
+    --gold-deep: #7e5b17;
+    --gold-soft: #f4e8d0;
+    --teal: #2b6e77;
+    --teal-soft: #e3eeee;
+    --success: #2e7d46;
+    --success-soft: #e6f2e9;
+    --danger: #9c3b2e;
+    --danger-soft: #fbeae6;
+    --shadow: 0 1px 2px rgba(23, 31, 20, 0.06);
+    --shadow-lg: 0 12px 32px rgba(23, 31, 20, 0.10);
+    --r: 14px;
+    --display: Georgia, "Iowan Old Style", "Palatino Linotype", "Book Antiqua", serif;
+    --body: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+    --mono: ui-monospace, "SF Mono", "Cascadia Code", "Fira Code", Consolas, "Liberation Mono", monospace;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --paper: #10150d;
+      --paper-raised: #171e13;
+      --paper-sunken: #0b0f08;
+      --ink: #e8ece1;
+      --ink-soft: #b6c0ac;
+      --muted: #7d8a73;
+      --line: #29331f;
+      --line-strong: #3a462b;
+      --forest: #0c1308;
+      --forest-2: #1c2916;
+      --forest-ink: #eef2e8;
+      --gold: #dcae5c;
+      --gold-deep: #f0c780;
+      --gold-soft: rgba(220, 174, 92, 0.14);
+      --teal: #6cb3bb;
+      --teal-soft: rgba(108, 179, 187, 0.14);
+      --success: #5cc17e;
+      --success-soft: rgba(92, 193, 126, 0.14);
+      --danger: #e2685a;
+      --danger-soft: rgba(226, 104, 90, 0.14);
+      --shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
+      --shadow-lg: 0 16px 40px rgba(0, 0, 0, 0.45);
+    }
+  }
+  :root[data-theme="dark"] {
+    --paper: #10150d; --paper-raised: #171e13; --paper-sunken: #0b0f08;
+    --ink: #e8ece1; --ink-soft: #b6c0ac; --muted: #7d8a73;
+    --line: #29331f; --line-strong: #3a462b;
+    --forest: #0c1308; --forest-2: #1c2916; --forest-ink: #eef2e8;
+    --gold: #dcae5c; --gold-deep: #f0c780; --gold-soft: rgba(220, 174, 92, 0.14);
+    --teal: #6cb3bb; --teal-soft: rgba(108, 179, 187, 0.14);
+    --success: #5cc17e; --success-soft: rgba(92, 193, 126, 0.14);
+    --danger: #e2685a; --danger-soft: rgba(226, 104, 90, 0.14);
+    --shadow: 0 1px 2px rgba(0,0,0,.3); --shadow-lg: 0 16px 40px rgba(0,0,0,.45);
+  }
+  :root[data-theme="light"] {
+    --paper: #f6f7f1; --paper-raised: #ffffff; --paper-sunken: #eef0e7;
+    --ink: #171f14; --ink-soft: #48524a; --muted: #7d8676;
+    --line: #e1e4d8; --line-strong: #c7ccba;
+    --forest: #24331e; --forest-2: #33502a; --forest-ink: #eef2e8;
+    --gold: #a97a1f; --gold-deep: #7e5b17; --gold-soft: #f4e8d0;
+    --teal: #2b6e77; --teal-soft: #e3eeee;
+    --success: #2e7d46; --success-soft: #e6f2e9;
+    --danger: #9c3b2e; --danger-soft: #fbeae6;
+    --shadow: 0 1px 2px rgba(23,31,20,.06); --shadow-lg: 0 12px 32px rgba(23,31,20,.10);
+  }
+
+  * { box-sizing: border-box; }
+  html { -webkit-text-size-adjust: 100%; }
+  body {
+    margin: 0;
+    background: var(--paper);
+    color: var(--ink);
+    font-family: var(--body);
+    font-size: 16px;
+    line-height: 1.6;
+    -webkit-font-smoothing: antialiased;
+  }
+  ::selection { background: var(--gold-soft); color: var(--ink); }
+  a { color: inherit; }
+  h1, h2, h3, h4 { font-family: var(--display); font-weight: 700; text-wrap: balance; color: var(--ink); margin: 0; }
+  p { margin: 0; }
+  :focus-visible { outline: 2px solid var(--gold); outline-offset: 2px; border-radius: 4px; }
+  @media (prefers-reduced-motion: reduce) {
+    * { animation-duration: 0.001ms !important; transition-duration: 0.001ms !important; scroll-behavior: auto !important; }
+  }
+
+  .mi { display: inline-flex; flex: none; }
+  .mi svg { display: block; }
+
+  /* ---------- Hero ---------- */
+  .hero {
+    background:
+      radial-gradient(ellipse 900px 420px at 85% -10%, rgba(169,122,31,0.16), transparent 60%),
+      linear-gradient(160deg, var(--forest), var(--forest-2));
+    color: var(--forest-ink);
+    padding: 64px 24px 56px;
+  }
+  .hero-inner { max-width: 980px; margin: 0 auto; }
+  .eyebrow {
+    font-family: var(--mono);
+    font-size: 12px;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--gold-deep);
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 18px;
+  }
+  :root[data-theme="dark"] .eyebrow, @media (prefers-color-scheme: dark) { }
+  .hero h1 {
+    font-size: clamp(28px, 4.2vw, 44px);
+    line-height: 1.15;
+    color: #fff;
+    max-width: 18ch;
+  }
+  .hero .lede {
+    margin-top: 18px;
+    max-width: 68ch;
+    font-size: 17px;
+    color: rgba(238, 242, 232, 0.86);
+  }
+  .hero .meta {
+    margin-top: 22px;
+    font-size: 13px;
+    color: rgba(238, 242, 232, 0.62);
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px 18px;
+  }
+  .stat-row {
+    margin-top: 34px;
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 14px;
+  }
+  .stat-tile {
+    background: rgba(238, 242, 232, 0.07);
+    border: 1px solid rgba(238, 242, 232, 0.16);
+    border-radius: var(--r);
+    padding: 18px 18px 16px;
+  }
+  .stat-tile .val {
+    font-family: var(--display);
+    font-size: 30px;
+    color: var(--gold-deep);
+    font-variant-numeric: tabular-nums;
+    line-height: 1;
+  }
+  .stat-tile .lbl {
+    margin-top: 8px;
+    font-size: 12.5px;
+    font-weight: 600;
+    color: #fff;
+  }
+  .stat-tile .sub {
+    margin-top: 4px;
+    font-size: 12.5px;
+    color: rgba(238, 242, 232, 0.62);
+    line-height: 1.45;
+  }
+
+  /* ---------- Shell / nav ---------- */
+  .shell {
+    max-width: 1180px;
+    margin: 0 auto;
+    padding: 0 24px 80px;
+    display: grid;
+    grid-template-columns: 200px minmax(0, 1fr);
+    gap: 44px;
+  }
+  .toc {
+    position: sticky;
+    top: 24px;
+    align-self: start;
+    padding-top: 40px;
+    font-size: 13px;
+  }
+  .toc-label { font-size: 11px; letter-spacing: .08em; text-transform: uppercase; color: var(--muted); margin-bottom: 10px; display:block; }
+  .toc a {
+    display: block;
+    text-decoration: none;
+    color: var(--ink-soft);
+    padding: 6px 0 6px 12px;
+    border-left: 2px solid var(--line);
+    transition: color .15s ease, border-color .15s ease;
+  }
+  .toc a:hover { color: var(--ink); }
+  .toc a.active { color: var(--gold-deep); border-color: var(--gold); font-weight: 600; }
+
+  main { min-width: 0; padding-top: 40px; }
+
+  section.block { margin-bottom: 68px; scroll-margin-top: 24px; }
+  .block-head { margin-bottom: 22px; }
+  .kicker {
+    font-family: var(--mono);
+    font-size: 12px;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--teal);
+    margin-bottom: 8px;
+    display: block;
+  }
+  .block-head h2 { font-size: clamp(22px, 3vw, 30px); }
+  .block-lead { margin-top: 12px; max-width: 72ch; color: var(--ink-soft); font-size: 15.5px; }
+
+  /* ---------- Cards / findings ---------- */
+  .callout {
+    display: flex;
+    gap: 16px;
+    padding: 20px 22px;
+    border-radius: var(--r);
+    border: 1px solid var(--danger);
+    background: var(--danger-soft);
+    box-shadow: var(--shadow);
+  }
+  .callout .mi { color: var(--danger); }
+  .callout h3 { font-size: 17px; margin-bottom: 6px; }
+  .callout p { color: var(--ink-soft); font-size: 14.5px; }
+  .callout .tag {
+    display: inline-block;
+    font-family: var(--mono);
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: .05em;
+    background: var(--danger);
+    color: #fff;
+    padding: 2px 8px;
+    border-radius: 999px;
+    margin-bottom: 10px;
+  }
+  .callout code, .finding p code, .arch-card p code, .block-lead code {
+    font-family: var(--mono);
+    font-size: 0.92em;
+    background: var(--paper-sunken);
+    padding: 1px 5px;
+    border-radius: 4px;
+    color: var(--ink);
+  }
+
+  .finding-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 12px; margin-top: 18px; }
+  .finding {
+    background: var(--paper-raised);
+    border: 1px solid var(--line);
+    border-radius: 10px;
+    padding: 14px 16px;
+    box-shadow: var(--shadow);
+  }
+  .finding .sev {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    font-family: var(--mono);
+    font-size: 10.5px;
+    text-transform: uppercase;
+    letter-spacing: .05em;
+    color: var(--sev, var(--muted));
+    font-weight: 700;
+  }
+  .finding .sev::before {
+    content: "";
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: var(--sev, var(--muted));
+    flex: none;
+  }
+  .finding h4 { font-size: 14.5px; font-family: var(--body); font-weight: 700; margin-top: 4px; }
+  .finding p { font-size: 13.5px; color: var(--ink-soft); margin-top: 5px; }
+  .finding.sev-block { --sev: var(--danger); }
+  .finding.sev-grave { --sev: var(--gold-deep); }
+  .finding.sev-medio { --sev: var(--teal); }
+
+  /* ---------- Methodology ---------- */
+  .method-row { display: grid; grid-template-columns: repeat(4, 1fr) auto repeat(2, 1fr) auto 1fr; gap: 10px; align-items: center; margin-top: 22px; }
+  .method-card {
+    background: var(--paper-raised);
+    border: 1px solid var(--line);
+    border-radius: 10px;
+    padding: 12px 10px;
+    text-align: center;
+    font-size: 12px;
+    color: var(--ink-soft);
+    box-shadow: var(--shadow);
+  }
+  .method-card .mi { color: var(--teal); margin: 0 auto 6px; }
+  .method-card b { display: block; color: var(--ink); font-size: 12.5px; margin-bottom: 2px; }
+  .method-arrow { color: var(--line-strong); display: flex; align-items: center; justify-content: center; }
+  .method-card.model .mi { color: var(--gold-deep); }
+  .method-card.synth { background: var(--forest); color: var(--forest-ink); border-color: var(--forest); }
+  .method-card.synth b { color: #fff; }
+  .method-card.synth .mi { color: var(--gold-deep); }
+  .gap-note { margin-top: 18px; background: var(--teal-soft); border: 1px solid var(--teal); border-radius: 10px; padding: 14px 16px; font-size: 13.5px; color: var(--ink-soft); }
+  .gap-note b { color: var(--ink); }
+
+  /* ---------- Tables ---------- */
+  .table-wrap { overflow-x: auto; border: 1px solid var(--line); border-radius: var(--r); box-shadow: var(--shadow); background: var(--paper-raised); }
+  table { border-collapse: collapse; width: 100%; min-width: 640px; font-size: 13.8px; }
+  thead th {
+    text-align: left;
+    font-family: var(--mono);
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: .04em;
+    color: var(--muted);
+    background: var(--paper-sunken);
+    padding: 10px 16px;
+    border-bottom: 1px solid var(--line);
+    white-space: nowrap;
+  }
+  tbody td { padding: 12px 16px; border-bottom: 1px solid var(--line); color: var(--ink-soft); vertical-align: top; }
+  tbody tr:last-child td { border-bottom: none; }
+  tbody td:first-child { color: var(--ink); font-weight: 600; }
+  tbody tr:hover { background: var(--paper-sunken); }
+
+  /* ---------- Architecture diagram ---------- */
+  .arch-row { margin-top: 20px; }
+  .arch-label { font-family: var(--mono); font-size: 11px; text-transform: uppercase; letter-spacing: .05em; color: var(--muted); margin-bottom: 10px; }
+  .arch-flow { display: flex; align-items: stretch; gap: 8px; flex-wrap: wrap; }
+  .arch-node {
+    background: var(--paper-raised);
+    border: 1px solid var(--line);
+    border-radius: 10px;
+    padding: 10px 14px;
+    font-size: 12.5px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    box-shadow: var(--shadow);
+    min-width: 0;
+  }
+  .arch-node .mi { color: var(--ink-soft); }
+  .arch-node code { font-family: var(--mono); font-size: 11.5px; }
+  .arch-sep { display: flex; align-items: center; color: var(--line-strong); flex: none; }
+  .arch-node.end-bad { border-color: var(--danger); color: var(--danger); background: var(--danger-soft); font-weight: 600; }
+  .arch-node.end-bad .mi { color: var(--danger); }
+  .arch-node.end-good { border-color: var(--success); color: var(--success); background: var(--success-soft); font-weight: 600; }
+  .arch-node.end-good .mi { color: var(--success); }
+  .arch-branch { display: flex; flex-direction: column; gap: 8px; }
+  .arch-note { font-size: 12.5px; color: var(--muted); margin-top: 6px; }
+
+  .arch-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 14px; margin-top: 26px; }
+  .arch-card { background: var(--paper-raised); border: 1px solid var(--line); border-radius: var(--r); padding: 16px 18px; box-shadow: var(--shadow); }
+  .arch-card .mi { color: var(--forest-2); margin-bottom: 8px; }
+  :root[data-theme="dark"] .arch-card .mi, @media (prefers-color-scheme: dark) { }
+  .arch-card h4 { font-family: var(--body); font-size: 14.5px; font-weight: 700; margin-bottom: 5px; }
+  .arch-card p { font-size: 13px; color: var(--ink-soft); }
+
+  /* ---------- Before/after wizard ---------- */
+  .ba-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 18px; margin-top: 22px; }
+  .ba-card { border-radius: var(--r); border: 1px solid var(--line); overflow: hidden; box-shadow: var(--shadow); background: var(--paper-raised); }
+  .ba-card .ba-head { padding: 12px 16px; font-size: 12px; font-weight: 700; letter-spacing: .03em; text-transform: uppercase; font-family: var(--mono); }
+  .ba-card.before .ba-head { background: var(--danger-soft); color: var(--danger); }
+  .ba-card.after .ba-head { background: var(--success-soft); color: var(--success); }
+  .ba-card .ba-body { padding: 16px; }
+  .mock-form { display: flex; flex-direction: column; gap: 7px; }
+  .mock-types { display: grid; grid-template-columns: repeat(5, 1fr); gap: 4px; margin-bottom: 6px; }
+  .mock-type { background: var(--paper-sunken); border: 1px solid var(--line); border-radius: 6px; height: 30px; display:flex; align-items:center; justify-content:center; color: var(--muted); }
+  .mock-field { background: var(--paper-sunken); border: 1px solid var(--line); border-radius: 6px; height: 16px; }
+  .mock-field.w60 { width: 60%; }
+  .mock-caption { margin-top: 12px; font-size: 12.5px; color: var(--muted); }
+
+  .wizard-steps { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; position: relative; }
+  .wizard-steps::before {
+    content: ""; position: absolute; top: 22px; left: 8%; right: 8%; height: 2px;
+    background: repeating-linear-gradient(to right, var(--line-strong) 0 6px, transparent 6px 11px);
+    z-index: 0;
+  }
+  .wstep { position: relative; z-index: 1; text-align: center; }
+  .wstep .num {
+    width: 44px; height: 44px; border-radius: 50%; margin: 0 auto 10px;
+    background: var(--forest); color: var(--forest-ink);
+    display: flex; align-items: center; justify-content: center;
+    box-shadow: var(--shadow);
+  }
+  .wstep h4 { font-family: var(--body); font-size: 13.5px; font-weight: 700; margin-bottom: 4px; }
+  .wstep p { font-size: 12.5px; color: var(--ink-soft); }
+
+  .feature-pair { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin-top: 22px; }
+  .feature-card { background: var(--gold-soft); border: 1px solid var(--gold); border-radius: var(--r); padding: 16px 18px; }
+  .feature-card .mi { color: var(--gold-deep); }
+  .feature-card h4 { font-family: var(--body); font-size: 14.5px; font-weight: 700; margin: 8px 0 4px; }
+  .feature-card p { font-size: 13px; color: var(--ink-soft); }
+
+  .a11y-note { margin-top: 22px; background: var(--teal-soft); border: 1px solid var(--teal); border-radius: var(--r); padding: 16px 18px; font-size: 13.5px; color: var(--ink-soft); display: flex; gap: 12px; }
+  .a11y-note .mi { color: var(--teal); flex: none; margin-top: 2px; }
+  .a11y-note b { color: var(--ink); }
+
+  /* ---------- Icon grid ---------- */
+  .icon-group-label { font-family: var(--mono); font-size: 11.5px; text-transform: uppercase; letter-spacing: .05em; color: var(--muted); margin: 26px 0 10px; }
+  .icon-group-label:first-child { margin-top: 4px; }
+  .icon-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 10px; }
+  .icon-card {
+    display: flex; align-items: center; gap: 12px;
+    background: var(--paper-raised); border: 1px solid var(--line); border-radius: 10px;
+    padding: 10px 12px; box-shadow: var(--shadow);
+  }
+  .icon-card .mi-wrap {
+    width: 38px; height: 38px; border-radius: 9px; background: var(--paper-sunken);
+    display: flex; align-items: center; justify-content: center; flex: none; color: var(--forest-2);
+  }
+  .icon-card.new .mi-wrap { background: var(--gold-soft); color: var(--gold-deep); }
+  .icon-card .txt { min-width: 0; }
+  .icon-card .txt .name { font-size: 13px; font-weight: 600; color: var(--ink); line-height: 1.25; }
+  .icon-card .txt .glyph { font-family: var(--mono); font-size: 11px; color: var(--muted); }
+  .icon-mini-row { display: flex; flex-wrap: wrap; gap: 8px; }
+  .icon-mini { display: flex; align-items: center; gap: 6px; background: var(--paper-raised); border: 1px solid var(--line); border-radius: 999px; padding: 6px 12px 6px 8px; font-size: 12.5px; box-shadow: var(--shadow); }
+  .icon-mini .mi-wrap { width: 24px; height: 24px; border-radius: 50%; background: var(--paper-sunken); display: flex; align-items: center; justify-content: center; color: var(--ink-soft); }
+  .icon-caption { margin-top: 16px; font-size: 12.5px; color: var(--muted); max-width: 74ch; }
+
+  /* ---------- Templates ---------- */
+  .tmpl-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(230px, 1fr)); gap: 12px; }
+  .tmpl-card { background: var(--paper-raised); border: 1px solid var(--line); border-radius: var(--r); padding: 14px 16px; box-shadow: var(--shadow); }
+  .tmpl-card .tmpl-top { display: flex; align-items: center; gap: 10px; margin-bottom: 8px; }
+  .tmpl-card .mi-wrap { width: 32px; height: 32px; border-radius: 8px; background: var(--gold-soft); color: var(--gold-deep); display: flex; align-items: center; justify-content: center; flex: none; }
+  .tmpl-card h4 { font-family: var(--body); font-size: 13.5px; font-weight: 700; }
+  .tmpl-card .base { font-family: var(--mono); font-size: 10.5px; text-transform: uppercase; color: var(--teal); }
+  .tmpl-card p { font-size: 12.5px; color: var(--ink-soft); margin-top: 4px; }
+
+  /* ---------- Roadmap ---------- */
+  .roadmap-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; }
+  .phase-card { background: var(--paper-raised); border: 1px solid var(--line); border-radius: var(--r); padding: 18px; box-shadow: var(--shadow); display: flex; flex-direction: column; }
+  .phase-card .phase-head { display: flex; align-items: center; gap: 10px; margin-bottom: 4px; }
+  .phase-card .mi-wrap { width: 34px; height: 34px; border-radius: 9px; background: var(--forest); color: var(--forest-ink); display: flex; align-items: center; justify-content: center; flex: none; }
+  .phase-card h4 { font-family: var(--body); font-size: 14.5px; font-weight: 700; }
+  .phase-card .dur { font-family: var(--mono); font-size: 11px; color: var(--muted); }
+  .phase-sub { margin-top: 12px; }
+  .phase-sub .sub-label { font-size: 11.5px; font-weight: 700; color: var(--gold-deep); margin-bottom: 4px; }
+  .phase-card ul { margin: 0; padding-left: 18px; font-size: 13px; color: var(--ink-soft); }
+  .phase-card li { margin-bottom: 6px; }
+  .phase-card li code { font-family: var(--mono); font-size: 0.9em; background: var(--paper-sunken); padding: 0 4px; border-radius: 4px; }
+
+  /* ---------- Differentiators ---------- */
+  .diff-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 12px; }
+  .diff-card { display: flex; gap: 12px; background: var(--paper-raised); border: 1px solid var(--line); border-radius: 10px; padding: 14px 16px; box-shadow: var(--shadow); }
+  .diff-card .mi-wrap { width: 30px; height: 30px; border-radius: 8px; background: var(--teal-soft); color: var(--teal); display: flex; align-items: center; justify-content: center; flex: none; }
+  .diff-card b { font-size: 13.5px; color: var(--ink); display: block; margin-bottom: 3px; }
+  .diff-card p { font-size: 13px; color: var(--ink-soft); }
+
+  /* ---------- Metrics ---------- */
+  .metric-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 12px; }
+  .metric-tile { background: var(--paper-raised); border: 1px solid var(--line); border-radius: 10px; padding: 14px 16px; box-shadow: var(--shadow); }
+  .metric-tile .lbl { font-size: 12.5px; font-weight: 600; color: var(--ink); }
+  .metric-flow { display: flex; align-items: baseline; gap: 8px; margin-top: 8px; font-family: var(--mono); font-variant-numeric: tabular-nums; }
+  .metric-flow .base { font-size: 14px; color: var(--danger); text-decoration: line-through; text-decoration-color: var(--danger); opacity: .8; }
+  .metric-flow .arrow { color: var(--muted); }
+  .metric-flow .target { font-size: 18px; font-weight: 700; color: var(--success); }
+  .metric-tile .desc { margin-top: 6px; font-size: 12px; color: var(--muted); }
+
+  footer { border-top: 1px solid var(--line); padding: 28px 24px 60px; }
+  .footer-inner { max-width: 1180px; margin: 0 auto; font-size: 12.5px; color: var(--muted); display: flex; flex-wrap: wrap; gap: 8px 20px; justify-content: space-between; }
+  .footer-inner b { color: var(--ink-soft); }
+
+  @media (max-width: 880px) {
+    .shell { grid-template-columns: 1fr; }
+    .toc { position: static; padding-top: 0; display: flex; overflow-x: auto; gap: 4px; border-bottom: 1px solid var(--line); padding-bottom: 10px; }
+    .toc-label { display: none; }
+    .toc a { border-left: none; border-bottom: 2px solid transparent; white-space: nowrap; padding: 6px 10px; }
+    .toc a.active { border-color: var(--gold); border-left: none; }
+    main { padding-top: 24px; }
+    .stat-row { grid-template-columns: 1fr; }
+    .ba-grid, .feature-pair, .roadmap-grid { grid-template-columns: 1fr; }
+    .wizard-steps { grid-template-columns: 1fr 1fr; row-gap: 20px; }
+    .wizard-steps::before { display: none; }
+    .method-row { grid-template-columns: 1fr 1fr; }
+    .method-arrow { display: none; }
+  }
+</style>
+
+<div class="hero">
+  <div class="hero-inner">
+    <span class="eyebrow"><span class="mi" data-icon="rocket_launch" data-size="14"></span> Plan estratégico de producto · OmniDiscount (discount-rules-woo) v1.4.1 → v2.0</span>
+    <h1>Cupones y Promociones: de ficción funcional al motor de descuentos más honesto de WooCommerce</h1>
+    <p class="lede">Diagnóstico completo del módulo actual, análisis de 12 plugins y referencias del mercado, y un plan de arquitectura + rediseño de experiencia para que cada promoción publicada tenga, por fin, efecto real en el carrito — con una interfaz notablemente más simple que la de cualquier competidor evaluado.</p>
+    <div class="meta">
+      <span>9 de julio de 2026</span>
+      <span>·</span>
+      <span>Diseñado por un panel independiente con Opus + Fable, sintetizado en un solo plan</span>
+      <span>·</span>
+      <span>Basado en lectura directa del código fuente v1.4.1</span>
+    </div>
+    <div class="stat-row">
+      <div class="stat-tile">
+        <div class="val">0%</div>
+        <div class="lbl">Efecto real en el carrito, hoy</div>
+        <div class="sub">100% de las promociones creadas en este panel no generan ningún descuento verdadero — confirmado leyendo el código.</div>
+      </div>
+      <div class="stat-tile">
+        <div class="val">&lt;90s</div>
+        <div class="lbl">Meta: tiempo a la primera promo publicada</div>
+        <div class="sub">El mejor competidor evaluado (Disco, de Flycart) tarda ~3 minutos.</div>
+      </div>
+      <div class="stat-tile">
+        <div class="val">15 → 34+</div>
+        <div class="lbl">Íconos Material Symbols aplicados</div>
+        <div class="sub">Reemplazo total de Dashicons: tipos actuales + nuevos tipos propuestos.</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="shell">
+  <nav class="toc" aria-label="Contenido">
+    <span class="toc-label">En este plan</span>
+    <a href="#diagnostico">Diagnóstico crítico</a>
+    <a href="#metodologia">Cómo se hizo</a>
+    <a href="#competencia">Análisis competitivo</a>
+    <a href="#arquitectura">Arquitectura técnica</a>
+    <a href="#ux">Rediseño de UX</a>
+    <a href="#iconografia">Iconografía</a>
+    <a href="#plantillas">Plantillas</a>
+    <a href="#roadmap">Roadmap</a>
+    <a href="#diferenciadores">Diferenciadores</a>
+    <a href="#metricas">Métricas de éxito</a>
+  </nav>
+
+  <main>
+
+    <section class="block" id="diagnostico">
+      <div class="block-head">
+        <span class="kicker">01 — Diagnóstico</span>
+        <h2>El módulo hoy es una ficción funcional</h2>
+        <p class="block-lead">El plugin ya tiene un motor de descuentos maduro y bien enganchado (<code>RulesEngine.php</code>, <code>Conditions/</code>, <code>Adjustments/</code>) que sí modifica precios reales vía <code>woocommerce_before_calculate_totals</code>. El módulo de Promociones no lo usa: guarda todo en <code>wp_options('drw_promos')</code> y ningún hook lo lee.</p>
+      </div>
+
+      <div class="callout">
+        <span class="mi" data-icon="bug_report" data-size="26"></span>
+        <div>
+          <span class="tag">Hallazgo #1 · Bloqueante</span>
+          <h3>Crear una promoción hoy no cambia un solo centavo en el checkout</h3>
+          <p>
+            <code>PromosController::save_promos()</code> escribe un blob JSON en <code>wp_options</code>. Los hooks reales de precio
+            (<code>woocommerce_before_calculate_totals</code>, <code>woocommerce_cart_calculate_fees</code>, <code>woocommerce_get_shop_coupon_data</code>
+            en <code>CartController.php</code>) solo leen <code>wp_drw_rules</code> vía <code>RulesEngine::get_active_rules()</code>. Un comerciante
+            configura "20% off en Zapatos", publica la campaña… y en el carrito real no pasa nada. Es el defecto más grave que puede tener un plugin de descuentos.
+          </p>
+        </div>
+      </div>
+
+      <div class="finding-grid">
+        <div class="finding sev-grave">
+          <span class="sev">Grave</span>
+          <h4>Almacenamiento con condición de carrera</h4>
+          <p><code>save_promos()</code> reescribe el array completo en cada guardado (read-modify-write). Dos pestañas abiertas a la vez pueden pisarse datos silenciosamente.</p>
+        </div>
+        <div class="finding sev-medio">
+          <span class="sev">Medio</span>
+          <h4>Catálogo de tipos duplicado y desincronizado</h4>
+          <p>PHP (<code>type_definitions()</code>) y JS (<code>PROMO_TYPES</code>) definen íconos y colores distintos para los mismos 15 tipos. El endpoint <code>GET /promos/types</code> nunca se consume.</p>
+        </div>
+        <div class="finding sev-grave">
+          <span class="sev">Grave</span>
+          <h4>El campo "Aplica a" es decorativo</h4>
+          <p>Cuatro strings fijos ("Todo el carrito", "Primera compra"…) sin ligarse a productos/categorías reales, aunque el motor de Reglas ya sabe hacerlo de verdad.</p>
+        </div>
+        <div class="finding sev-grave">
+          <span class="sev">Grave</span>
+          <h4>El contador de "usos" es una mentira piadosa</h4>
+          <p>Se inicializa en 0 y ningún hook de pedido lo incrementa jamás. Los KPI de "canjes totales" del listado siempre muestran datos falsos.</p>
+        </div>
+        <div class="finding sev-medio">
+          <span class="sev">Medio</span>
+          <h4>Validación de backend insuficiente</h4>
+          <p><code>validate_promo()</code> no exige <code>end ≥ start</code>, ni unicidad de código contra otros cupones, ni <code>needsCode</code> cuando el tipo lo requiere.</p>
+        </div>
+        <div class="finding sev-medio">
+          <span class="sev">Experiencia</span>
+          <h4>UX de alta carga cognitiva</h4>
+          <p>Un modal de una sola columna muestra 15 tipos y todos los campos a la vez, sin importar el tipo elegido. Sin plantillas, sin vista previa, sin validación inline.</p>
+        </div>
+        <div class="finding sev-medio">
+          <span class="sev">Experiencia</span>
+          <h4>Iconografía anticuada</h4>
+          <p>Dashicons: set cerrado, sin variantes de peso o relleno, imposible de animar entre estados sin cambiar de glifo. Visualmente detrás de la competencia moderna.</p>
+        </div>
+        <div class="finding sev-block">
+          <span class="sev">Bloqueante</span>
+          <h4>9 de 15 tipos no tienen forma de ejecutarse</h4>
+          <p>El motor solo sabe correr 6 ajustes (<code>percentage</code>, <code>fixed</code>, <code>bulk</code>, <code>bogo</code>, <code>free_shipping</code>, <code>bundle_set</code>). Escalonado, cashback, flash, etc. necesitan una capa de traducción explícita.</p>
+        </div>
+        <div class="finding sev-grave">
+          <span class="sev">Grave</span>
+          <h4>Riesgo de colisión con otros plugins de cupones</h4>
+          <p><code>woocommerce_get_shop_coupon_data</code> ya inventa un <code>WC_Coupon</code> virtual con ID aleatorio que puede chocar con IDs de Advanced Coupons o Smart Coupons.</p>
+        </div>
+      </div>
+    </section>
+
+    <section class="block" id="metodologia">
+      <div class="block-head">
+        <span class="kicker">02 — Metodología</span>
+        <h2>Cómo se construyó este plan</h2>
+        <p class="block-lead">No es una lista de deseos: es la síntesis editorial de dos propuestas de arquitectura y UX generadas de forma completamente independiente por dos modelos distintos, sobre una base de investigación de mercado en vivo.</p>
+      </div>
+      <div class="method-row">
+        <div class="method-card"><span class="mi" data-icon="sell" data-size="20"></span><b>Cupones avanzados</b>Advanced Coupons, Smart Coupons</div>
+        <div class="method-card"><span class="mi" data-icon="price_check" data-size="20"></span><b>Precios dinámicos</b>Flycart, YITH, Dynamic Pricing</div>
+        <div class="method-card"><span class="mi" data-icon="trending_up" data-size="20"></span><b>Jugadores emergentes</b>FunnelKit, Iconic, gamificación</div>
+        <div class="method-card"><span class="mi" data-icon="tune" data-size="20"></span><b>UX y Material Symbols</b>Convenciones de iconografía y wizards</div>
+        <div class="method-arrow"><span class="mi" data-icon="east" data-size="18"></span></div>
+        <div class="method-card model"><span class="mi" data-icon="hub" data-size="20"></span><b>Propuesta Opus</b>Rigor arquitectónico</div>
+        <div class="method-card model"><span class="mi" data-icon="hub" data-size="20"></span><b>Propuesta Fable</b>Creatividad de producto</div>
+        <div class="method-arrow"><span class="mi" data-icon="east" data-size="18"></span></div>
+        <div class="method-card synth"><span class="mi" data-icon="verified" data-size="20"></span><b>Síntesis editorial</b>Un solo plan, sin vacíos</div>
+      </div>
+      <div class="gap-note">
+        <b>Transparencia sobre los vacíos cerrados en la síntesis:</b> Opus mezclaba metadatos de marketing dentro de la tabla técnica de Reglas y no tabulaba el "modo sandbox"; Fable no tabulaba el mapeo tipo→ajuste ni el multisitio. Ninguna de las dos cerraba bien la compatibilidad con otros plugins de cupones ni un criterio verificable de migración de datos. El plan final resuelve las cinco cosas — incluida la corrección de un nombre de ícono inventado (<code>delivery_truck_speed</code>, que no existe en el catálogo real de Material Symbols).
+      </div>
+    </section>
+
+    <section class="block" id="competencia">
+      <div class="block-head">
+        <span class="kicker">03 — Mercado</span>
+        <h2>Análisis competitivo</h2>
+        <p class="block-lead">Once referencias directas del ecosistema WooCommerce (más Shopify, como referencia de UX nativa) evaluadas contra el plan propuesto.</p>
+      </div>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>Plugin / referencia</th><th>Fortaleza documentada</th><th>Por qué OmniDiscount lo supera con este plan</th></tr></thead>
+          <tbody id="tbl-competencia"></tbody>
+        </table>
+      </div>
+    </section>
+
+    <section class="block" id="arquitectura">
+      <div class="block-head">
+        <span class="kicker">04 — Arquitectura</span>
+        <h2>De blob JSON a motor real, sin reinventar nada</h2>
+        <p class="block-lead">El motor de Reglas ya está probado en producción. El plan no lo reemplaza: construye un puente que lo conecta con el panel de Promociones.</p>
+      </div>
+
+      <div class="arch-row">
+        <span class="arch-label">Hoy</span>
+        <div class="arch-flow">
+          <div class="arch-node"><span class="mi" data-icon="storefront" data-size="16"></span>Panel Promociones</div>
+          <div class="arch-sep"><span class="mi" data-icon="arrow_forward" data-size="16"></span></div>
+          <div class="arch-node"><span class="mi" data-icon="database" data-size="16"></span><code>wp_options('drw_promos')</code></div>
+          <div class="arch-sep"><span class="mi" data-icon="arrow_forward" data-size="16"></span></div>
+          <div class="arch-node end-bad"><span class="mi" data-icon="remove_shopping_cart" data-size="16"></span>Ningún hook lo lee</div>
+        </div>
+      </div>
+      <div class="arch-row">
+        <div class="arch-flow">
+          <div class="arch-node"><span class="mi" data-icon="rule" data-size="16"></span>Motor de Reglas (aparte)</div>
+          <div class="arch-sep"><span class="mi" data-icon="arrow_forward" data-size="16"></span></div>
+          <div class="arch-node"><span class="mi" data-icon="database" data-size="16"></span><code>wp_drw_rules</code></div>
+          <div class="arch-sep"><span class="mi" data-icon="arrow_forward" data-size="16"></span></div>
+          <div class="arch-node end-good"><span class="mi" data-icon="shopping_cart" data-size="16"></span>Carrito real ✓</div>
+        </div>
+      </div>
+
+      <div class="arch-row" style="margin-top:28px;">
+        <span class="arch-label">Después</span>
+        <div class="arch-flow">
+          <div class="arch-node"><span class="mi" data-icon="storefront" data-size="16"></span>Wizard de Promociones</div>
+          <div class="arch-sep"><span class="mi" data-icon="arrow_forward" data-size="16"></span></div>
+          <div class="arch-node"><span class="mi" data-icon="database" data-size="16"></span><code>wp_drw_promos</code> (tabla propia)</div>
+          <div class="arch-sep"><span class="mi" data-icon="arrow_forward" data-size="16"></span></div>
+          <div class="arch-node"><span class="mi" data-icon="hub" data-size="16"></span><code>PromoBridgeController</code></div>
+          <div class="arch-sep"><span class="mi" data-icon="arrow_forward" data-size="16"></span></div>
+          <div class="arch-branch">
+            <div class="arch-node"><span class="mi" data-icon="confirmation_number" data-size="16"></span>Vía A: <code>WC_Coupon</code> nativo</div>
+            <div class="arch-node"><span class="mi" data-icon="layers" data-size="16"></span>Vía B: fila <code>wp_drw_rules</code></div>
+          </div>
+          <div class="arch-sep"><span class="mi" data-icon="arrow_forward" data-size="16"></span></div>
+          <div class="arch-node end-good"><span class="mi" data-icon="shopping_cart" data-size="16"></span>Carrito real ✓</div>
+        </div>
+        <p class="arch-note">Tipos con código (porcentual, fijo, bienvenida…) se sincronizan como <code>WC_Coupon</code> nativo. Tipos automáticos (2x1, escalonado, bundle…) se compilan como fila de <code>wp_drw_rules</code> con columna <code>source='promo'</code>. Cero hooks nuevos: <code>RulesEngine.php</code> y <code>CartController.php</code> no cambian su lógica de cálculo.</p>
+      </div>
+
+      <div class="arch-grid">
+        <div class="arch-card"><span class="mi" data-icon="category" data-size="22"></span><h4>Catálogo único de tipos</h4><p><code>PromoTypeRegistry</code> reemplaza las dos copias divergentes (PHP y JS); una sola fuente de verdad inyectada al frontend.</p></div>
+        <div class="arch-card"><span class="mi" data-icon="search" data-size="22"></span><h4>Scope real</h4><p>El "Aplica a" decorativo se cambia por <code>{target, ids}</code> con buscador paginado real de productos/categorías.</p></div>
+        <div class="arch-card"><span class="mi" data-icon="rule" data-size="22"></span><h4>Validación endurecida</h4><p>Unicidad de código contra promos y contra <code>shop_coupon</code> de cualquier plugin, <code>end ≥ start</code>, errores por campo.</p></div>
+        <div class="arch-card"><span class="mi" data-icon="sync" data-size="22"></span><h4>Migración verificable</h4><p>Conteo y checksum de filas migradas desde el JSON legacy; si no cuadra, aviso de "reintentar migración", nunca borrado silencioso.</p></div>
+        <div class="arch-card"><span class="mi" data-icon="monitoring" data-size="22"></span><h4>Tracking de canjes real</h4><p>Hooks HPOS-safe sobre <code>WC_Order</code> incrementan <code>uses</code> de verdad; KPIs y analítica dejan de mentir.</p></div>
+        <div class="arch-card"><span class="mi" data-icon="speed" data-size="22"></span><h4>Rendimiento y caché</h4><p>Snapshot cacheado + bail-out temprano cuando no hay promos activas; benchmark publicado vía WP-CLI.</p></div>
+        <div class="arch-card"><span class="mi" data-icon="shield" data-size="22"></span><h4>Compatibilidad universal</h4><p>HPOS, multisitio, multi-moneda (Aelia/WOOCS/WPML), Cart &amp; Checkout Blocks, y coexistencia segura con otros plugins de cupones.</p></div>
+        <div class="arch-card"><span class="mi" data-icon="extension" data-size="22"></span><h4>Reutiliza lo que ya funciona</h4><p><code>Bogo.php</code>, <code>BundleSet.php</code>, <code>FreeShipping.php</code> y las <code>Conditions/</code> existentes ejecutan las promos — cero motor nuevo.</p></div>
+      </div>
+    </section>
+
+    <section class="block" id="ux">
+      <div class="block-head">
+        <span class="kicker">05 — Experiencia</span>
+        <h2>Rediseño de UX: de un formulario largo a un asistente de 4 pasos</h2>
+        <p class="block-lead">Se sustituye el modal de una sola columna con 15 botones y todos los campos visibles por un wizard organizado por objetivo de negocio, con plantillas de un clic y vista previa en vivo.</p>
+      </div>
+
+      <div class="ba-grid">
+        <div class="ba-card before">
+          <div class="ba-head">Hoy — "Nueva promoción"</div>
+          <div class="ba-body">
+            <div class="mock-form">
+              <div class="mock-types">
+                <div class="mock-type">%</div><div class="mock-type">$</div><div class="mock-type">★</div><div class="mock-type">2x1</div><div class="mock-type">3x2</div>
+                <div class="mock-type">⋯</div><div class="mock-type">⋯</div><div class="mock-type">⋯</div><div class="mock-type">⋯</div><div class="mock-type">⋯</div>
+              </div>
+              <div class="mock-field w60"></div>
+              <div class="mock-field"></div>
+              <div class="mock-field"></div>
+              <div class="mock-field"></div>
+              <div class="mock-field"></div>
+              <div class="mock-field w60"></div>
+            </div>
+            <p class="mock-caption">1 pantalla · 15 tipos y todos los campos a la vez · sin plantillas · sin vista previa · "Aplica a" con 4 opciones de texto fijas</p>
+          </div>
+        </div>
+        <div class="ba-card after">
+          <div class="ba-head">Después — Wizard por objetivo</div>
+          <div class="ba-body">
+            <div class="wizard-steps" style="grid-template-columns:repeat(2,1fr); row-gap:16px;">
+              <div class="wstep"><div class="num"><span class="mi" data-icon="dashboard" data-size="18"></span></div><h4>0 · Plantillas</h4></div>
+              <div class="wstep"><div class="num"><span class="mi" data-icon="storefront" data-size="18"></span></div><h4>1 · A qué aplica</h4></div>
+              <div class="wstep"><div class="num"><span class="mi" data-icon="tune" data-size="18"></span></div><h4>2 · Descuento</h4></div>
+              <div class="wstep"><div class="num"><span class="mi" data-icon="rule" data-size="18"></span></div><h4>3 · Publicar</h4></div>
+            </div>
+            <p class="mock-caption">Una promoción funcional a 2 clics de publicarse · vista previa persistente · validación en cada paso · scope real de productos/categorías</p>
+          </div>
+        </div>
+      </div>
+
+      <div class="wizard-steps" style="margin-top:36px;">
+        <div class="wstep">
+          <div class="num"><span class="mi" data-icon="dashboard" data-size="20"></span></div>
+          <h4>Paso 0 · Galería por objetivo</h4>
+          <p>Descuento directo, vender más por pedido, envío, captar y fidelizar, o modo experto. Plantillas de 1 clic: "Black Friday -20%", "3x2 en categoría", "Envío gratis desde $50"…</p>
+        </div>
+        <div class="wstep">
+          <div class="num"><span class="mi" data-icon="storefront" data-size="20"></span></div>
+          <h4>Paso 1 · A qué aplica</h4>
+          <p>Toda la tienda / productos específicos (buscador con miniatura y stock) / categorías. "Solo para" opcional: rol, primera compra, ubicación, fechas.</p>
+        </div>
+        <div class="wstep">
+          <div class="num"><span class="mi" data-icon="tune" data-size="20"></span></div>
+          <h4>Paso 2 · Descuento y reglas</h4>
+          <p>Solo los campos del tipo elegido: editor de tramos, selector 2x1/bundle, límites, vigencia con presets, código con verificación en vivo. Vista previa persistente.</p>
+        </div>
+        <div class="wstep">
+          <div class="num"><span class="mi" data-icon="rule" data-size="20"></span></div>
+          <h4>Paso 3 · Revisar y publicar</h4>
+          <p>Resumen en lenguaje natural, vista previa con producto real, chequeo de conflictos, y publicar o guardar como borrador.</p>
+        </div>
+      </div>
+
+      <div class="feature-pair">
+        <div class="feature-card">
+          <span class="mi" data-icon="visibility" data-size="24"></span>
+          <h4>Modo Simulador — "Probar en mi tienda"</h4>
+          <p>Activa la promo solo para el admin en el frontend real vía cookie firmada, sin exponerla a clientes. Cierra la queja #1 del mercado: "la regla no funciona".</p>
+        </div>
+        <div class="feature-card">
+          <span class="mi" data-icon="rule" data-size="24"></span>
+          <h4>ConflictChecker — semáforo pre-publicación</h4>
+          <p>Detecta solapamiento con otras promos, código duplicado (propio o de terceros), fechas incoherentes y margen negativo, antes de publicar.</p>
+        </div>
+      </div>
+
+      <div class="table-wrap" style="margin-top:26px;">
+        <table>
+          <thead><tr><th>Componente nuevo</th><th>Función</th></tr></thead>
+          <tbody id="tbl-componentes"></tbody>
+        </table>
+      </div>
+
+      <div class="a11y-note">
+        <span class="mi" data-icon="verified" data-size="22"></span>
+        <div><b>Accesibilidad WCAG 2.2 AA aplicada, no solo mencionada:</b> targets interactivos ≥24×24px, foco nunca oculto por cabeceras sticky, alternativa por botones a cualquier arrastre, validación en <code>blur</code> con foco al primer error, auditoría manual con teclado y lector de pantalla (NVDA/VoiceOver) sobre el wizard completo.</div>
+      </div>
+    </section>
+
+    <section class="block" id="iconografia">
+      <div class="block-head">
+        <span class="kicker">06 — Iconografía</span>
+        <h2>Sistema de íconos Material Symbols</h2>
+        <p class="block-lead">Material Symbols <b>Rounded</b>, auto-hospedado en <code>assets/fonts/</code> (sin CDN externo), con ejes <code>FILL</code> 0→1 para animar estado activo/pausado, <code>wght</code> 400, <code>GRAD</code> -25 sobre fondos de color. Reemplaza por completo los Dashicons actuales.</p>
+      </div>
+
+      <div class="icon-group-label">Tipos de promoción actuales (15)</div>
+      <div class="icon-grid" id="icon-grid-current"></div>
+
+      <div class="icon-group-label">Nuevos tipos propuestos en el roadmap</div>
+      <div class="icon-grid" id="icon-grid-new"></div>
+
+      <div class="icon-group-label">Íconos de interfaz</div>
+      <div class="icon-mini-row" id="icon-mini-ui"></div>
+
+      <p class="icon-caption">Corrección editorial: se descarta <code>delivery_truck_speed</code> (propuesto en un borrador) por no existir en el catálogo oficial — se unifica en <code>local_shipping</code> para todo lo relacionado con envío. Se reserva <code>attach_money</code> para "descuento fijo" y <code>sell</code> para conceptos de liquidación/rebaja, evitando ambigüedad entre dos tipos con el mismo glifo.</p>
+    </section>
+
+    <section class="block" id="plantillas">
+      <div class="block-head">
+        <span class="kicker">07 — Plantillas</span>
+        <h2>Plantillas prediseñadas de 1 clic</h2>
+        <p class="block-lead">El punto de partida del Paso 0: valores precargados y editables, no un formulario en blanco.</p>
+      </div>
+      <div class="tmpl-grid" id="tmpl-grid"></div>
+    </section>
+
+    <section class="block" id="roadmap">
+      <div class="block-head">
+        <span class="kicker">08 — Roadmap</span>
+        <h2>Implementación por fases</h2>
+        <p class="block-lead">De la verdad económica a la confianza verificable, sin bloquear el lanzamiento de valor temprano.</p>
+      </div>
+      <div class="roadmap-grid">
+        <div class="phase-card">
+          <div class="phase-head"><span class="mi-wrap"><span class="mi" data-icon="build" data-size="18"></span></span><div><h4>Quick wins</h4><span class="dur">1–2 semanas</span></div></div>
+          <ul style="margin-top:14px;">
+            <li>Unificar catálogo → <code>PromoTypeRegistry</code>; eliminar <code>PROMO_TYPES</code> de JS</li>
+            <li>Endurecer <code>validate_promo()</code>: unicidad de código, <code>needsCode</code>, fechas</li>
+            <li>Crear <code>wp_drw_promos</code> + <code>PromoModel.php</code> (operaciones atómicas por fila)</li>
+            <li>Migración automática con backup legacy y verificación de conteo/checksum</li>
+            <li>Reescribir <code>PromosController</code> para operar por fila (fin de la condición de carrera)</li>
+            <li>Soporte multisitio en creación de tablas</li>
+          </ul>
+        </div>
+        <div class="phase-card">
+          <div class="phase-head"><span class="mi-wrap"><span class="mi" data-icon="hub" data-size="18"></span></span><div><h4>Mediano plazo</h4><span class="dur">4–7 semanas</span></div></div>
+          <div class="phase-sub">
+            <div class="sub-label">Semanas 1–3 · Puente al motor</div>
+            <ul>
+              <li><code>PromoBridgeController</code> (Vía A: <code>WC_Coupon</code>; Vía B: <code>wp_drw_rules</code>)</li>
+              <li>Scope estructurado <code>{target, ids}</code> + buscador paginado</li>
+              <li>Tracking real de canjes (hooks HPOS-safe)</li>
+              <li>Candado "Editar en OmniDiscount" en Marketing &gt; Cupones</li>
+            </ul>
+          </div>
+          <div class="phase-sub">
+            <div class="sub-label">Semanas 4–7 · Wizard e iconografía</div>
+            <ul>
+              <li>Auto-hospedar Material Symbols Rounded + <code>MaterialIcon</code></li>
+              <li><code>TemplateGallery</code>, <code>PromoWizard</code>, <code>ProductCategoryPicker</code></li>
+              <li><code>TieredTableEditor</code>, <code>BundleBuilder</code>, <code>CodeInput</code></li>
+              <li>Auditoría de accesibilidad WCAG 2.2 AA manual</li>
+            </ul>
+          </div>
+        </div>
+        <div class="phase-card">
+          <div class="phase-head"><span class="mi-wrap"><span class="mi" data-icon="rocket_launch" data-size="18"></span></span><div><h4>Largo plazo</h4><span class="dur">8–16+ semanas</span></div></div>
+          <div class="phase-sub">
+            <div class="sub-label">Semanas 8–10 · Confianza</div>
+            <ul>
+              <li><code>LivePreviewPanel</code> con datos reales · <code>ConflictChecker</code> · <code>SandboxMode</code></li>
+            </ul>
+          </div>
+          <div class="phase-sub">
+            <div class="sub-label">Semanas 11–12 · Universalidad</div>
+            <ul>
+              <li>Cart/Checkout Blocks · suite E2E HPOS on/off · benchmark WP-CLI publicado</li>
+            </ul>
+          </div>
+          <div class="phase-sub">
+            <div class="sub-label">Semanas 13–16+ · Diferenciación</div>
+            <ul>
+              <li>Cupón por URL/QR, crédito de tienda, ruleta gamificada, "Describe tu promo"</li>
+            </ul>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="block" id="diferenciadores">
+      <div class="block-head">
+        <span class="kicker">09 — Posicionamiento</span>
+        <h2>Diferenciadores frente al mercado</h2>
+      </div>
+      <div class="diff-grid" id="diff-grid"></div>
+    </section>
+
+    <section class="block" id="metricas">
+      <div class="block-head">
+        <span class="kicker">10 — Métricas</span>
+        <h2>Métricas de éxito</h2>
+      </div>
+      <div class="metric-grid" id="metric-grid"></div>
+    </section>
+
+  </main>
+</div>
+
+<footer>
+  <div class="footer-inner">
+    <span><b>OmniDiscount</b> · discount-rules-woo · GPLv3 · Bywuilgonzalez.com</span>
+    <span>Plan completo en Markdown adjunto para handoff de ingeniería</span>
+  </div>
+</footer>
+
+<script>
+const ICON_PATHS = {
+  "account_balance_wallet": "M200-200v-560 560Zm0 80q-33 0-56.5-23.5T120-200v-560q0-33 23.5-56.5T200-840h560q33 0 56.5 23.5T840-760v100h-80v-100H200v560h560v-100h80v100q0 33-23.5 56.5T760-120H200Zm320-160q-33 0-56.5-23.5T440-360v-240q0-33 23.5-56.5T520-680h280q33 0 56.5 23.5T880-600v240q0 33-23.5 56.5T800-280H520Zm280-80v-240H520v240h280Zm-117.5-77.5Q700-455 700-480t-17.5-42.5Q665-540 640-540t-42.5 17.5Q580-505 580-480t17.5 42.5Q615-420 640-420t42.5-17.5Z",
+  "account_tree": "M600-200v-40h-80q-33 0-56.5-23.5T440-320v-320h-80v40q0 33-23.5 56.5T280-520H160q-33 0-56.5-23.5T80-600v-160q0-33 23.5-56.5T160-840h120q33 0 56.5 23.5T360-760v40h240v-40q0-33 23.5-56.5T680-840h120q33 0 56.5 23.5T880-760v160q0 33-23.5 56.5T800-520H680q-33 0-56.5-23.5T600-600v-40h-80v320h80v-40q0-33 23.5-56.5T680-440h120q33 0 56.5 23.5T880-360v160q0 33-23.5 56.5T800-120H680q-33 0-56.5-23.5T600-200ZM160-760v160-160Zm520 400v160-160Zm0-400v160-160Zm0 160h120v-160H680v160Zm0 400h120v-160H680v160ZM160-600h120v-160H160v160Z",
+  "add": "M440-440H240q-17 0-28.5-11.5T200-480q0-17 11.5-28.5T240-520h200v-200q0-17 11.5-28.5T480-760q17 0 28.5 11.5T520-720v200h200q17 0 28.5 11.5T760-480q0 17-11.5 28.5T720-440H520v200q0 17-11.5 28.5T480-200q-17 0-28.5-11.5T440-240v-200Z",
+  "add_shopping_cart": "M440-720h-80q-17 0-28.5-11.5T320-760q0-17 11.5-28.5T360-800h80v-80q0-17 11.5-28.5T480-920q17 0 28.5 11.5T520-880v80h80q17 0 28.5 11.5T640-760q0 17-11.5 28.5T600-720h-80v80q0 17-11.5 28.5T480-600q-17 0-28.5-11.5T440-640v-80ZM223.5-103.5Q200-127 200-160t23.5-56.5Q247-240 280-240t56.5 23.5Q360-193 360-160t-23.5 56.5Q313-80 280-80t-56.5-23.5Zm400 0Q600-127 600-160t23.5-56.5Q647-240 680-240t56.5 23.5Q760-193 760-160t-23.5 56.5Q713-80 680-80t-56.5-23.5ZM120-800H80q-17 0-28.5-11.5T40-840q0-17 11.5-28.5T80-880h66q11 0 21 6t15 17l159 337h280l145-260q5-10 14-15t20-5q23 0 34.5 19.5t.5 39.5L692-482q-11 20-29.5 31T622-440H324l-44 80h440q17 0 28.5 11.5T760-320q0 17-11.5 28.5T720-280H280q-45 0-68.5-39t-1.5-79l54-98-144-304Z",
+  "alternate_email": "M480-80q-83 0-156-31.5T197-197q-54-54-85.5-127T80-480q0-83 31.5-156T197-763q54-54 127-85.5T480-880q83 0 156 31.5T763-763q54 54 85.5 127T880-480v58q0 59-40.5 100.5T740-280q-35 0-66-15t-52-43q-29 29-65.5 43.5T480-280q-83 0-141.5-58.5T280-480q0-83 58.5-141.5T480-680q83 0 141.5 58.5T680-480v58q0 26 17 44t43 18q26 0 43-18t17-44v-58q0-134-93-227t-227-93q-134 0-227 93t-93 227q0 134 93 227t227 93h160q17 0 28.5 11.5T680-120q0 17-11.5 28.5T640-80H480Zm85-315q35-35 35-85t-35-85q-35-35-85-35t-85 35q-35 35-35 85t35 85q35 35 85 35t85-35Z",
+  "api": "m480-400-80-80 80-80 80 80-80 80Zm-85-235L295-735l128-128q12-12 27-18t30-6q15 0 30 6t27 18l128 128-100 100-85-85-85 85ZM225-295 97-423q-12-12-18-27t-6-30q0-15 6-30t18-27l128-128 100 100-85 85 85 85-100 100Zm510 0L635-395l85-85-85-85 100-100 128 128q12 12 18 27t6 30q0 15-6 30t-18 27L735-295ZM423-97 295-225l100-100 85 85 85-85 100 100L537-97q-12 12-27 18t-30 6q-15 0-30-6t-27-18Z",
+  "archive": "M451.5-548.5Q440-537 440-520v128l-36-36q-11-11-28-11t-28 11q-11 11-11 28t11 28l104 104q12 12 28 12t28-12l104-104q11-11 11-28t-11-28q-11-11-28-11t-28 11l-36 36v-128q0-17-11.5-28.5T480-560q-17 0-28.5 11.5ZM200-640v440h560v-440H200Zm0 520q-33 0-56.5-23.5T120-200v-499q0-14 4.5-27t13.5-24l50-61q11-14 27.5-21.5T250-840h460q18 0 34.5 7.5T772-811l50 61q9 11 13.5 24t4.5 27v499q0 33-23.5 56.5T760-120H200Zm16-600h528l-34-40H250l-34 40Zm264 300Z",
+  "arrow_back": "m313-440 196 196q12 12 11.5 28T508-188q-12 11-28 11.5T452-188L188-452q-6-6-8.5-13t-2.5-15q0-8 2.5-15t8.5-13l264-264q11-11 27.5-11t28.5 11q12 12 12 28.5T508-715L313-520h447q17 0 28.5 11.5T800-480q0 17-11.5 28.5T760-440H313Z",
+  "arrow_forward": "M647-440H200q-17 0-28.5-11.5T160-480q0-17 11.5-28.5T200-520h447L451-716q-12-12-11.5-28t12.5-28q12-11 28-11.5t28 11.5l264 264q6 6 8.5 13t2.5 15q0 8-2.5 15t-8.5 13L508-188q-11 11-27.5 11T452-188q-12-12-12-28.5t12-28.5l195-195Z",
+  "attach_money": "M481-120q-17 0-28.5-11.5T441-160v-46q-45-10-79-35t-55-70q-7-14-.5-29.5T330-363q14-6 29 .5t23 21.5q17 30 43 45.5t64 15.5q41 0 69.5-18.5T587-356q0-35-22-55.5T463-458q-86-27-118-64.5T313-614q0-65 42-101t86-41v-44q0-17 11.5-28.5T481-840q17 0 28.5 11.5T521-800v44q38 6 66 24.5t46 45.5q9 13 3.5 29T614-634q-14 6-29 .5T557-653q-13-14-30.5-21.5T483-682q-44 0-67 19.5T393-614q0 33 30 52t104 40q69 20 104.5 63.5T667-358q0 71-42 108t-104 46v44q0 17-11.5 28.5T481-120Z",
+  "bolt": "m422-232 207-248H469l29-227-185 267h139l-30 208Zm-62-128H236q-24 0-35.5-21.5T203-423l299-430q10-14 26-19.5t33 .5q17 6 25 21t6 32l-32 259h155q26 0 36.5 23t-6.5 43L416-100q-11 13-27 17t-31-3q-15-7-23.5-21.5T328-139l32-221Zm111-110Z",
+  "bug_report": "M480-120q-65 0-120.5-32T272-240h-72q-17 0-28.5-11.5T160-280q0-17 11.5-28.5T200-320h44q-3-20-3.5-40t-.5-40h-40q-17 0-28.5-11.5T160-440q0-17 11.5-28.5T200-480h40q0-20 .5-40t3.5-40h-44q-17 0-28.5-11.5T160-600q0-17 11.5-28.5T200-640h72q14-23 31.5-43t40.5-35l-37-38q-11-11-11-27.5t12-28.5q11-11 28-11t28 11l58 58q28-9 57-9t57 9l60-59q11-11 27.5-11t28.5 12q11 11 11 28t-11 28l-38 38q23 15 41.5 34.5T688-640h72q17 0 28.5 11.5T800-600q0 17-11.5 28.5T760-560h-44q3 20 3.5 40t.5 40h40q17 0 28.5 11.5T800-440q0 17-11.5 28.5T760-400h-40q0 20-.5 40t-3.5 40h44q17 0 28.5 11.5T800-280q0 17-11.5 28.5T760-240h-72q-32 56-87.5 88T480-120Zm0-80q66 0 113-47t47-113v-160q0-66-47-113t-113-47q-66 0-113 47t-47 113v160q0 66 47 113t113 47Zm-40-120h80q17 0 28.5-11.5T560-360q0-17-11.5-28.5T520-400h-80q-17 0-28.5 11.5T400-360q0 17 11.5 28.5T440-320Zm0-160h80q17 0 28.5-11.5T560-520q0-17-11.5-28.5T520-560h-80q-17 0-28.5 11.5T400-520q0 17 11.5 28.5T440-480Zm40 40Z",
+  "build": "M360-360q-100 0-170-70t-70-170q0-20 3-40t11-38q5-10 12.5-15t16.5-7q9-2 18.5.5T199-689l105 105 72-72-105-105q-8-8-10.5-17.5T260-797q2-9 7-16.5t15-12.5q18-8 38-11t40-3q100 0 170 70t70 170q0 23-4 43.5T584-516l202 200q29 29 29 71t-29 71q-29 29-71 29t-71-30L444-376q-20 8-40.5 12t-43.5 4Zm0-80q26 0 52-8t47-25l243 243q5 5 13.5 4.5T729-231q5-5 5-13.5t-5-13.5L486-500q18-20 26-46.5t8-53.5q0-60-38.5-104.5T386-758l74 74q12 12 12 28t-12 28L332-500q-12 12-28 12t-28-12l-74-74q9 57 53.5 95.5T360-440Zm109-51Z",
+  "cake": "M160-80q-17 0-28.5-11.5T120-120v-200q0-33 23.5-56.5T200-400v-160q0-33 23.5-56.5T280-640h160v-58q-18-12-29-29t-11-41q0-15 6-29.5t18-26.5l42-42q2-2 14-6 2 0 14 6l42 42q12 12 18 26.5t6 29.5q0 24-11 41t-29 29v58h160q33 0 56.5 23.5T760-560v160q33 0 56.5 23.5T840-320v200q0 17-11.5 28.5T800-80H160Zm120-320h400v-160H280v160Zm-80 240h560v-160H200v160Zm80-240h400-400Zm-80 240h560-560Zm560-240H200h560Z",
+  "calendar_month": "M200-80q-33 0-56.5-23.5T120-160v-560q0-33 23.5-56.5T200-800h40v-40q0-17 11.5-28.5T280-880q17 0 28.5 11.5T320-840v40h320v-40q0-17 11.5-28.5T680-880q17 0 28.5 11.5T720-840v40h40q33 0 56.5 23.5T840-720v560q0 33-23.5 56.5T760-80H200Zm0-80h560v-400H200v400Zm0-480h560v-80H200v80Zm0 0v-80 80Zm280 240q-17 0-28.5-11.5T440-440q0-17 11.5-28.5T480-480q17 0 28.5 11.5T520-440q0 17-11.5 28.5T480-400Zm-188.5-11.5Q280-423 280-440t11.5-28.5Q303-480 320-480t28.5 11.5Q360-457 360-440t-11.5 28.5Q337-400 320-400t-28.5-11.5ZM640-400q-17 0-28.5-11.5T600-440q0-17 11.5-28.5T640-480q17 0 28.5 11.5T680-440q0 17-11.5 28.5T640-400ZM480-240q-17 0-28.5-11.5T440-280q0-17 11.5-28.5T480-320q17 0 28.5 11.5T520-280q0 17-11.5 28.5T480-240Zm-188.5-11.5Q280-263 280-280t11.5-28.5Q303-320 320-320t28.5 11.5Q360-297 360-280t-11.5 28.5Q337-240 320-240t-28.5-11.5ZM640-240q-17 0-28.5-11.5T600-280q0-17 11.5-28.5T640-320q17 0 28.5 11.5T680-280q0 17-11.5 28.5T640-240Z",
+  "card_giftcard": "M160-280v80h640v-80H160Zm0-440h88q-5-9-6.5-19t-1.5-21q0-50 35-85t85-35q30 0 55.5 15.5T460-826l20 26 20-26q18-24 44-39t56-15q50 0 85 35t35 85q0 11-1.5 21t-6.5 19h88q33 0 56.5 23.5T880-640v440q0 33-23.5 56.5T800-120H160q-33 0-56.5-23.5T80-200v-440q0-33 23.5-56.5T160-720Zm0 320h640v-240H596l60 82q10 14 8 29.5T648-503q-14 10-29.5 7.5T593-511L480-664 367-511q-10 13-25.5 15.5T312-503q-14-10-16.5-25.5T303-558l59-82H160v240Zm228.5-331.5Q400-743 400-760t-11.5-28.5Q377-800 360-800t-28.5 11.5Q320-777 320-760t11.5 28.5Q343-720 360-720t28.5-11.5ZM600-720q17 0 28.5-11.5T640-760q0-17-11.5-28.5T600-800q-17 0-28.5 11.5T560-760q0 17 11.5 28.5T600-720Z",
+  "casino": "M342.5-257.5Q360-275 360-300t-17.5-42.5Q325-360 300-360t-42.5 17.5Q240-325 240-300t17.5 42.5Q275-240 300-240t42.5-17.5Zm0-360Q360-635 360-660t-17.5-42.5Q325-720 300-720t-42.5 17.5Q240-685 240-660t17.5 42.5Q275-600 300-600t42.5-17.5Zm180 180Q540-455 540-480t-17.5-42.5Q505-540 480-540t-42.5 17.5Q420-505 420-480t17.5 42.5Q455-420 480-420t42.5-17.5Zm180 180Q720-275 720-300t-17.5-42.5Q685-360 660-360t-42.5 17.5Q600-325 600-300t17.5 42.5Q635-240 660-240t42.5-17.5Zm0-360Q720-635 720-660t-17.5-42.5Q685-720 660-720t-42.5 17.5Q600-685 600-660t17.5 42.5Q635-600 660-600t42.5-17.5ZM200-120q-33 0-56.5-23.5T120-200v-560q0-33 23.5-56.5T200-840h560q33 0 56.5 23.5T840-760v560q0 33-23.5 56.5T760-120H200Zm0-80h560v-560H200v560Zm0-560v560-560Z",
+  "category": "m297-581 149-243q6-10 15-14.5t19-4.5q10 0 19 4.5t15 14.5l149 243q6 10 6 21t-5 20q-5 9-14 14.5t-21 5.5H331q-12 0-21-5.5T296-540q-5-9-5-20t6-21ZM700-80q-75 0-127.5-52.5T520-260q0-75 52.5-127.5T700-440q75 0 127.5 52.5T880-260q0 75-52.5 127.5T700-80Zm-580-60v-240q0-17 11.5-28.5T160-420h240q17 0 28.5 11.5T440-380v240q0 17-11.5 28.5T400-100H160q-17 0-28.5-11.5T120-140Zm580-20q42 0 71-29t29-71q0-42-29-71t-71-29q-42 0-71 29t-29 71q0 42 29 71t71 29Zm-500-20h160v-160H200v160Zm202-420h156l-78-126-78 126Zm78 0ZM360-340Zm340 80Z",
+  "check_circle": "m424-408-86-86q-11-11-28-11t-28 11q-11 11-11 28t11 28l114 114q12 12 28 12t28-12l226-226q11-11 11-28t-11-28q-11-11-28-11t-28 11L424-408Zm56 328q-83 0-156-31.5T197-197q-54-54-85.5-127T80-480q0-83 31.5-156T197-763q54-54 127-85.5T480-880q83 0 156 31.5T763-763q54 54 85.5 127T880-480q0 83-31.5 156T763-197q-54 54-127 85.5T480-80Zm0-80q134 0 227-93t93-227q0-134-93-227t-227-93q-134 0-227 93t-93 227q0 134 93 227t227 93Zm0-320Z",
+  "chevron_right": "M504-480 348-636q-11-11-11-28t11-28q11-11 28-11t28 11l184 184q6 6 8.5 13t2.5 15q0 8-2.5 15t-8.5 13L404-268q-11 11-28 11t-28-11q-11-11-11-28t11-28l156-156Z",
+  "close": "M480-424 284-228q-11 11-28 11t-28-11q-11-11-11-28t11-28l196-196-196-196q-11-11-11-28t11-28q11-11 28-11t28 11l196 196 196-196q11-11 28-11t28 11q11 11 11 28t-11 28L536-480l196 196q11 11 11 28t-11 28q-11 11-28 11t-28-11L480-424Z",
+  "confirmation_number": "M160-160q-33 0-56.5-23.5T80-240v-135q0-11 7-19t18-10q24-8 39.5-29t15.5-47q0-26-15.5-47T105-556q-11-2-18-10t-7-19v-135q0-33 23.5-56.5T160-800h640q33 0 56.5 23.5T880-720v135q0 11-7 19t-18 10q-24 8-39.5 29T800-480q0 26 15.5 47t39.5 29q11 2 18 10t7 19v135q0 33-23.5 56.5T800-160H160Zm0-80h640v-102q-37-22-58.5-58.5T720-480q0-43 21.5-79.5T800-618v-102H160v102q37 22 58.5 58.5T240-480q0 43-21.5 79.5T160-342v102Zm320-40q17 0 28.5-11.5T520-320q0-17-11.5-28.5T480-360q-17 0-28.5 11.5T440-320q0 17 11.5 28.5T480-280Zm0-160q17 0 28.5-11.5T520-480q0-17-11.5-28.5T480-520q-17 0-28.5 11.5T440-480q0 17 11.5 28.5T480-440Zm0-160q17 0 28.5-11.5T520-640q0-17-11.5-28.5T480-680q-17 0-28.5 11.5T440-640q0 17 11.5 28.5T480-600Zm0 120Z",
+  "construction": "M714-162 537-339l84-84 177 177q17 17 17 42t-17 42q-17 17-42 17t-42-17Zm-569-42q0-25 17-42l234-234-68-68q-11 11-28 11t-28-11l-23-23v90q0 14-12 19t-22-5L106-576q-10-10-5-22t19-12h90l-22-22q-12-12-12-28t12-28l114-114q20-20 43-29t47-9q20 0 37.5 6t34.5 18q8 5 8.5 14t-6.5 16l-76 76 22 22q11 11 11 28t-11 28l68 68 90-90q-4-11-6.5-23t-2.5-24q0-59 40.5-99.5T701-841q8 0 15 .5t14 2.5q9 3 11.5 12.5T737-809l-65 65q-6 6-6 14t6 14l44 44q6 6 14 6t14-6l65-65q7-7 16.5-5t12.5 12q2 7 2.5 14t.5 15q0 59-40.5 99.5T701-561q-12 0-24-2t-23-7L246-162q-17 17-42 17t-42-17q-17-17-17-42Z",
+  "content_copy": "M360-240q-33 0-56.5-23.5T280-320v-480q0-33 23.5-56.5T360-880h360q33 0 56.5 23.5T800-800v480q0 33-23.5 56.5T720-240H360Zm0-80h360v-480H360v480ZM200-80q-33 0-56.5-23.5T120-160v-520q0-17 11.5-28.5T160-720q17 0 28.5 11.5T200-680v520h400q17 0 28.5 11.5T640-120q0 17-11.5 28.5T600-80H200Zm160-240v-480 480Z",
+  "counter_2": "M480-80q-83 0-156-31.5T197-197q-54-54-85.5-127T80-480q0-83 31.5-156T197-763q54-54 127-85.5T480-880q83 0 156 31.5T763-763q54 54 85.5 127T880-480q0 83-31.5 156T763-197q-54 54-127 85.5T480-80Zm0-80q134 0 227-93t93-227q0-134-93-227t-227-93q-134 0-227 93t-93 227q0 134 93 227t227 93Zm0-320Zm80 200q17 0 28.5-11.5T600-320q0-17-11.5-28.5T560-360H440v-80h80q33 0 56.5-23.5T600-520v-80q0-33-23.5-56.5T520-680H400q-17 0-28.5 11.5T360-640q0 17 11.5 28.5T400-600h120v80h-80q-33 0-56.5 23.5T360-440v120q0 17 11.5 28.5T400-280h160Z",
+  "counter_3": "M480-80q-83 0-156-31.5T197-197q-54-54-85.5-127T80-480q0-83 31.5-156T197-763q54-54 127-85.5T480-880q83 0 156 31.5T763-763q54 54 85.5 127T880-480q0 83-31.5 156T763-197q-54 54-127 85.5T480-80Zm0-80q134 0 227-93t93-227q0-134-93-227t-227-93q-134 0-227 93t-93 227q0 134 93 227t227 93Zm0-320Zm-80 200h120q33 0 56.5-23.5T600-360v-60q0-26-17-43t-43-17q26 0 43-17t17-43v-60q0-33-23.5-56.5T520-680H400q-17 0-28.5 11.5T360-640q0 17 11.5 28.5T400-600h120v80h-40q-17 0-28.5 11.5T440-480q0 17 11.5 28.5T480-440h40v80H400q-17 0-28.5 11.5T360-320q0 17 11.5 28.5T400-280Z",
+  "dashboard": "M520-640v-160q0-17 11.5-28.5T560-840h240q17 0 28.5 11.5T840-800v160q0 17-11.5 28.5T800-600H560q-17 0-28.5-11.5T520-640ZM120-480v-320q0-17 11.5-28.5T160-840h240q17 0 28.5 11.5T440-800v320q0 17-11.5 28.5T400-440H160q-17 0-28.5-11.5T120-480Zm400 320v-320q0-17 11.5-28.5T560-520h240q17 0 28.5 11.5T840-480v320q0 17-11.5 28.5T800-120H560q-17 0-28.5-11.5T520-160Zm-400 0v-160q0-17 11.5-28.5T160-360h240q17 0 28.5 11.5T440-320v160q0 17-11.5 28.5T400-120H160q-17 0-28.5-11.5T120-160Zm80-360h160v-240H200v240Zm400 320h160v-240H600v240Zm0-480h160v-80H600v80ZM200-200h160v-80H200v80Zm160-320Zm240-160Zm0 240ZM360-280Z",
+  "database": "M480-120q-151 0-255.5-46.5T120-280v-400q0-66 105.5-113T480-840q149 0 254.5 47T840-680v400q0 67-104.5 113.5T480-120Zm0-479q89 0 179-25.5T760-679q-11-29-100.5-55T480-760q-91 0-178.5 25.5T200-679q14 30 101.5 55T480-599Zm0 199q42 0 81-4t74.5-11.5q35.5-7.5 67-18.5t57.5-25v-120q-26 14-57.5 25t-67 18.5Q600-528 561-524t-81 4q-42 0-82-4t-75.5-11.5Q287-543 256-554t-56-25v120q25 14 56 25t66.5 18.5Q358-408 398-404t82 4Zm0 200q46 0 93.5-7t87.5-18.5q40-11.5 67-26t32-29.5v-98q-26 14-57.5 25t-67 18.5Q600-328 561-324t-81 4q-42 0-82-4t-75.5-11.5Q287-343 256-354t-56-25v99q5 15 31.5 29t66.5 25.5q40 11.5 88 18.5t94 7Z",
+  "delete": "M280-120q-33 0-56.5-23.5T200-200v-520q-17 0-28.5-11.5T160-760q0-17 11.5-28.5T200-800h160q0-17 11.5-28.5T400-840h160q17 0 28.5 11.5T600-800h160q17 0 28.5 11.5T800-760q0 17-11.5 28.5T760-720v520q0 33-23.5 56.5T680-120H280Zm400-600H280v520h400v-520ZM428.5-291.5Q440-303 440-320v-280q0-17-11.5-28.5T400-640q-17 0-28.5 11.5T360-600v280q0 17 11.5 28.5T400-280q17 0 28.5-11.5Zm160 0Q600-303 600-320v-280q0-17-11.5-28.5T560-640q-17 0-28.5 11.5T520-600v280q0 17 11.5 28.5T560-280q17 0 28.5-11.5ZM280-720v520-520Z",
+  "devices": "M480-540Zm-40 380H120q-17 0-28.5-11.5T80-200q0-17 11.5-28.5T120-240h320q17 0 28.5 11.5T480-200q0 17-11.5 28.5T440-160ZM200-280q-33 0-56.5-23.5T120-360v-360q0-33 23.5-56.5T200-800h600q17 0 28.5 11.5T840-760q0 17-11.5 28.5T800-720H200v360h240q17 0 28.5 11.5T480-320q0 17-11.5 28.5T440-280H200Zm600 40v-320H640v320h160Zm-180 80q-25 0-42.5-17.5T560-220v-360q0-25 17.5-42.5T620-640h200q25 0 42.5 17.5T880-580v360q0 25-17.5 42.5T820-160H620Zm100-300q13 0 21.5-9t8.5-21q0-13-8.5-21.5T720-520q-12 0-21 8.5t-9 21.5q0 12 9 21t21 9Zm0 60Z",
+  "diversity_3": "M40-200v-120q0-34 23.5-57t56.5-23h131q20 0 38 10t29 27q29 39 71.5 61t90.5 22q49 0 91.5-22t70.5-61q13-17 30.5-27t36.5-10h131q34 0 57 23t23 57v120q0 17-11.5 28.5T880-160H680q-17 0-28.5-11.5T640-200v-51q-35 25-75.5 38T480-200q-43 0-84-13.5T320-252v52q0 17-11.5 28.5T280-160H80q-17 0-28.5-11.5T40-200Zm440-120q-38 0-72-17.5T351-386q-17-25-42.5-39.5T253-440q22-37 93-58.5T480-520q63 0 134 21.5t93 58.5q-29 0-55 14.5T609-386q-22 32-56 49t-73 17ZM160-440q-50 0-85-35t-35-85q0-51 35-85.5t85-34.5q51 0 85.5 34.5T280-560q0 50-34.5 85T160-440Zm640 0q-50 0-85-35t-35-85q0-51 35-85.5t85-34.5q51 0 85.5 34.5T920-560q0 50-34.5 85T800-440ZM480-560q-50 0-85-35t-35-85q0-51 35-85.5t85-34.5q51 0 85.5 34.5T600-680q0 50-34.5 85T480-560Z",
+  "draft": "M240-80q-33 0-56.5-23.5T160-160v-640q0-33 23.5-56.5T240-880h287q16 0 30.5 6t25.5 17l194 194q11 11 17 25.5t6 30.5v447q0 33-23.5 56.5T720-80H240Zm280-560v-160H240v640h480v-440H560q-17 0-28.5-11.5T520-640ZM240-800v200-200 640-640Z",
+  "east": "M727-440H120q-17 0-28.5-11.5T80-480q0-17 11.5-28.5T120-520h607L572-676q-11-11-11.5-27.5T572-732q11-11 28-11t28 11l224 224q6 6 8.5 13t2.5 15q0 8-2.5 15t-8.5 13L628-228q-11 11-27.5 11T572-228q-12-12-12-28.5t12-28.5l155-155Z",
+  "edit": "M200-200h57l391-391-57-57-391 391v57Zm-40 80q-17 0-28.5-11.5T120-160v-97q0-16 6-30.5t17-25.5l505-504q12-11 26.5-17t30.5-6q16 0 31 6t26 18l55 56q12 11 17.5 26t5.5 30q0 16-5.5 30.5T817-647L313-143q-11 11-25.5 17t-30.5 6h-97Zm600-584-56-56 56 56Zm-141 85-28-29 57 57-29-28Z",
+  "extension": "M200-200h520v-159q0-11 5.5-21t16.5-15l23-11q16-8 25.5-22t9.5-32q0-17-9.5-31.5T765-514l-22-10q-11-5-17-14.5t-6-21.5v-160H563q-15 0-26.5-9.5T523-754l-5-34q-3-22-19.5-37T460-840q-23 0-39.5 15T401-788l-5 34q-2 15-13.5 24.5T356-720H200v86q56 21 88 68t32 106q0 60-32 107t-88 68v85Zm0 80q-34 0-57-23t-23-57v-125q0-11 8-19.5t19-10.5q39-8 66-36.5t27-68.5q0-39-27-67t-66-37q-11-3-19-11.5t-8-19.5v-125q0-33 23.5-56.5T200-800h122q7-51 46-85.5t92-34.5q52 0 91 34.5t47 85.5h122q33 0 56.5 23.5T800-720v134q36 18 58 52t22 74q0 41-22 75t-58 51v134q0 34-23.5 57T720-120H200Zm300-340Z",
+  "featured_seasonal_and_gifts": "M160-160v-360q-33 0-56.5-23.5T80-600v-80q0-33 23.5-56.5T160-760h128q-5-9-6.5-19t-1.5-21q0-50 35-85t85-35q23 0 43 8.5t37 23.5q17-16 37-24t43-8q50 0 85 35t35 85q0 11-2 20.5t-6 19.5h128q33 0 56.5 23.5T880-680v80q0 33-23.5 56.5T800-520v360q0 33-23.5 56.5T720-80H240q-33 0-56.5-23.5T160-160Zm371.5-668.5Q520-817 520-800t11.5 28.5Q543-760 560-760t28.5-11.5Q600-783 600-800t-11.5-28.5Q577-840 560-840t-28.5 11.5ZM360-800q0 17 11.5 28.5T400-760q17 0 28.5-11.5T440-800q0-17-11.5-28.5T400-840q-17 0-28.5 11.5T360-800ZM160-680v80h280v-80H160Zm280 520v-360H240v360h200Zm80 0h200v-360H520v360Zm280-440v-80H520v80h280Z",
+  "filter_alt": "M440-160q-17 0-28.5-11.5T400-200v-240L168-736q-15-20-4.5-42t36.5-22h560q26 0 36.5 22t-4.5 42L560-440v240q0 17-11.5 28.5T520-160h-80Zm40-308 198-252H282l198 252Zm0 0Z",
+  "groups": "M40-240q-17 0-28.5-11.5T0-280v-23q0-43 44-70t116-27q13 0 25 .5t23 2.5q-14 21-21 44t-7 48v65H40Zm240 0q-17 0-28.5-11.5T240-280v-25q0-32 17.5-58.5T307-410q32-20 76.5-30t96.5-10q53 0 97.5 10t76.5 30q32 20 49 46.5t17 58.5v25q0 17-11.5 28.5T680-240H280Zm500 0v-65q0-26-6.5-49T754-397q11-2 22.5-2.5t23.5-.5q72 0 116 26.5t44 70.5v23q0 17-11.5 28.5T920-240H780Zm-455-80h311q-10-20-55.5-35T480-370q-55 0-100.5 15T325-320ZM160-440q-33 0-56.5-23.5T80-520q0-34 23.5-57t56.5-23q34 0 57 23t23 57q0 33-23 56.5T160-440Zm640 0q-33 0-56.5-23.5T720-520q0-34 23.5-57t56.5-23q34 0 57 23t23 57q0 33-23 56.5T800-440Zm-320-40q-50 0-85-35t-35-85q0-51 35-85.5t85-34.5q51 0 85.5 34.5T600-600q0 50-34.5 85T480-480Zm0-80q17 0 28.5-11.5T520-600q0-17-11.5-28.5T480-640q-17 0-28.5 11.5T440-600q0 17 11.5 28.5T480-560Zm1 240Zm-1-280Z",
+  "handshake": "M475-160q4 0 8-2t6-4l328-328q12-12 17.5-27t5.5-30q0-16-5.5-30.5T817-607L647-777q-11-12-25.5-17.5T591-800q-15 0-30 5.5T534-777l-11 11 74 75q15 14 22 32t7 38q0 42-28.5 70.5T527-522q-20 0-38.5-7T456-550l-75-74-175 175q-3 3-4.5 6.5T200-435q0 8 6 14.5t14 6.5q4 0 8-2t6-4l108-108q11-11 27.5-11.5T398-528q11 11 11 28t-11 28L291-364q-3 3-4.5 6.5T285-350q0 8 6 14t14 6q4 0 8-2t6-4l108-107q11-11 27.5-11.5T483-443q11 11 11 28t-11 28L376-279q-3 2-4.5 6t-1.5 8q0 8 6 14t14 6q4 0 7.5-1.5t6.5-4.5l108-107q11-11 27.5-11.5T568-358q11 11 11 28t-11 28L460-194q-3 3-4.5 6.5T454-180q0 8 6.5 14t14.5 6Zm-1 80q-37 0-65.5-24.5T375-166q-34-5-57-28t-28-57q-34-5-56.5-28.5T206-336q-38-5-62-33t-24-66q0-20 7.5-38.5T149-506l175-175q23-23 56.5-23t56.5 23l75 75q2 3 6 4.5t8 1.5q9 0 15-5.5t6-14.5q0-4-1.5-8t-4.5-6L398-777q-11-12-25.5-17.5T342-800q-15 0-30 5.5T285-777L144-635q-14 14-20 33t-3 38q3 17-7 30t-27 15q-17 2-30-7.5T42-553q-6-38 5.5-74.5T87-692l141-141q24-23 53.5-35t60.5-12q31 0 60.5 12t52.5 35l11 11 11-11q24-23 53.5-35t60.5-12q31 0 60.5 12t52.5 35l169 169q23 23 35 53t12 61q0 31-12 60.5T873-437L545-110q-14 14-32.5 22T474-80Zm-98-560Z",
+  "hub": "M155-75q-35-35-35-85t35-85q35-35 85-35 14 0 26 3t23 8l57-71q-28-31-39-70t-5-78l-81-27q-17 25-43 40t-58 15q-50 0-85-35T0-580q0-50 35-85t85-35q50 0 85 35t35 85v8l81 28q20-36 53.5-61t75.5-32v-87q-39-11-64.5-42.5T360-840q0-50 35-85t85-35q50 0 85 35t35 85q0 42-26 73.5T510-724v87q42 7 75.5 32t53.5 61l81-28v-8q0-50 35-85t85-35q50 0 85 35t35 85q0 50-35 85t-85 35q-32 0-58.5-15T739-515l-81 27q6 39-5 77.5T614-340l57 70q11-5 23-7.5t26-2.5q50 0 85 35t35 85q0 50-35 85t-85 35q-50 0-85-35t-35-85q0-20 6.5-38.5T624-232l-57-71q-41 23-87.5 23T392-303l-56 71q11 15 17.5 33.5T360-160q0 50-35 85t-85 35q-50 0-85-35Zm-35-465q17 0 28.5-11.5T160-580q0-17-11.5-28.5T120-620q-17 0-28.5 11.5T80-580q0 17 11.5 28.5T120-540Zm148.5 408.5Q280-143 280-160t-11.5-28.5Q257-200 240-200t-28.5 11.5Q200-177 200-160t11.5 28.5Q223-120 240-120t28.5-11.5Zm240-680Q520-823 520-840t-11.5-28.5Q497-880 480-880t-28.5 11.5Q440-857 440-840t11.5 28.5Q463-800 480-800t28.5-11.5ZM480-360q42 0 71-29t29-71q0-42-29-71t-71-29q-42 0-71 29t-29 71q0 42 29 71t71 29Zm268.5 228.5Q760-143 760-160t-11.5-28.5Q737-200 720-200t-28.5 11.5Q680-177 680-160t11.5 28.5Q703-120 720-120t28.5-11.5Zm120-420Q880-563 880-580t-11.5-28.5Q857-620 840-620t-28.5 11.5Q800-597 800-580t11.5 28.5Q823-540 840-540t28.5-11.5ZM480-840ZM120-580Zm360 120Zm360-120ZM240-160Zm480 0Z",
+  "insights": "M120-160q-33 0-56.5-23.5T40-240q0-33 23.5-56.5T120-320h10.5q4.5 0 9.5 2l182-182q-2-5-2-9.5V-520q0-33 23.5-56.5T400-600q33 0 56.5 23.5T480-520q0 2-2 20l102 102q5-2 9.5-2h21q4.5 0 9.5 2l142-142q-2-5-2-9.5V-560q0-33 23.5-56.5T840-640q33 0 56.5 23.5T920-560q0 33-23.5 56.5T840-480h-10.5q-4.5 0-9.5-2L678-340q2 5 2 9.5v10.5q0 33-23.5 56.5T600-240q-33 0-56.5-23.5T520-320v-10.5q0-4.5 2-9.5L420-442q-5 2-9.5 2H400q-2 0-20-2L198-260q2 5 2 9.5v10.5q0 33-23.5 56.5T120-160Zm40-401-25-54-54-25 54-25 25-54 25 54 54 25-54 25-25 54Zm440-39-38-82-82-38 82-38 38-82 38 82 82 38-82 38-38 82Z",
+  "layers": "M161-366q-16-12-15.5-31.5T162-429q11-8 24-8t24 8l270 209 270-209q11-8 24-8t24 8q16 12 16.5 31.5T799-366L529-156q-22 17-49 17t-49-17L161-366Zm270 8L201-537q-31-24-31-63t31-63l230-179q22-17 49-17t49 17l230 179q31 24 31 63t-31 63L529-358q-22 17-49 17t-49-17Zm49-64 230-178-230-178-230 178 230 178Zm0-178Z",
+  "local_shipping": "M155-195q-35-35-35-85H80q-17 0-28.5-11.5T40-320v-400q0-33 23.5-56.5T120-800h480q33 0 56.5 23.5T680-720v80h80q19 0 36 8.5t28 23.5l88 117q4 5 6 11t2 13v147q0 17-11.5 28.5T880-280h-40q0 50-35 85t-85 35q-50 0-85-35t-35-85H360q0 50-35 85t-85 35q-50 0-85-35Zm113.5-56.5Q280-263 280-280t-11.5-28.5Q257-320 240-320t-28.5 11.5Q200-297 200-280t11.5 28.5Q223-240 240-240t28.5-11.5ZM120-360h32q17-18 39-29t49-11q27 0 49 11t39 29h272v-360H120v360Zm628.5 108.5Q760-263 760-280t-11.5-28.5Q737-320 720-320t-28.5 11.5Q680-297 680-280t11.5 28.5Q703-240 720-240t28.5-11.5ZM680-440h170l-90-120h-80v120ZM360-540Z",
+  "loyalty": "M856-390 570-104q-12 12-27 18t-30 6q-15 0-30-6t-27-18L103-457q-11-11-17-25.5T80-513v-287q0-33 23.5-56.5T160-880h287q16 0 31 6.5t26 17.5l352 353q12 12 17.5 27t5.5 30q0 15-5.5 29.5T856-390ZM513-160l286-286-353-354H160v286l353 354ZM260-640q25 0 42.5-17.5T320-700q0-25-17.5-42.5T260-760q-25 0-42.5 17.5T200-700q0 25 17.5 42.5T260-640Zm220 160Zm68 192 112-112q11-11 17.5-26t6.5-32q0-34-24-58t-58-24q-19 0-37.5 11T520-492q-30-28-47-38t-35-10q-34 0-58 24t-24 58q0 17 6.5 32t17.5 26l112 112q12 12 28 12t28-12Z",
+  "monitoring": "M131.5-131.5Q120-143 120-160v-40q0-17 11.5-28.5T160-240q17 0 28.5 11.5T200-200v40q0 17-11.5 28.5T160-120q-17 0-28.5-11.5Zm160 0Q280-143 280-160v-220q0-17 11.5-28.5T320-420q17 0 28.5 11.5T360-380v220q0 17-11.5 28.5T320-120q-17 0-28.5-11.5Zm160 0Q440-143 440-160v-140q0-17 11.5-28.5T480-340q17 0 28.5 11.5T520-300v140q0 17-11.5 28.5T480-120q-17 0-28.5-11.5Zm160 0Q600-143 600-160v-200q0-17 11.5-28.5T640-400q17 0 28.5 11.5T680-360v200q0 17-11.5 28.5T640-120q-17 0-28.5-11.5Zm160 0Q760-143 760-160v-360q0-17 11.5-28.5T800-560q17 0 28.5 11.5T840-520v360q0 17-11.5 28.5T800-120q-17 0-28.5-11.5ZM560-481q-16 0-30.5-6T503-504L400-607 188-395q-12 12-28.5 11.5T131-396q-11-12-10.5-28.5T132-452l211-211q12-12 26.5-17.5T400-686q16 0 31 5.5t26 17.5l103 103 212-212q12-12 28.5-11.5T829-771q11 12 10.5 28.5T828-715L617-504q-11 11-26 17t-31 6Z",
+  "package_2": "M440-183v-274L200-596v274l240 139Zm80 0 240-139v-274L520-457v274Zm-80 92L160-252q-19-11-29.5-29T120-321v-318q0-22 10.5-40t29.5-29l280-161q19-11 40-11t40 11l280 161q19 11 29.5 29t10.5 40v318q0 22-10.5 40T800-252L520-91q-19 11-40 11t-40-11Zm200-528 77-44-237-137-78 45 238 136Zm-160 93 78-45-237-137-78 45 237 137Z",
+  "payments": "M560-440q-50 0-85-35t-35-85q0-50 35-85t85-35q50 0 85 35t35 85q0 50-35 85t-85 35ZM280-320q-33 0-56.5-23.5T200-400v-320q0-33 23.5-56.5T280-800h560q33 0 56.5 23.5T920-720v320q0 33-23.5 56.5T840-320H280Zm80-80h400q0-33 23.5-56.5T840-480v-160q-33 0-56.5-23.5T760-720H360q0 33-23.5 56.5T280-640v160q33 0 56.5 23.5T360-400Zm400 240H120q-33 0-56.5-23.5T40-240v-400q0-17 11.5-28.5T80-680q17 0 28.5 11.5T120-640v400h640q17 0 28.5 11.5T800-200q0 17-11.5 28.5T760-160ZM280-400v-320 320Z",
+  "percent": "M300-520q-58 0-99-41t-41-99q0-58 41-99t99-41q58 0 99 41t41 99q0 58-41 99t-99 41Zm0-80q25 0 42.5-17.5T360-660q0-25-17.5-42.5T300-720q-25 0-42.5 17.5T240-660q0 25 17.5 42.5T300-600Zm360 440q-58 0-99-41t-41-99q0-58 41-99t99-41q58 0 99 41t41 99q0 58-41 99t-99 41Zm42.5-97.5Q720-275 720-300t-17.5-42.5Q685-360 660-360t-42.5 17.5Q600-325 600-300t17.5 42.5Q635-240 660-240t42.5-17.5ZM177-216q0-17 11-28l528-528q11-11 28-11t28 11q11 11 11 28t-11 28L244-188q-11 11-28 11t-28-11q-11-11-11-28Z",
+  "price_check": "m558-233 198-198q11-11 28-11t28 11q11 11 11 28t-11 28L586-149q-12 12-28 12t-28-12L416-263q-11-11-11-28t11-28q11-11 28-11t28 11l86 86ZM260-401h-60q-17 0-28.5-11.5T160-441q0-17 11.5-28.5T200-481h160v-80H200q-17 0-28.5-11.5T160-601v-160q0-17 11.5-28.5T200-801h60q0-17 11.5-28.5T300-841q17 0 28.5 11.5T340-801h60q17 0 28.5 11.5T440-761q0 17-11.5 28.5T400-721H240v80h160q17 0 28.5 11.5T440-601v160q0 17-11.5 28.5T400-401h-60q0 17-11.5 28.5T300-361q-17 0-28.5-11.5T260-401Z",
+  "qr_code_2": "M520-120v-80h80v80h-80Zm-80-80v-200h80v200h-80Zm320-120v-160h80v160h-80Zm-80-160v-80h80v80h-80Zm-480 80v-80h80v80h-80Zm-80-80v-80h80v80h-80Zm360-280v-80h80v80h-80ZM180-660h120v-120H180v120Zm-60 20v-160q0-17 11.5-28.5T160-840h160q17 0 28.5 11.5T360-800v160q0 17-11.5 28.5T320-600H160q-17 0-28.5-11.5T120-640Zm60 460h120v-120H180v120Zm-60 20v-160q0-17 11.5-28.5T160-360h160q17 0 28.5 11.5T360-320v160q0 17-11.5 28.5T320-120H160q-17 0-28.5-11.5T120-160Zm540-500h120v-120H660v120Zm-60 20v-160q0-17 11.5-28.5T640-840h160q17 0 28.5 11.5T840-800v160q0 17-11.5 28.5T800-600H640q-17 0-28.5-11.5T600-640Zm80 520v-120h-80v-80h160v120h80v80H680ZM520-400v-80h160v80H520Zm-160 0v-80h-80v-80h240v80h-80v80h-80Zm40-200v-160h80v80h80v80H400Zm-190-90v-60h60v60h-60Zm0 480v-60h60v60h-60Zm480-480v-60h60v60h-60Z",
+  "radio_button_checked": "M621.5-338.5Q680-397 680-480t-58.5-141.5Q563-680 480-680t-141.5 58.5Q280-563 280-480t58.5 141.5Q397-280 480-280t141.5-58.5ZM480-80q-83 0-156-31.5T197-197q-54-54-85.5-127T80-480q0-83 31.5-156T197-763q54-54 127-85.5T480-880q83 0 156 31.5T763-763q54 54 85.5 127T880-480q0 83-31.5 156T763-197q-54 54-127 85.5T480-80Zm0-80q134 0 227-93t93-227q0-134-93-227t-227-93q-134 0-227 93t-93 227q0 134 93 227t227 93Z",
+  "radio_button_unchecked": "M480-80q-83 0-156-31.5T197-197q-54-54-85.5-127T80-480q0-83 31.5-156T197-763q54-54 127-85.5T480-880q83 0 156 31.5T763-763q54 54 85.5 127T880-480q0 83-31.5 156T763-197q-54 54-127 85.5T480-80Zm0-80q134 0 227-93t93-227q0-134-93-227t-227-93q-134 0-227 93t-93 227q0 134 93 227t227 93Z",
+  "remove_shopping_cart": "M400-640q-17 0-28.5-11.5T360-680q0-17 11.5-28.5T400-720h160q17 0 28.5 11.5T600-680q0 17-11.5 28.5T560-640H400ZM223.5-103.5Q200-127 200-160t23.5-56.5Q247-240 280-240t56.5 23.5Q360-193 360-160t-23.5 56.5Q313-80 280-80t-56.5-23.5Zm400 0Q600-127 600-160t23.5-56.5Q647-240 680-240t56.5 23.5Q760-193 760-160t-23.5 56.5Q713-80 680-80t-56.5-23.5ZM120-800H80q-17 0-28.5-11.5T40-840q0-17 11.5-28.5T80-880h66q11 0 21 6t15 17l159 337h280l145-260q5-10 14-15t20-5q23 0 34.5 19.5t.5 39.5L692-482q-11 20-29.5 31T622-440H324l-44 80h440q17 0 28.5 11.5T760-320q0 17-11.5 28.5T720-280H280q-45 0-68.5-39t-1.5-79l54-98-144-304Z",
+  "rocket": "M319-230q-10-29-18.5-59T287-349l-47 32v119l79-32Zm147-535q-48 51-77 134.5T360-455q0 60 11 117.5t29 97.5h160q18-40 29-97.5T600-455q0-92-29-175.5T494-765q-3-3-6.5-4.5T480-771q-4 0-7.5 1.5T466-765Zm14 325q-33 0-56.5-23.5T400-520q0-33 23.5-56.5T480-600q33 0 56.5 23.5T560-520q0 33-23.5 56.5T480-440Zm161 210 79 32v-119l-47-32q-5 30-13.5 60T641-230ZM511-856q84 72 126.5 177T680-440l84 56q17 11 26.5 29t9.5 38v178q0 21-17.5 33t-37.5 4l-144-58H359l-144 58q-20 8-37.5-4T160-139v-178q0-20 9.5-38t26.5-29l84-56q0-134 42.5-239T449-856q7-5 15-8t16-3q8 0 16 3t15 8Z",
+  "rocket_launch": "M284-506q14-28 29-54t33-52l-56-11-84 84 78 33Zm482-275q-70 2-149.5 41T472-636q-42 42-75 90t-49 90l114 113q42-16 90-49t90-75q65-65 104-144t41-149q0-4-1.5-8t-4.5-7q-3-3-7-4.5t-8-1.5ZM523-597.5q0-33.5 23-56.5t57-23q34 0 57 23t23 56.5q0 33.5-23 56.5t-57 23q-34 0-57-23t-23-56.5ZM512-279l33 79 84-84-11-56q-26 18-52 32.5T512-279Zm351-534q8 110-36 214.5T688-399l20 99q4 20-2 39t-20 33L560-102q-15 15-36 11.5T495-114l-61-143-171-171-143-61q-20-8-24-29t11-36l126-126q14-14 33.5-20t39.5-2l99 20q95-95 199.5-139T819-857q8 1 16 4.5t14 9.5q6 6 9.5 14t4.5 16ZM157-321q35-35 85.5-35.5T328-322q35 35 34.5 85.5T327-151q-48 48-113.5 57T82-76q9-66 18-131.5T157-321Zm57 56q-17 17-23.5 41T180-175q25-4 49-10t41-23q12-12 13-29t-11-29q-12-12-29-11.5T214-265Z",
+  "rule": "m680-264-76 76q-11 11-28 11t-28-11q-11-11-11-28t11-28l76-76-76-76q-11-11-11-28t11-28q11-11 28-11t28 11l76 76 76-76q11-11 28-11t28 11q11 11 11 28t-11 28l-76 76 76 76q11 11 11 28t-11 28q-11 11-28 11t-28-11l-76-76Zm-26-369 142-142q12-12 28-11.5t28 12.5q11 12 11 28t-11 28L683-548q-12 12-28 12t-28-12l-86-86q-11-11-11-28t11-28q11-11 28-11t28 11l57 57ZM120-360h280q17 0 28.5 11.5T440-320q0 17-11.5 28.5T400-280H120q-17 0-28.5-11.5T80-320q0-17 11.5-28.5T120-360Zm0-320h280q17 0 28.5 11.5T440-640q0 17-11.5 28.5T400-600H120q-17 0-28.5-11.5T80-640q0-17 11.5-28.5T120-680Z",
+  "schedule": "M520-496v-144q0-17-11.5-28.5T480-680q-17 0-28.5 11.5T440-640v159q0 8 3 15.5t9 13.5l132 132q11 11 28 11t28-11q11-11 11-28t-11-28L520-496ZM480-80q-83 0-156-31.5T197-197q-54-54-85.5-127T80-480q0-83 31.5-156T197-763q54-54 127-85.5T480-880q83 0 156 31.5T763-763q54 54 85.5 127T880-480q0 83-31.5 156T763-197q-54 54-127 85.5T480-80Zm0-400Zm0 320q133 0 226.5-93.5T800-480q0-133-93.5-226.5T480-800q-133 0-226.5 93.5T160-480q0 133 93.5 226.5T480-160Z",
+  "search": "M380-320q-109 0-184.5-75.5T120-580q0-109 75.5-184.5T380-840q109 0 184.5 75.5T640-580q0 44-14 83t-38 69l224 224q11 11 11 28t-11 28q-11 11-28 11t-28-11L532-372q-30 24-69 38t-83 14Zm0-80q75 0 127.5-52.5T560-580q0-75-52.5-127.5T380-760q-75 0-127.5 52.5T200-580q0 75 52.5 127.5T380-400Z",
+  "sell": "M856-390 570-104q-12 12-27 18t-30 6q-15 0-30-6t-27-18L103-457q-11-11-17-25.5T80-513v-287q0-33 23.5-56.5T160-880h287q16 0 31 6.5t26 17.5l352 353q12 12 17.5 27t5.5 30q0 15-5.5 29.5T856-390ZM513-160l286-286-353-354H160v286l353 354ZM260-640q25 0 42.5-17.5T320-700q0-25-17.5-42.5T260-760q-25 0-42.5 17.5T200-700q0 25 17.5 42.5T260-640Zm220 160Z",
+  "settings": "M433-80q-27 0-46.5-18T363-142l-9-66q-13-5-24.5-12T307-235l-62 26q-25 11-50 2t-39-32l-47-82q-14-23-8-49t27-43l53-40q-1-7-1-13.5v-27q0-6.5 1-13.5l-53-40q-21-17-27-43t8-49l47-82q14-23 39-32t50 2l62 26q11-8 23-15t24-12l9-66q4-26 23.5-44t46.5-18h94q27 0 46.5 18t23.5 44l9 66q13 5 24.5 12t22.5 15l62-26q25-11 50-2t39 32l47 82q14 23 8 49t-27 43l-53 40q1 7 1 13.5v27q0 6.5-2 13.5l53 40q21 17 27 43t-8 49l-48 82q-14 23-39 32t-50-2l-60-26q-11 8-23 15t-24 12l-9 66q-4 26-23.5 44T527-80h-94Zm7-80h79l14-106q31-8 57.5-23.5T639-327l99 41 39-68-86-65q5-14 7-29.5t2-31.5q0-16-2-31.5t-7-29.5l86-65-39-68-99 42q-22-23-48.5-38.5T533-694l-13-106h-79l-14 106q-31 8-57.5 23.5T321-633l-99-41-39 68 86 64q-5 15-7 30t-2 32q0 16 2 31t7 30l-86 65 39 68 99-42q22 23 48.5 38.5T427-266l13 106Zm42-180q58 0 99-41t41-99q0-58-41-99t-99-41q-59 0-99.5 41T342-480q0 58 40.5 99t99.5 41Zm-2-140Z",
+  "shield": "M467-85q-6-1-12-3-135-45-215-166.5T160-516v-189q0-25 14.5-45t37.5-29l240-90q14-5 28-5t28 5l240 90q23 9 37.5 29t14.5 45v189q0 140-80 261.5T505-88q-6 2-12 3t-13 1q-7 0-13-1Zm13-79q104-33 172-132t68-220v-189l-240-90-240 90v189q0 121 68 220t172 132Zm0-316Z",
+  "shopping_cart": "M223.5-103.5Q200-127 200-160t23.5-56.5Q247-240 280-240t56.5 23.5Q360-193 360-160t-23.5 56.5Q313-80 280-80t-56.5-23.5Zm400 0Q600-127 600-160t23.5-56.5Q647-240 680-240t56.5 23.5Q760-193 760-160t-23.5 56.5Q713-80 680-80t-56.5-23.5ZM246-720l96 200h280l110-200H246Zm-38-80h590q23 0 35 20.5t1 41.5L692-482q-11 20-29.5 31T622-440H324l-44 80h440q17 0 28.5 11.5T760-320q0 17-11.5 28.5T720-280H280q-45 0-68-39.5t-2-78.5l54-98-144-304H80q-17 0-28.5-11.5T40-840q0-17 11.5-28.5T80-880h65q11 0 21 6t15 17l27 57Zm134 280h280-280Z",
+  "speed": "M480-316.5q38-.5 56-27.5l169-253q9-14-2.5-25.5T677-625L424-456q-27 18-28.5 55t22.5 61q24 24 62 23.5Zm0-483.5q36 0 71 6t68 19q16 6 34 22.5t10 31.5q-8 15-36 20t-45-1q-25-9-50.5-13.5T480-720q-133 0-226.5 93.5T160-400q0 42 11.5 83t32.5 77h552q23-38 33.5-79t10.5-85q0-26-4.5-51T782-504q-6-17-2-33t18-27q13-10 28.5-6t21.5 18q15 35 23 71.5t9 74.5q1 57-13 109t-41 99q-11 18-30 28t-40 10H204q-21 0-40-10t-30-28q-26-45-40-95.5T80-400q0-83 31.5-155.5t86-127Q252-737 325-768.5T480-800Zm7 313Z",
+  "sports_score": "M360-720h80v-80h-80v80Zm160 0v-80h80v80h-80ZM360-400v-80h80v80h-80Zm320-160v-80h80v80h-80Zm0 160v-80h80v80h-80Zm-160 0v-80h80v80h-80Zm160-320v-80h80v80h-80Zm-240 80v-80h80v80h-80ZM211.5-171.5Q200-183 200-200v-560q0-17 11.5-28.5T240-800q17 0 28.5 11.5T280-760v40h80v80h-80v80h80v80h-80v280q0 17-11.5 28.5T240-160q-17 0-28.5-11.5ZM600-480v-80h80v80h-80Zm-160 0v-80h80v80h-80Zm-80-80v-80h80v80h-80Zm160 0v-80h80v80h-80Zm80-80v-80h80v80h-80Z",
+  "stacks": "M460.5-413.5Q451-416 442-421L104-605q-11-6-15.5-15T84-640q0-11 4.5-20t15.5-15l338-184q9-5 18.5-7.5T480-869q10 0 19.5 2.5T518-859l338 184q11 6 15.5 15t4.5 20q0 11-4.5 20T856-605L518-421q-9 5-18.5 7.5T480-411q-10 0-19.5-2.5ZM480-491l273-149-273-149-273 149 273 149Zm0-149Zm0 309 314-171q2-1 19-5 17 0 28.5 11.5T853-467q0 11-5 20t-16 15L518-261q-9 5-18.5 7.5T480-251q-10 0-19.5-2.5T442-261L128-432q-11-6-16-15t-5-20q0-17 11.5-28.5T147-507q5 0 9.5 1.5t9.5 3.5l314 171Zm0 160 314-171q2-1 19-5 17 0 28.5 11.5T853-307q0 11-5 20t-16 15L518-101q-9 5-18.5 7.5T480-91q-10 0-19.5-2.5T442-101L128-272q-11-6-16-15t-5-20q0-17 11.5-28.5T147-347q5 0 9.5 1.5t9.5 3.5l314 171Z",
+  "stairs": "M417-373h63q17 0 28.5-11.5T520-413v-93h63q17 0 28.5-11.5T623-546v-94h57q17 0 28.5-11.5T720-680q0-17-11.5-28.5T680-720h-97q-17 0-28.5 11.5T543-680v93h-63q-17 0-28.5 11.5T440-547v93h-63q-17 0-28.5 11.5T337-414v94h-57q-17 0-28.5 11.5T240-280q0 17 11.5 28.5T280-240h97q17 0 28.5-11.5T417-280v-93ZM200-120q-33 0-56.5-23.5T120-200v-560q0-33 23.5-56.5T200-840h560q33 0 56.5 23.5T840-760v560q0 33-23.5 56.5T760-120H200Zm0-80h560v-560H200v560Zm0-560v560-560Z",
+  "storage": "M200-160q-33 0-56.5-23.5T120-240q0-33 23.5-56.5T200-320h560q33 0 56.5 23.5T840-240q0 33-23.5 56.5T760-160H200Zm0-480q-33 0-56.5-23.5T120-720q0-33 23.5-56.5T200-800h560q33 0 56.5 23.5T840-720q0 33-23.5 56.5T760-640H200Zm0 240q-33 0-56.5-23.5T120-480q0-33 23.5-56.5T200-560h560q33 0 56.5 23.5T840-480q0 33-23.5 56.5T760-400H200Zm68.5-291.5Q280-703 280-720t-11.5-28.5Q257-760 240-760t-28.5 11.5Q200-737 200-720t11.5 28.5Q223-680 240-680t28.5-11.5Zm0 240Q280-463 280-480t-11.5-28.5Q257-520 240-520t-28.5 11.5Q200-497 200-480t11.5 28.5Q223-440 240-440t28.5-11.5Zm0 240Q280-223 280-240t-11.5-28.5Q257-280 240-280t-28.5 11.5Q200-257 200-240t11.5 28.5Q223-200 240-200t28.5-11.5Z",
+  "storefront": "M201-120q-33 0-56.5-23.5T121-200v-318q-23-21-35.5-54t-.5-72l42-136q8-26 28.5-43t47.5-17h556q27 0 47 16.5t29 43.5l42 136q12 39-.5 71T841-518v318q0 33-23.5 56.5T761-120H201Zm368-440q27 0 41-18.5t11-41.5l-22-140h-78v148q0 21 14 36.5t34 15.5Zm-180 0q23 0 37.5-15.5T441-612v-148h-78l-22 140q-4 24 10.5 42t37.5 18Zm-178 0q18 0 31.5-13t16.5-33l22-154h-78l-40 134q-6 20 6.5 43t41.5 23Zm540 0q29 0 42-23t6-43l-42-134h-76l22 154q3 20 16.5 33t31.5 13ZM201-200h560v-282q-5 2-6.5 2H751q-27 0-47.5-9T663-518q-18 18-41 28t-49 10q-27 0-50.5-10T481-518q-17 18-39.5 28T393-480q-29 0-52.5-10T299-518q-21 21-41.5 29.5T211-480h-4.5q-2.5 0-5.5-2v282Zm560 0H201h560Z",
+  "sync": "M240-478q0 45 17 87.5t53 78.5l10 10v-58q0-17 11.5-28.5T360-400q17 0 28.5 11.5T400-360v160q0 17-11.5 28.5T360-160H200q-17 0-28.5-11.5T160-200q0-17 11.5-28.5T200-240h70l-16-14q-52-46-73-105t-21-119q0-94 48-170.5T337-766q14-8 29.5-1t20.5 23q5 15-.5 30T367-691q-58 32-92.5 88.5T240-478Zm480-4q0-45-17-87.5T650-648l-10-10v58q0 17-11.5 28.5T600-560q-17 0-28.5-11.5T560-600v-160q0-17 11.5-28.5T600-800h160q17 0 28.5 11.5T800-760q0 17-11.5 28.5T760-720h-70l16 14q49 49 71.5 106.5T800-482q0 94-48 170.5T623-194q-14 8-29.5 1T573-216q-5-15 .5-30t19.5-23q58-32 92.5-88.5T720-482Z",
+  "timeline": "M120-240q-33 0-56.5-23.5T40-320q0-33 23.5-56.5T120-400h10.5q4.5 0 9.5 2l182-182q-2-5-2-9.5V-600q0-33 23.5-56.5T400-680q33 0 56.5 23.5T480-600q0 2-2 20l102 102q5-2 9.5-2h21q4.5 0 9.5 2l142-142q-2-5-2-9.5V-640q0-33 23.5-56.5T840-720q33 0 56.5 23.5T920-640q0 33-23.5 56.5T840-560h-10.5q-4.5 0-9.5-2L678-420q2 5 2 9.5v10.5q0 33-23.5 56.5T600-320q-33 0-56.5-23.5T520-400v-10.5q0-4.5 2-9.5L420-522q-5 2-9.5 2H400q-2 0-20-2L198-340q2 5 2 9.5v10.5q0 33-23.5 56.5T120-240Z",
+  "tips_and_updates": "m855-615-35-16q-6-3-6-9t6-9l35-16 16-35q3-6 9-6t9 6l16 35 35 16q6 3 6 9t-6 9l-35 16-16 35q-3 6-9 6t-9-6l-16-35ZM722-802l-62-29q-6-3-6-9t6-9l62-29 29-62q3-6 9-6t9 6l29 62 62 29q6 3 6 9t-6 9l-62 29-29 62q-3 6-9 6t-9-6l-29-62ZM303.5-103.5Q280-127 280-160h160q0 33-23.5 56.5T360-80q-33 0-56.5-23.5ZM240-200q-17 0-28.5-11.5T200-240q0-17 11.5-28.5T240-280h240q17 0 28.5 11.5T520-240q0 17-11.5 28.5T480-200H240Zm-30-120q-69-41-109.5-110T60-580q0-125 87.5-212.5T360-880q125 0 212.5 87.5T660-580q0 81-40.5 150T510-320H210Zm24-80h252q45-32 69.5-79T580-580q0-92-64-156t-156-64q-92 0-156 64t-64 156q0 54 24.5 101t69.5 79Zm126 0Z",
+  "toggle_on": "M280-240q-100 0-170-70T40-480q0-100 70-170t170-70h400q100 0 170 70t70 170q0 100-70 170t-170 70H280Zm0-80h400q66 0 113-47t47-113q0-66-47-113t-113-47H280q-66 0-113 47t-47 113q0 66 47 113t113 47Zm485-75q35-35 35-85t-35-85q-35-35-85-35t-85 35q-35 35-35 85t35 85q35 35 85 35t85-35Zm-285-85Z",
+  "trending_up": "M108-255q-12-12-11.5-28.5T108-311l211-214q23-23 57-23t57 23l103 104 208-206h-64q-17 0-28.5-11.5T640-667q0-17 11.5-28.5T680-707h160q17 0 28.5 11.5T880-667v160q0 17-11.5 28.5T840-467q-17 0-28.5-11.5T800-507v-64L593-364q-23 23-57 23t-57-23L376-467 164-255q-11 11-28 11t-28-11Z",
+  "tune": "M451.5-131.5Q440-143 440-160v-160q0-17 11.5-28.5T480-360q17 0 28.5 11.5T520-320v40h280q17 0 28.5 11.5T840-240q0 17-11.5 28.5T800-200H520v40q0 17-11.5 28.5T480-120q-17 0-28.5-11.5ZM160-200q-17 0-28.5-11.5T120-240q0-17 11.5-28.5T160-280h160q17 0 28.5 11.5T360-240q0 17-11.5 28.5T320-200H160Zm131.5-171.5Q280-383 280-400v-40H160q-17 0-28.5-11.5T120-480q0-17 11.5-28.5T160-520h120v-40q0-17 11.5-28.5T320-600q17 0 28.5 11.5T360-560v160q0 17-11.5 28.5T320-360q-17 0-28.5-11.5ZM480-440q-17 0-28.5-11.5T440-480q0-17 11.5-28.5T480-520h320q17 0 28.5 11.5T840-480q0 17-11.5 28.5T800-440H480Zm131.5-171.5Q600-623 600-640v-160q0-17 11.5-28.5T640-840q17 0 28.5 11.5T680-800v40h120q17 0 28.5 11.5T840-720q0 17-11.5 28.5T800-680H680v40q0 17-11.5 28.5T640-600q-17 0-28.5-11.5ZM160-680q-17 0-28.5-11.5T120-720q0-17 11.5-28.5T160-760h320q17 0 28.5 11.5T520-720q0 17-11.5 28.5T480-680H160Z",
+  "verified": "m438-452-58-57q-11-11-27.5-11T324-508q-11 11-11 28t11 28l86 86q12 12 28 12t28-12l170-170q12-12 11.5-28T636-592q-12-12-28.5-12.5T579-593L438-452ZM326-90l-58-98-110-24q-15-3-24-15.5t-7-27.5l11-113-75-86q-10-11-10-26t10-26l75-86-11-113q-2-15 7-27.5t24-15.5l110-24 58-98q8-13 22-17.5t28 1.5l104 44 104-44q14-6 28-1.5t22 17.5l58 98 110 24q15 3 24 15.5t7 27.5l-11 113 75 86q10 11 10 26t-10 26l-75 86 11 113q2 15-7 27.5T802-212l-110 24-58 98q-8 13-22 17.5T584-74l-104-44-104 44q-14 6-28 1.5T326-90Zm52-72 102-44 104 44 56-96 110-26-10-112 74-84-74-86 10-112-110-24-58-96-102 44-104-44-56 96-110 24 10 112-74 86 74 84-10 114 110 24 58 96Zm102-318Z",
+  "visibility": "M607.5-372.5Q660-425 660-500t-52.5-127.5Q555-680 480-680t-127.5 52.5Q300-575 300-500t52.5 127.5Q405-320 480-320t127.5-52.5Zm-204-51Q372-455 372-500t31.5-76.5Q435-608 480-608t76.5 31.5Q588-545 588-500t-31.5 76.5Q525-392 480-392t-76.5-31.5ZM235.5-272Q125-344 61-462q-5-9-7.5-18.5T51-500q0-10 2.5-19.5T61-538q64-118 174.5-190T480-800q134 0 244.5 72T899-538q5 9 7.5 18.5T909-500q0 10-2.5 19.5T899-462q-64 118-174.5 190T480-200q-134 0-244.5-72ZM480-500Zm207.5 160.5Q782-399 832-500q-50-101-144.5-160.5T480-720q-113 0-207.5 59.5T128-500q50 101 144.5 160.5T480-280q113 0 207.5-59.5Z",
+  "warning": "M109-120q-11 0-20-5.5T75-140q-5-9-5.5-19.5T75-180l370-640q6-10 15.5-15t19.5-5q10 0 19.5 5t15.5 15l370 640q6 10 5.5 20.5T885-140q-5 9-14 14.5t-20 5.5H109Zm69-80h604L480-720 178-200Zm330.5-51.5Q520-263 520-280t-11.5-28.5Q497-320 480-320t-28.5 11.5Q440-297 440-280t11.5 28.5Q463-240 480-240t28.5-11.5Zm0-120Q520-383 520-400v-120q0-17-11.5-28.5T480-560q-17 0-28.5 11.5T440-520v120q0 17 11.5 28.5T480-360q17 0 28.5-11.5ZM480-460Z",
+  "waving_hand": "M680-39q-17 0-28.5-12T640-80q0-17 11.5-28.5T680-120q66 0 113-47t47-113q0-17 12-29t29-12q17 0 28.5 12t11.5 29q0 100-70.5 170.5T680-39ZM80-640q-17 0-29-11.5T39-680q0-100 70.5-170.5T280-921q17 0 29 11.5t12 28.5q0 17-12 29t-29 12q-66 0-113 47t-47 113q0 17-11.5 28.5T80-640Zm701-115q0 16-12 28L515-472q-11 12-27.5 11.5T459-472q-12-12-12-28.5t12-28.5l254-254q12-12 28-12t28 12q12 12 12 28Zm71 127.5q0 16.5-12 28.5L614-373q-11 11-27.5 11T558-373q-12-12-12.5-28.5T557-430l226-226q12-12 28.5-12t28.5 12q12 12 12 28.5ZM211-211q-91-91-91-219t91-219l92-92q12-12 28-12t28 12l31 31q7 7 12 14.5t10 15.5l148-149q12-12 28.5-12t28.5 12q12 12 12 28.5T617-772L444-599l-85 84 19 19q46 46 44 110t-49 111l-1 1q-11 11-27.5 11T316-274q-12-12-12-28.5t12-28.5q23-23 25.5-54.5T321-440l-47-46q-12-12-12-28.5t12-28.5l57-56q12-12 12-28.5T331-656l-64 64q-68 68-68 162.5T267-267q68 68 163 68t163-68l239-240q12-12 28.5-12t28.5 12q12 12 12 28.5T889-450L649-211q-91 91-219 91t-219-91Zm219-219Z",
+  "west": "M233-440h607q17 0 28.5-11.5T880-480q0-17-11.5-28.5T840-520H233l155-156q11-11 11.5-27.5T388-732q-11-11-28-11t-28 11L108-508q-6 6-8.5 13T97-480q0 8 2.5 15t8.5 13l224 224q11 11 27.5 11t28.5-11q12-12 12-28.5T388-285L233-440Z",
+  "workspace_premium": "m480-483-68 52q-6 5-12 .5t-4-11.5l26-84-70-56q-5-5-3-11.5t9-6.5h86l26-82q2-7 10-7t10 7l26 82h85q7 0 9.5 6.5T608-582l-71 56 26 84q2 7-4 11.5t-12-.5l-67-52Zm0 363L293-58q-20 7-36.5-5T240-95v-254q-38-42-59-96t-21-115q0-134 93-227t227-93q134 0 227 93t93 227q0 61-21 115t-59 96v254q0 20-16.5 32T667-58l-187-62Zm170-270q70-70 70-170t-70-170q-70-70-170-70t-170 70q-70 70-70 170t70 170q70 70 170 70t170-70ZM320-159l160-41 160 41v-124q-35 20-75.5 31.5T480-240q-44 0-84.5-11.5T320-283v124Zm160-62Z",
+};
+
+function iconSVG(name, size) {
+  size = size || 20;
+  var d = ICON_PATHS[name] || ICON_PATHS['warning'];
+  return '<svg viewBox="0 -960 960 960" width="' + size + '" height="' + size + '" aria-hidden="true" focusable="false"><path d="' + d + '" fill="currentColor"/></svg>';
+}
+
+var COMPETENCIA = [
+  ['Advanced Coupons', 'Cart Conditions con grupos AND/OR, BOGO nativo, Store Credit, IA generativa (StoreAgent)', 'Todo en un plugin GPLv3 sin fragmentar en add-ons de pago; nuestro "Describe tu promo" da el 80% del valor de StoreAgent sin coste; el ConflictChecker previene su bug documentado de múltiples BOGO auto-aplicados chocando entre sí.'],
+  ['Smart Coupons (StoreApps)', 'Un solo plan con todo incluido, generador masivo de códigos', 'Somos gratuitos (vs. US$129/año); el wizard reduce el "demasiados pasos para actualizar cupones" que citan sus reseñas.'],
+  ['Discount Rules / Disco (Flycart)', 'Líder en instalaciones (100k+), ~3 min hasta la primera regla', 'Bajamos a &lt;90s con plantillas + vista previa; resolvemos su deuda en Cart/Checkout Blocks construyendo sobre Store API desde el día uno.'],
+  ['YITH Dynamic Pricing', 'Constructor de condiciones anidadas maduro, rediseño 2.0 con plantillas', 'Gratuitos (vs. licencia anual 129,99€→149,99€); tratamos multi-moneda como caso de primera clase (su bug documentado: solo funciona en USD).'],
+  ['Advanced Dynamic Pricing', 'Actualización de precio en vivo en producto, buena capa gratuita', 'Resolvemos su issue público en GitHub (incompatible con Cart/Checkout Blocks) vía Store API nativa.'],
+  ['FunnelKit (WooFunnels)', 'Barra de progreso gamificada, cupones dinámicos por recuperación de carrito', 'Integramos la gamificación directamente en el motor de descuentos, sin el modelo de precios "innecesariamente complicado" que citan sus reseñas.'],
+  ['Iconic (IconicWP)', 'Plugins de propósito único muy pulidos (checkout, cross-sell)', 'Su consolidación forzosa en Liquid Web (2026) generó incertidumbre de marca; ofrecemos continuidad como plugin independiente GPLv3.'],
+  ['Conditional Discounts / Booster Plus', 'Gratuitos, descuentos por rol sin paywall; amplitud de módulos', 'Conditional Discounts está en modo legacy incompatible con HPOS; Booster es "buenas funciones, mal codificado" según sus propias reseñas — nosotros tenemos motor especializado con caché e índices.'],
+  ['YayPricing', 'UI moderna en tarjetas, vista previa de precio en vivo, plantillas como primer paso', 'Igualamos su vista previa pero con producto real de la tienda; añadimos modo sandbox y analítica de canjes verídica, ausentes en su capa gratuita.'],
+  ['Shopify (descuentos nativos)', 'Summary Card en vivo, selección por tarjetas, combinación explícita', 'Traemos ese estándar de pulido al admin de WordPress con componentes nativos, sin exigir código.'],
+  ['Klaviyo / Omnisend (referencia UX)', 'Modo dual wizard/canvas, librería de 100+ plantillas', 'Adoptamos el modo dual (wizard guiado + modo experto) sin abandonar el contexto WooCommerce.']
+];
+
+var COMPONENTES = [
+  ['PromoWizard + StepperNav', 'Contenedor de 4 pasos, navegación atrás sin pérdida de datos, autoguardado de borrador'],
+  ['TemplateGallery', 'Galería de plantillas por objetivo, con plantillas de temporada y búsqueda'],
+  ['ProductCategoryPicker', 'Buscador asíncrono con miniaturas, chips, paginación y debounce (reutilizable en Reglas)'],
+  ['TieredTableEditor', 'Editor de tramos de escalonado con vista previa en vivo'],
+  ['BogoBuyGetPicker / BundleBuilder / GiftPicker', 'Selectores de producto real para 2x1/3x2/bundle/regalo'],
+  ['CodeInput', 'Generador de código + verificación de unicidad en vivo (promos y WC_Coupon de cualquier origen)'],
+  ['LivePreviewPanel / SummaryCard', 'Recalcula precio antes/después sobre producto real, badge y resumen en lenguaje natural'],
+  ['ConflictChecker', 'Semáforo pre-publicación de solapamientos y errores de configuración'],
+  ['SandboxMode', 'Activa la promo solo para el admin vía cookie firmada'],
+  ['MaterialIcon', 'Renderiza el ícono Material Symbol con ejes FILL/wght/GRAD/opsz'],
+  ['PromoStatsPanel', 'Analítica real por promoción: canjes, descuento acumulado, ingresos asistidos, sparkline 30 días']
+];
+
+var ICONS_CURRENT = [
+  ['percent', 'Descuento porcentual'], ['attach_money', 'Descuento fijo'], ['rocket_launch', 'Precio de lanzamiento'],
+  ['counter_2', '2x1'], ['counter_3', '3x2'], ['stacks', 'Segunda unidad con descuento'],
+  ['stairs', 'Escalonado por monto/cantidad'], ['package_2', 'Bundle / combo'], ['sports_score', 'Envío gratis con umbral'],
+  ['local_shipping', 'Envío gratis con cupón'], ['waving_hand', 'Cupón de bienvenida'], ['card_giftcard', 'Regalo por compra'],
+  ['loyalty', 'Puntos / cashback'], ['bolt', 'Oferta flash con contador'], ['alternate_email', 'Descuento por captura de datos']
+];
+
+var ICONS_NEW = [
+  ['qr_code_2', 'Cupón por URL/QR'], ['account_balance_wallet', 'Crédito de tienda'], ['add_shopping_cart', 'BOGO cruzado (X ≠ Y)'],
+  ['cake', 'Cumpleaños / aniversario'], ['timeline', 'Barra de progreso hacia recompensa'], ['remove_shopping_cart', 'Recuperación de carrito abandonado'],
+  ['workspace_premium', 'Precio por rol / mayorista (VIP)'], ['confirmation_number', 'Códigos únicos en lote'],
+  ['sell', 'Liquidación de temporada'], ['diversity_3', 'Referidos'], ['casino', 'Ruleta gamificada (spin-the-wheel)']
+];
+
+var ICONS_UI = [
+  ['featured_seasonal_and_gifts', 'Módulo Promociones'], ['schedule', 'Programada'], ['draft', 'Borrador'],
+  ['content_copy', 'Duplicar'], ['archive', 'Archivar'], ['search', 'Buscar'], ['warning', 'Conflicto'], ['monitoring', 'Analítica']
+];
+
+var TEMPLATES = [
+  ['bolt', 'Black Friday -20% toda la tienda', 'Descuento porcentual', '20%, scope "Toda la tienda", fechas del fin de semana de noviembre, sin código, badge "BLACK FRIDAY"'],
+  ['counter_3', '3x2 en categoría', 'Segunda/tercera unidad', 'Compra 3, paga 2, scope "Categorías específicas" a elegir, sin límite de usos'],
+  ['local_shipping', 'Envío gratis desde $50', 'Envío gratis con umbral', 'Umbral equivalente a $50, mensaje "¡Te faltan {monto} para envío gratis!", barra de progreso activada'],
+  ['waving_hand', 'Cupón de bienvenida 10%', 'Descuento porcentual con código', '10%, condición "primera compra", 1 uso por cliente, código autogenerado "BIENVENIDO10"'],
+  ['bolt', 'Oferta flash 24h', 'Flash con contador', 'Ventana de 24h desde publicación, contador visible en frontend, badge "FLASH"'],
+  ['card_giftcard', 'Regalo por compra +$80', 'Regalo por compra (BOGO)', 'Compra mínima equivalente a $80, producto de regalo a elegir, 1 por cliente'],
+  ['stairs', 'Escalonado por cantidad', 'Escalonado (bulk)', 'Tabla precargada: 3–5 uds → 10%, 6+ uds → 15%'],
+  ['package_2', 'Combo ahorra 15%', 'Bundle / combo', '2+ productos a elegir, precio de set = -15% sobre la suma individual'],
+  ['sell', 'Liquidación de temporada', 'Descuento porcentual', '30–50%, scope "Categorías específicas", badge "LIQUIDACIÓN", sin fecha de fin fija'],
+  ['workspace_premium', 'VIP mayorista -12%', 'Precio por rol (nuevo)', 'Rol "wholesale_customer", 12%, sin código, sin límite']
+];
+
+var DIFERENCIADORES = [
+  ['visibility', 'Vista previa WYSIWYG con datos reales', 'Ningún competidor evaluado muestra el precio antes/después sobre un producto real mientras se edita, con el mismo motor que corre en producción.'],
+  ['sync', 'Modo Simulador — "Probar en mi tienda"', 'Activa la promo solo para el admin vía cookie firmada; convierte la prueba en parte del flujo.'],
+  ['hub', 'Doble materialización transparente', 'Cada promo con código ES un WC_Coupon real; cada promo automática ES una fila probada del motor de Reglas.'],
+  ['rule', 'Detector de conflictos pre-publicación', 'Previene la clase de bugs documentados en Advanced Coupons (BOGO chocando) y Flycart (bundles mal calculados).'],
+  ['tips_and_updates', '"Describe tu promo" en lenguaje natural', 'Sin coste ni IA de pago, a diferencia de StoreAgent de Advanced Coupons.'],
+  ['devices', 'Compatible con Cart/Checkout Blocks de fábrica', 'Mientras Advanced Dynamic Pricing tiene un issue público abierto y Flycart lo etiqueta "en desarrollo".'],
+  ['speed', 'Benchmark de rendimiento publicado (WP-CLI)', 'Ningún competidor evaluado publica cifras propias; la queja de rendimiento es la más citada del nicho.'],
+  ['payments', 'Multi-moneda correcto de fábrica', 'Probado explícitamente contra Aelia/WOOCS/WPML, vs. el bug documentado de YITH ("solo funciona en USD").'],
+  ['handshake', 'Todo incluido, gratis, GPLv3', 'Sin fragmentación en add-ons de pago, respuesta directa a la crítica más repetida contra Advanced Coupons.'],
+  ['category', 'Modo dual wizard / experto', 'El 90% de los casos vía wizard guiado; power users acceden sin fricción al motor de Reglas avanzado.'],
+  ['verified', 'Accesibilidad WCAG 2.2 AA auditada', 'Ningún competidor analizado la declara.'],
+  ['casino', 'Gamificación nativa en el mismo motor', 'Barra de progreso y ruleta con captura de email, sin necesitar un plugin aparte como exige la competencia adyacente.']
+];
+
+var METRICAS = [
+  ['rule', 'Verdad funcional', '0%', '100%', 'Promociones activas que producen un descuento verificable en WC_Cart'],
+  ['schedule', 'Tiempo a la 1ª promo (TTFP)', '—', '&lt;90s', 'Usando plantilla; techo a batir: ~3 min de Disco/Flycart'],
+  ['dashboard', 'Finalización del wizard', '—', '&gt;80%', 'Y &gt;60% de promociones creadas desde plantilla'],
+  ['database', 'Pérdida de datos por concurrencia', 'riesgo hoy', '0', 'Prueba de escrituras paralelas en CI'],
+  ['speed', 'Rendimiento p95', '—', '&lt;30ms', 'Con 50 promos activas y 500 productos; &lt;1ms sin promos activas'],
+  ['monitoring', 'Exactitud de analítica de canjes', 'nunca sube', '100%', 'Conciliación contra WooCommerce Analytics &gt; Coupons'],
+  ['category', 'Cobertura de tipos ejecutables', '0/15', '15/15 + 10 nuevos', 'Todos con "recipe" declarativo probado'],
+  ['verified', 'Fuente de verdad del catálogo', '2 (duplicado)', '1', 'El array JS deja de existir, verificado en CI'],
+  ['shield', 'Compatibilidad', 'sin verificar', 'matriz verde', 'HPOS, multisitio, Blocks, coexistencia con otros plugins'],
+  ['rule', 'Migración de datos legacy', '—', '100% verificado', 'Conteo y checksum, 0 pérdidas reportadas'],
+  ['bug_report', 'Tickets "no aplica el descuento"', '100% afectado', '↓ &gt;50%', 'Tras el lanzamiento del puente al motor real']
+];
+
+function el(tag, cls, html) { var e = document.createElement(tag); if (cls) e.className = cls; if (html !== undefined) e.innerHTML = html; return e; }
+
+document.addEventListener('DOMContentLoaded', function () {
+
+  document.querySelectorAll('[data-icon]').forEach(function (n) {
+    n.innerHTML = iconSVG(n.getAttribute('data-icon'), n.getAttribute('data-size'));
+  });
+
+  var tblC = document.getElementById('tbl-competencia');
+  COMPETENCIA.forEach(function (r) {
+    tblC.appendChild(el('tr', null, '<td>' + r[0] + '</td><td>' + r[1] + '</td><td>' + r[2] + '</td>'));
+  });
+
+  var tblComp = document.getElementById('tbl-componentes');
+  COMPONENTES.forEach(function (r) {
+    tblComp.appendChild(el('tr', null, '<td><code style="font-family:var(--mono);font-size:12.5px;">' + r[0] + '</code></td><td>' + r[1] + '</td>'));
+  });
+
+  function iconCard(row, isNew) {
+    return el('div', 'icon-card' + (isNew ? ' new' : ''),
+      '<span class="mi-wrap">' + iconSVG(row[0], 22) + '</span>' +
+      '<span class="txt"><span class="name">' + row[1] + '</span><br><span class="glyph">' + row[0] + '</span></span>');
+  }
+  var gc = document.getElementById('icon-grid-current');
+  ICONS_CURRENT.forEach(function (r) { gc.appendChild(iconCard(r, false)); });
+  var gn = document.getElementById('icon-grid-new');
+  ICONS_NEW.forEach(function (r) { gn.appendChild(iconCard(r, true)); });
+  var gu = document.getElementById('icon-mini-ui');
+  ICONS_UI.forEach(function (r) {
+    gu.appendChild(el('span', 'icon-mini', '<span class="mi-wrap">' + iconSVG(r[0], 15) + '</span>' + r[1]));
+  });
+
+  var tg = document.getElementById('tmpl-grid');
+  TEMPLATES.forEach(function (r) {
+    tg.appendChild(el('div', 'tmpl-card',
+      '<div class="tmpl-top"><span class="mi-wrap">' + iconSVG(r[0], 17) + '</span><h4>' + r[1] + '</h4></div>' +
+      '<span class="base">' + r[2] + '</span><p>' + r[3] + '</p>'));
+  });
+
+  var dg = document.getElementById('diff-grid');
+  DIFERENCIADORES.forEach(function (r) {
+    dg.appendChild(el('div', 'diff-card',
+      '<span class="mi-wrap">' + iconSVG(r[0], 16) + '</span><div><b>' + r[1] + '</b><p>' + r[2] + '</p></div>'));
+  });
+
+  var mg = document.getElementById('metric-grid');
+  METRICAS.forEach(function (r) {
+    mg.appendChild(el('div', 'metric-tile',
+      '<span class="lbl">' + r[1] + '</span>' +
+      '<div class="metric-flow"><span class="base">' + r[2] + '</span><span class="arrow">→</span><span class="target">' + r[3] + '</span></div>' +
+      '<div class="desc">' + r[4] + '</div>'));
+  });
+
+  var links = Array.prototype.slice.call(document.querySelectorAll('.toc a'));
+  var sections = links.map(function (a) { return document.querySelector(a.getAttribute('href')); });
+  function onScroll() {
+    var y = window.scrollY + 120;
+    var activeIdx = 0;
+    sections.forEach(function (s, i) { if (s && s.offsetTop <= y) activeIdx = i; });
+    links.forEach(function (a, i) { a.classList.toggle('active', i === activeIdx); });
+  }
+  document.addEventListener('scroll', onScroll, { passive: true });
+  onScroll();
+});
+</script>

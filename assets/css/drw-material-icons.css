@@ -1,0 +1,55 @@
+/**
+ * OmniDiscount — Material Symbols Rounded (self-hosted variable font)
+ *
+ * Source: Google Fonts CSS2 API, requested with all four variable axes
+ * (opsz, wght, FILL, GRAD) so a single file can render every weight/fill/
+ * grade/optical-size combination via `font-variation-settings` at runtime —
+ * see assets/js/drw-material-icon.js for the component that sets those.
+ *
+ *   Family:  Material Symbols Rounded
+ *   Version: v358 (as served by fonts.googleapis.com on 2026-07-09)
+ *   File:    assets/fonts/material-symbols-rounded.woff2 (~5.1 MB, full glyph set)
+ *
+ * NOTE ON "SUBSET": this ships the *full* icon set, not a name-based subset.
+ * Google's `&text=` subsetting only works by matching literal characters,
+ * which does not apply to an icon ligature font where each icon is selected
+ * by name (e.g. "delete", "favorite") — subsetting would require knowing in
+ * advance the exact closed list of icon names ever used across the plugin,
+ * which isn't true yet (dashicons have not been mapped/replaced). Once the
+ * dashicons -> Material Symbols swap happens in a later phase and the final
+ * icon-name list is known, this can be regenerated as a much smaller subset
+ * via the Google Fonts API `text=` parameter.
+ *
+ * Usage: enqueue this stylesheet wherever assets/js/drw-material-icon.js's
+ * <MaterialIcon> component is used. Not enqueued anywhere yet (see that
+ * file's header for scope notes).
+ */
+
+@font-face {
+	font-family: 'Material Symbols Rounded';
+	font-style: normal;
+	font-weight: 100 700;
+	font-display: block;
+	src: url('../fonts/material-symbols-rounded.woff2') format('woff2');
+}
+
+.material-symbols-rounded {
+	font-family: 'Material Symbols Rounded';
+	font-weight: normal;
+	font-style: normal;
+	font-size: 24px;
+	line-height: 1;
+	letter-spacing: normal;
+	text-transform: none;
+	display: inline-block;
+	white-space: nowrap;
+	word-wrap: normal;
+	direction: ltr;
+	-webkit-font-feature-settings: 'liga';
+	-webkit-font-smoothing: antialiased;
+	font-variation-settings:
+		'FILL' 0,
+		'wght' 400,
+		'GRAD' 0,
+		'opsz' 24;
+}

@@ -12,23 +12,9 @@
 	var useRef = wp.element.useRef;
 	var apiFetch = wp.apiFetch;
 
-	var PROMO_TYPES = [
-		{ id: 'percent', label: 'Descuento porcentual', icon: 'tag', color: '#5b7b41', needsCode: true, value: 'percent', short: '% OFF' },
-		{ id: 'fixed', label: 'Descuento fijo', icon: 'tag', color: '#3a5a2a', needsCode: true, value: 'money', short: '$ OFF' },
-		{ id: 'launch', label: 'Precio de lanzamiento', icon: 'star-filled', color: '#00a000', needsCode: false, value: 'money', short: 'Lanzamiento' },
-		{ id: '2x1', label: '2x1', icon: 'archive', color: '#00c0b4', needsCode: false, value: 'none', short: '2x1' },
-		{ id: '3x2', label: '3x2', icon: 'archive', color: '#00c0b4', needsCode: false, value: 'none', short: '3x2' },
-		{ id: 'second_unit', label: 'Segunda unidad', icon: 'archive', color: '#008cd4', needsCode: true, value: 'percent', short: '2ª und.' },
-		{ id: 'tiered', label: 'Escalonado por monto', icon: 'chart-bar', color: '#1d5c9e', needsCode: false, value: 'percent', short: 'Escalonado' },
-		{ id: 'bundle', label: 'Bundle / combo', icon: 'screenoptions', color: '#8a32a2', needsCode: false, value: 'money', short: 'Combo' },
-		{ id: 'free_ship_threshold', label: 'Envío gratis con umbral', icon: 'car', color: '#bb8855', needsCode: false, value: 'money', short: 'Envío' },
-		{ id: 'free_ship', label: 'Envío gratis', icon: 'car', color: '#bb8855', needsCode: true, value: 'none', short: 'Envío' },
-		{ id: 'welcome', label: 'Cupón de bienvenida', icon: 'star-filled', color: '#d4af37', needsCode: true, value: 'percent', short: 'Bienvenida' },
-		{ id: 'gift', label: 'Regalo por compra', icon: 'cart', color: '#ff1a80', needsCode: false, value: 'text', short: 'Regalo' },
-		{ id: 'cashback', label: 'Puntos / cashback', icon: 'star-filled', color: '#7a3fa8', needsCode: false, value: 'percent', short: 'Cashback' },
-		{ id: 'flash', label: 'Oferta flash con contador', icon: 'update', color: '#b8412a', needsCode: false, value: 'percent', short: 'Flash' },
-		{ id: 'data_capture', label: 'Descuento por datos', icon: 'groups', color: '#0b7a55', needsCode: true, value: 'percent', short: 'Datos' }
-	];
+	// Single source of truth: Drw\App\Models\PromoTypeRegistry (PHP), preloaded
+	// via wp_localize_script so there is no duplicate catalogue here anymore.
+	var PROMO_TYPES = (window.drwAdminData && window.drwAdminData.promoTypes) || [];
 
 	function getType(id) {
 		for (var i = 0; i < PROMO_TYPES.length; i++) {
@@ -52,12 +38,12 @@
 		if (p.type === 'free_ship' || p.type === 'free_ship_threshold') { return 'Envío gratis'; }
 		if (p.type === '2x1') { return '2×1'; }
 		if (p.type === '3x2') { return '3×2'; }
-		if (t.value === 'percent') { return p.value + '% OFF'; }
-		if (t.value === 'money') {
+		if (t.valueType === 'percent') { return p.value + '% OFF'; }
+		if (t.valueType === 'currency') {
 			if (p.type === 'bundle' || p.type === 'launch') { return fmtCOP(p.value); }
 			return '−' + fmtCOP(p.value);
 		}
-		if (t.value === 'text') { return p.giftText || 'Regalo'; }
+		if (t.valueType === 'text') { return p.giftText || 'Regalo'; }
 		return t.short;
 	}
 
@@ -68,12 +54,29 @@
 		});
 	}
 
+	// Human-readable label for a promo's `scope`, which may be either the
+	// legacy free-form string or the new { target, ids } object produced by
+	// the wizard's Paso 1.
+	function scopeSummary(scope) {
+		if (!scope) { return ''; }
+		if (typeof scope === 'string') { return scope; }
+		if (typeof scope === 'object') {
+			var target = scope.target || 'all';
+			var n = Array.isArray(scope.ids) ? scope.ids.length : 0;
+			if (target === 'products') { return n === 1 ? '1 producto' : n + ' productos'; }
+			if (target === 'category') { return n === 1 ? '1 categoría' : n + ' categorías'; }
+			return 'Toda la tienda';
+		}
+		return '';
+	}
+
 	var toastContainer = null;
 
 	function showToast(msg) {
 		if (!toastContainer) {
 			toastContainer = document.createElement('div');
 			toastContainer.className = 'drw-toasts';
+			toastContainer.setAttribute('aria-live', 'polite');
 			document.body.appendChild(toastContainer);
 		}
 		var toast = document.createElement('div');
@@ -112,7 +115,7 @@
 						el('span', { className: 'drw-promo-name' }, p.name),
 						p.home && el('span', { className: 'drw-status-badge active' }, 'En portada')
 					),
-					el('div', { className: 'drw-promo-type-label' }, t.label + (p.scope ? ' · ' + p.scope : ''))
+					el('div', { className: 'drw-promo-type-label' }, t.label + (scopeSummary(p.scope) ? ' · ' + scopeSummary(p.scope) : ''))
 				),
 				el('button', {
 					className: 'drw-sw' + (p.active ? ' on' : ''),
@@ -189,7 +192,7 @@
 			name: '', code: '', type: 'percent', value: 10, scope: 'Todo el carrito',
 			minAmount: 0, limitGlobal: 0, limitUser: 1,
 			start: new Date().toISOString().slice(0, 10), end: '',
-			active: true, home: false, priority: 5, cartMessage: '', giftText: '', uses: 0
+			active: true, home: false, exclusive: false, excludeSaleItems: false, showInMinicart: false, priority: 5, cartMessage: '', giftText: '', uses: 0
 		};
 
 		var initial = promo ? Object.assign({}, promo) : defaultPromo;
@@ -277,14 +280,14 @@
 					),
 
 					el('div', { className: 'drw-fields-row' },
-						t.value === 'percent' && el('div', { className: 'drw-field' },
+						t.valueType === 'percent' && el('div', { className: 'drw-field' },
 							el('label', null, 'Porcentaje de descuento'),
 							el('div', { style: { display: 'flex', alignItems: 'center', gap: 8 } },
 								el('input', { type: 'number', value: f.value, onChange: function (e) { set('value', e.target.value); }, style: { flex: 1 } }),
 								el('span', { className: 'drw-field-hint' }, '%')
 							)
 						),
-						t.value === 'money' && el('div', { className: 'drw-field' },
+						t.valueType === 'currency' && el('div', { className: 'drw-field' },
 							el('label', null,
 								f.type === 'bundle' ? 'Precio del combo (COP)' :
 								f.type === 'launch' ? 'Precio de lanzamiento (COP)' :
@@ -292,15 +295,22 @@
 							),
 							el('input', { type: 'number', value: f.value, onChange: function (e) { set('value', e.target.value); } })
 						),
-						t.value === 'text' && el('div', { className: 'drw-field' },
+						t.valueType === 'text' && el('div', { className: 'drw-field' },
 							el('label', null, 'Regalo incluido'),
 							el('input', { value: f.giftText || '', onChange: function (e) { set('giftText', e.target.value); }, placeholder: 'Ej. Bolsa reutilizable' })
 						),
 						el('div', { className: 'drw-field' },
 							el('label', null, 'Aplica a'),
-							el('select', { value: f.scope, onChange: function (e) { set('scope', e.target.value); } },
-								SCOPE_OPTIONS.map(function (s) { return el('option', { key: s, value: s }, s); })
-							)
+							// If this promo was created in the wizard, `scope` is a
+							// { target, ids } object; keep it intact in state (so a
+							// save round-trips it untouched) and only show a plain
+							// read-out here. Legacy string scopes use the select.
+							(f.scope && typeof f.scope === 'object')
+								? el('div', { className: 'drw-field-hint', style: { padding: '10px 0' } },
+									scopeSummary(f.scope) + ' — usa el asistente para cambiar el alcance.')
+								: el('select', { value: f.scope, onChange: function (e) { set('scope', e.target.value); } },
+									SCOPE_OPTIONS.map(function (s) { return el('option', { key: s, value: s }, s); })
+								)
 						)
 					),
 
@@ -326,8 +336,8 @@
 						),
 						el('div', { className: 'drw-field' },
 							el('label', null, 'Termina'),
-							el('span', { className: 'drw-field-hint' }, 'vacío = permanente'),
-							el('input', { type: 'date', value: f.end, onChange: function (e) { set('end', e.target.value); } })
+							el('input', { type: 'date', value: f.end, onChange: function (e) { set('end', e.target.value); } }),
+							el('span', { className: 'drw-field-hint' }, 'vacío = permanente')
 						)
 					),
 
@@ -336,7 +346,7 @@
 						el('input', { value: f.cartMessage, onChange: function (e) { set('cartMessage', e.target.value); }, placeholder: 'Ej. ¡Descuento aplicado!' })
 					),
 
-					el('div', { style: { display: 'flex', gap: 18, padding: '4px 2px' } },
+					el('div', { style: { display: 'flex', gap: 18, padding: '4px 2px', flexWrap: 'wrap' } },
 						el('label', { className: 'drw-toggle-label' },
 							el('button', { className: 'drw-sw' + (f.active ? ' on' : ''), onClick: function () { set('active', !f.active); } }),
 							' Activa'
@@ -344,6 +354,18 @@
 						el('label', { className: 'drw-toggle-label' },
 							el('button', { className: 'drw-sw' + (f.home ? ' on' : ''), onClick: function () { set('home', !f.home); } }),
 							' Mostrar en portada'
+						),
+						el('label', { className: 'drw-toggle-label' },
+							el('button', { className: 'drw-sw' + (f.exclusive ? ' on' : ''), onClick: function () { set('exclusive', !f.exclusive); } }),
+							' Exclusiva (no combinable con otras promociones)'
+						),
+						el('label', { className: 'drw-toggle-label' },
+							el('button', { className: 'drw-sw' + (f.excludeSaleItems ? ' on' : ''), onClick: function () { set('excludeSaleItems', !f.excludeSaleItems); } }),
+							' No aplica a productos en oferta'
+						),
+						el('label', { className: 'drw-toggle-label' },
+							el('button', { className: 'drw-sw' + (f.showInMinicart ? ' on' : ''), onClick: function () { set('showInMinicart', !f.showInMinicart); } }),
+							' Mostrar en el mini-carrito'
 						)
 					),
 
@@ -370,12 +392,26 @@
 		var editingState = useState(null);
 		var editing = editingState[0];
 		var setEditing = editingState[1];
+		// 'wizard' (default 4-step flow) | 'expert' (classic single-step editor).
+		var editorModeState = useState('wizard');
+		var editorMode = editorModeState[0];
+		var setEditorMode = editorModeState[1];
 		var filterState = useState('Todas');
 		var filter = filterState[0];
 		var setFilter = filterState[1];
 		var loadingState = useState(true);
 		var loading = loadingState[0];
 		var setLoading = loadingState[1];
+
+		// One-time legacy migration banner: null while unknown/not-applicable
+		// (nothing rendered), otherwise { legacyCount, migratedCount,
+		// backupExists, needsMigration }. See PromoMigrationController.
+		var legacyState = useState(null);
+		var legacy = legacyState[0];
+		var setLegacy = legacyState[1];
+		var migratingState = useState(false);
+		var migrating = migratingState[0];
+		var setMigrating = migratingState[1];
 
 		function fetchPromos() {
 			apiFetch({ path: '/drw/v1/promos' })
@@ -389,7 +425,51 @@
 				});
 		}
 
-		useEffect(function () { fetchPromos(); }, []);
+		function fetchLegacyStatus() {
+			apiFetch({ path: '/drw/v1/promos/legacy-migration' })
+				.then(function (data) { setLegacy(data); })
+				.catch(function () { setLegacy(null); });
+		}
+
+		useEffect(function () { fetchPromos(); fetchLegacyStatus(); }, []);
+
+		function runLegacyMigration() {
+			if (migrating) { return; }
+			setMigrating(true);
+			apiFetch({ path: '/drw/v1/promos/legacy-migration', method: 'POST' })
+				.then(function (result) {
+					var rejected = (result && result.rejected) || [];
+					if (result.status === 'ok') {
+						showToast('Migradas ' + result.migrated + ' promociones antiguas.');
+					} else if (result.status === 'incomplete') {
+						if (rejected.length > 0) {
+							// These entries failed the same validation gate the
+							// editor uses (bad dates, duplicate code, percentage
+							// > 100, …) and are NEVER inserted, so the migration
+							// can never reach `expected` — retrying will not
+							// recover them. Say so, and surface the first reason,
+							// instead of implying a retry would finish the job.
+							var n = rejected.length;
+							var reason = (rejected[0] && rejected[0].reason) ? ' Motivo: ' + rejected[0].reason : '';
+							showToast(
+								'Se migraron ' + result.migrated + ' de ' + result.expected + '. ' +
+								(n === 1
+									? '1 promoción antigua no se pudo migrar por datos inválidos y no se recuperará al reintentar.'
+									: n + ' promociones antiguas no se pudieron migrar por datos inválidos y no se recuperarán al reintentar.') +
+								reason
+							);
+						} else {
+							showToast('Se migraron ' + result.migrated + ' de ' + result.expected + '. Puedes reintentar sin duplicar nada.');
+						}
+					} else {
+						showToast('No había promociones antiguas por migrar.');
+					}
+					fetchLegacyStatus();
+					fetchPromos();
+				})
+				.catch(function () { showToast('Error al migrar. El respaldo original no se toca; puedes reintentar cuando quieras.'); })
+				.then(function () { setMigrating(false); });
+		}
 
 		function handleToggle(id) {
 			apiFetch({ path: '/drw/v1/promos/' + id + '/toggle', method: 'POST' })
@@ -405,7 +485,14 @@
 						});
 					});
 				})
-				.catch(function () { showToast('Error al cambiar estado'); });
+				.catch(function (err) {
+					// Activating re-validates the stored row (toggle_promo →
+					// validate_promo); a rejected activation returns a specific
+					// {message} explaining why (duplicate code, inverted dates,
+					// percentage > 100, …). Surface it instead of a generic
+					// "Error al cambiar estado" so the merchant knows what to fix.
+					showToast('Error: ' + ((err && err.message) || 'No se pudo cambiar el estado'));
+				});
 		}
 
 		function handleDelete(id) {
@@ -418,15 +505,26 @@
 				.catch(function () { showToast('Error al eliminar'); });
 		}
 
+		function closeEditor() {
+			setEditing(null);
+			setEditorMode('wizard');
+		}
+
+		// Returns the apiFetch promise so the wizard can track its own saving
+		// state. On success the editor is closed (unmounted); on error the
+		// promise still resolves (the .catch handles it) so callers that ignore
+		// the return value — e.g. the classic PromoEditor — never produce an
+		// unhandled rejection. The wizard stays open on error because
+		// closeEditor() only runs in the success branch.
 		function handleSave(payload) {
 			var isNew = !payload.id;
 			var method = isNew ? 'POST' : 'PUT';
 			var path = isNew ? '/drw/v1/promos' : '/drw/v1/promos/' + payload.id;
 
-			apiFetch({ path: path, method: method, data: payload })
+			return apiFetch({ path: path, method: method, data: payload })
 				.then(function () {
 					fetchPromos();
-					setEditing(null);
+					closeEditor();
 					showToast(isNew ? 'Promoción creada' : 'Promoción actualizada');
 				})
 				.catch(function (err) {
@@ -462,6 +560,30 @@
 				el('button', { className: 'drw-btn drw-btn-ghost drw-btn-sm', onClick: onBack },
 					'← Volver a Reglas'
 				)
+			),
+
+			legacy && legacy.needsMigration && el('div', {
+				className: 'drw-legacy-migration-banner',
+				style: {
+					display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, flexWrap: 'wrap',
+					padding: '12px 16px', marginBottom: 16,
+					background: '#fff8e6', border: '1px solid #f0d585', borderRadius: 8
+				}
+			},
+				el('div', null,
+					el('div', { style: { fontWeight: 600, fontSize: 13 } },
+						'Detectamos ' + (legacy.legacyCount - legacy.migratedCount) + ' promoción(es) del sistema anterior sin migrar.'
+					),
+					el('div', { className: 'drw-field-hint' },
+						'Se copian a la tabla nueva sin borrar ni modificar el respaldo original. Es seguro repetir esto las veces que haga falta.'
+					)
+				),
+				el('button', {
+					type: 'button',
+					className: 'drw-btn drw-btn-primary drw-btn-sm',
+					disabled: migrating,
+					onClick: runLegacyMigration
+				}, migrating ? 'Migrando…' : 'Migrar ahora')
 			),
 
 			el('div', { className: 'drw-kpi-row' },
@@ -520,11 +642,21 @@
 				)
 			),
 
-			editing && el(PromoEditor, {
-				promo: editing === 'new' ? null : editing,
-				onClose: function () { setEditing(null); },
-				onSave: handleSave
-			})
+			editing && (
+				(editorMode !== 'expert' && typeof window.DrwPromoWizard === 'function')
+					? el(window.DrwPromoWizard, {
+						promo: editing === 'new' ? null : editing,
+						onClose: closeEditor,
+						onSave: handleSave,
+						// "Modo experto": switch to the classic single-step editor.
+						onExpertMode: function () { setEditorMode('expert'); }
+					})
+					: el(PromoEditor, {
+						promo: editing === 'new' ? null : editing,
+						onClose: closeEditor,
+						onSave: handleSave
+					})
+			)
 		);
 	}
 
