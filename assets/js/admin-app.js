@@ -12,6 +12,7 @@
     const {
         Button,
         TextControl,
+        TextareaControl,
         SelectControl,
         ToggleControl,
         Notice,
@@ -255,6 +256,7 @@
             title: '',
             enabled: true,
             exclusive: false,
+            exclude_sale_items: false,
             priority: 10,
             apply_to: 'all_products',
             filters: {
@@ -397,10 +399,89 @@
                 : screen === 'promos'
                     ? (window.DrwPromosPage ? el(window.DrwPromosPage, { onBack: () => setScreen('list') }) : el('p', null, 'Cargando promociones...'))
                     : screen === 'list'
-                        ? el(RulesList, { rules, onEdit: handleEditRule, onDelete: handleDeleteRule, onToggle: handleToggleStatus })
+                        ? el(DashboardBody, { rules, onEdit: handleEditRule, onDelete: handleDeleteRule, onToggle: handleToggleStatus })
                         : screen === 'templates'
                             ? el(RuleTemplatePicker, { onSelectTemplate: handleSelectTemplate, onStartBlank: handleStartBlank, onCancel: () => setScreen('list') })
                             : el(RuleEditor, { rule: editingRule, setRule: setEditingRule, onSave: handleSaveRule, onCancel: () => setScreen('list'), conditionsSettings: conditionsSettings })
+        );
+    }
+
+    // Short labels for the quick-stats breakdown. Deliberately terser than
+    // RulesList's detailsText (which includes the actual configured values) —
+    // this panel groups rules by discount mechanism, not by their settings.
+    const DRW_ADJUSTMENT_TYPE_LABELS = {
+        percentage: 'Porcentaje',
+        fixed: 'Monto fijo',
+        bulk: 'Por niveles',
+        bogo: 'Compra y lleva (BOGO)',
+        free_shipping: 'Envío gratis',
+        bundle_set: 'Paquete',
+        bundle: 'Paquete'
+    };
+
+    /**
+     * Quick-stats sidebar for the Reglas dashboard.
+     *
+     * Purely derived from the `rules` list already held in DrwApp's state —
+     * no extra network request. Gives the wider dashboard layout a second,
+     * legitimately useful column instead of just stretching the rule list.
+     */
+    function QuickStats({ rules }) {
+        const total = rules.length;
+        const active = rules.filter((rule) => rule.enabled).length;
+        const inactive = total - active;
+
+        const typeCounts = {};
+        rules.forEach((rule) => {
+            const type = rule.adjustments ? rule.adjustments.type : 'percentage';
+            typeCounts[type] = (typeCounts[type] || 0) + 1;
+        });
+        const topTypes = Object.keys(typeCounts)
+            .map((type) => [type, typeCounts[type]])
+            .sort((a, b) => b[1] - a[1])
+            .slice(0, 4);
+
+        return el('aside', { className: 'drw-quick-stats', 'aria-label': 'Resumen de reglas' },
+            el('h3', { className: 'drw-quick-stats-title' }, 'Resumen'),
+            el('div', { className: 'drw-quick-stats-grid' },
+                el('div', { className: 'drw-quick-stat' },
+                    el('span', { className: 'drw-quick-stat-value' }, String(total)),
+                    el('span', { className: 'drw-quick-stat-label' }, total === 1 ? 'Regla' : 'Reglas')
+                ),
+                el('div', { className: 'drw-quick-stat' },
+                    el('span', { className: 'drw-quick-stat-value drw-quick-stat-active' }, String(active)),
+                    el('span', { className: 'drw-quick-stat-label' }, 'Activas')
+                ),
+                el('div', { className: 'drw-quick-stat' },
+                    el('span', { className: 'drw-quick-stat-value drw-quick-stat-inactive' }, String(inactive)),
+                    el('span', { className: 'drw-quick-stat-label' }, 'Inactivas')
+                )
+            ),
+            topTypes.length > 0 && el('div', { className: 'drw-quick-stats-breakdown' },
+                el('h4', { className: 'drw-quick-stats-subtitle' }, 'Tipos de descuento'),
+                topTypes.map(([type, count]) =>
+                    el('div', { key: type, className: 'drw-quick-stats-row' },
+                        el('span', null, DRW_ADJUSTMENT_TYPE_LABELS[type] || type),
+                        el('span', { className: 'drw-quick-stats-count' }, String(count))
+                    )
+                )
+            )
+        );
+    }
+
+    /**
+     * Reglas dashboard body: rule list plus the quick-stats sidebar.
+     *
+     * A plain grid (see .drw-dashboard-grid) so the sidebar only appears once
+     * there is real room for it (min-width: 1300px) and stacks below the list
+     * on narrower admin viewports instead of squeezing either column.
+     */
+    function DashboardBody({ rules, onEdit, onDelete, onToggle }) {
+        return el('div', { className: 'drw-dashboard-grid' },
+            el('div', { className: 'drw-dashboard-main' },
+                el(RulesList, { rules, onEdit, onDelete, onToggle })
+            ),
+            el(QuickStats, { rules })
         );
     }
 
@@ -783,11 +864,16 @@
                         value: rule.priority,
                         onChange: (val) => updateRuleField('priority', parseInt(val) || 10)
                     }),
-                    el('div', { style: { paddingTop: '28px' } },
+                    el('div', { style: { paddingTop: '28px', display: 'flex', flexDirection: 'column', gap: '8px' } },
                         el(ToggleControl, {
                             label: 'Exclusiva (impide que se apliquen otras reglas)',
                             checked: rule.exclusive,
                             onChange: (val) => updateRuleField('exclusive', val)
+                        }),
+                        el(ToggleControl, {
+                            label: 'No aplica a productos en oferta',
+                            checked: rule.exclude_sale_items,
+                            onChange: (val) => updateRuleField('exclude_sale_items', val)
                         })
                     )
                 )
@@ -1520,6 +1606,160 @@
     }
 
     /**
+     * {{variable}} tokens available to each of the popup's two custom-HTML
+     * email templates -- must stay in sync with PopupController's own
+     * render_email_template() call sites (build_custom_confirmation_email_html()
+     * / build_custom_code_reveal_email_html()). Order here is the display
+     * order of the chip row.
+     */
+    const CONFIRM_EMAIL_VARIABLES = ['enlace_confirmacion', 'correo', 'tienda', 'descuento', 'vigencia_dias'];
+    const CODE_EMAIL_VARIABLES    = ['codigo_descuento', 'enlace_tienda', 'correo', 'tienda', 'descuento', 'vigencia_dias'];
+
+    // Legacy fallback for browsers without the async Clipboard API -- same
+    // technique as drw-featured-promos.js's fallbackCopy().
+    function copyPlainText(text) {
+        if (navigator.clipboard && navigator.clipboard.writeText) {
+            return navigator.clipboard.writeText(text).catch(() => copyPlainTextFallback(text));
+        }
+        return Promise.resolve(copyPlainTextFallback(text));
+    }
+
+    function copyPlainTextFallback(text) {
+        const ta = document.createElement('textarea');
+        ta.value = text;
+        ta.setAttribute('readonly', '');
+        ta.style.position = 'absolute';
+        ta.style.left = '-9999px';
+        document.body.appendChild(ta);
+        ta.select();
+        try { document.execCommand('copy'); } catch (e) { /* no-op: best-effort */ }
+        document.body.removeChild(ta);
+    }
+
+    /**
+     * One clickable "{{variable}}" chip. Click copies the exact token text
+     * (braces included) to the clipboard and flashes a brief "¡Copiado!"
+     * confirmation so the merchant can paste it straight into the HTML
+     * textarea without memorising or mistyping the token name.
+     */
+    function VariableChip({ name }) {
+        const [copied, setCopied] = useState(false);
+        const token = '{{' + name + '}}';
+
+        const handleClick = () => {
+            copyPlainText(token).then(() => {
+                setCopied(true);
+                setTimeout(() => setCopied(false), 1600);
+            });
+        };
+
+        return el('button', {
+            type: 'button',
+            className: 'drw-var-chip' + (copied ? ' is-copied' : ''),
+            onClick: handleClick,
+            title: 'Copiar ' + token
+        }, copied ? '¡Copiado!' : token);
+    }
+
+    /**
+     * "Variables disponibles" reference strip shown above the custom-HTML
+     * textarea -- a quiet row of chips, not a wall of text, per this repo's
+     * design-review conventions for reference UI.
+     */
+    function VariableChips({ variables }) {
+        return el('div', { className: 'drw-var-chips' },
+            el('span', { className: 'drw-var-chips-label' }, 'Variables disponibles'),
+            el('div', { className: 'drw-var-chips-list' },
+                variables.map((name) => el(VariableChip, { key: name, name: name }))
+            )
+        );
+    }
+
+    /**
+     * Live preview for the popup's two transactional-email settings
+     * sections: "Correo de confirmación" (template='confirm') and "Correo
+     * con el código" (template='code').
+     *
+     * Debounces 500ms after the merchant stops typing/toggling any draft
+     * field, then POSTs to /drw/v1/popup/preview-email -- the SAME
+     * PopupController::build_confirmation_email_html() /
+     * build_code_reveal_email_html() the real sends use, so what renders
+     * here is byte-for-byte what would actually be mailed (blank field ->
+     * the real Spanish default, not a blank/broken preview; custom-HTML mode
+     * -> real {{variable}} substitution, not raw tokens). The response HTML
+     * is rendered via <iframe srcdoc> (sandboxed: no scripts, no
+     * same-origin access) rather than injected into this page's own DOM, so
+     * the email's own inline styles can never bleed into -- or be bled into
+     * by -- the admin screen around it.
+     */
+    function PopupEmailPreview({ template, subject, heading, intro, html, useCustomHtml, wrapWcChrome }) {
+        const [state, setState] = useState({ status: 'loading', html: '', subject: '', error: '' });
+
+        useEffect(() => {
+            setState((prev) => Object.assign({}, prev, { status: 'loading', error: '' }));
+
+            const timeout = setTimeout(() => {
+                apiFetch({
+                    path: '/drw/v1/popup/preview-email',
+                    method: 'POST',
+                    data: {
+                        template: template || 'confirm',
+                        subject: subject || '',
+                        heading: heading || '',
+                        intro: intro || '',
+                        html: html || '',
+                        use_custom_html: !!useCustomHtml,
+                        wrap_wc_chrome: !!wrapWcChrome
+                    }
+                })
+                    .then((data) => {
+                        setState({ status: 'ready', html: data.html || '', subject: data.subject || '', error: '' });
+                    })
+                    .catch((err) => {
+                        setState((prev) => Object.assign({}, prev, { status: 'error', error: (err && err.message) || 'No se pudo generar la vista previa.' }));
+                    });
+            }, 500);
+
+            return () => clearTimeout(timeout);
+        }, [template, subject, heading, intro, html, useCustomHtml, wrapWcChrome]);
+
+        const isLoading = 'loading' === state.status;
+        const isError   = 'error' === state.status;
+        const iframeTitle = 'code' === template
+            ? 'Vista previa del correo con el código'
+            : 'Vista previa del correo de confirmación';
+
+        return el('div', { className: 'drw-email-preview' },
+            el('p', { className: 'drw-settings-label' }, 'Vista previa'),
+            el('div', { className: 'drw-email-preview-device' },
+                el('div', { className: 'drw-email-preview-chrome' },
+                    el('div', { className: 'drw-email-preview-dots', 'aria-hidden': 'true' },
+                        el('span', null), el('span', null), el('span', null)
+                    ),
+                    el('div', { className: 'drw-email-preview-subject-row', 'aria-live': 'polite' },
+                        el('span', { className: 'drw-email-preview-subject-label' }, 'Asunto'),
+                        isLoading
+                            ? el('span', { className: 'drw-email-preview-skeleton drw-email-preview-skeleton-subject' }, 'Actualizando vista previa…')
+                            : el('span', { className: 'drw-email-preview-subject' }, state.subject)
+                    )
+                ),
+                el('div', { className: 'drw-email-preview-body' },
+                    isError
+                        ? el('p', { className: 'drw-email-preview-error' }, state.error)
+                        : (isLoading && !state.html)
+                            ? el('div', { className: 'drw-email-preview-skeleton drw-email-preview-skeleton-body' })
+                            : el('iframe', {
+                                className: 'drw-email-preview-iframe' + (isLoading ? ' is-refreshing' : ''),
+                                srcDoc: state.html,
+                                sandbox: '',
+                                title: iframeTitle
+                            })
+                )
+            )
+        );
+    }
+
+    /**
      * Global Settings Screen.
      *
      * Reorganised from one long vertical scroll into a wp.components TabPanel
@@ -1799,6 +2039,244 @@
             )
         );
 
+        /* ── Panel: Popup ─────────────────────────────────────────── */
+        const pu = settings.popup || {};
+        const popupPanel = el('div', { className: 'drw-form-section' },
+            el(ToggleControl, {
+                label: 'Activar el popup de captura de correo en la tienda',
+                checked: !!pu.enabled,
+                onChange: (v) => updateSetting('popup.enabled', v)
+            }),
+
+            el('p', { className: 'drw-settings-label' }, 'Contenido'),
+            window.DrwPopupMediaPicker
+                ? el(window.DrwPopupMediaPicker, {
+                    label: 'Imagen del popup',
+                    help: 'Se muestra en la columna izquierda del popup, junto al formulario.',
+                    value: pu.image_url || '',
+                    onChange: (v) => updateSetting('popup.image_url', v)
+                })
+                // Defensive fallback if drw-popup-media-picker.js failed to load for
+                // any reason — image_url must stay editable either way.
+                : el(TextControl, {
+                    label: 'URL de la imagen del popup',
+                    value: pu.image_url || '',
+                    onChange: (v) => updateSetting('popup.image_url', v)
+                }),
+            el(TextControl, {
+                label: 'Título',
+                value: pu.headline || '',
+                placeholder: '10% de descuento en tu primera compra',
+                onChange: (v) => updateSetting('popup.headline', v)
+            }),
+            el(TextControl, {
+                label: 'Texto',
+                value: pu.body_text || '',
+                placeholder: 'Suscríbete y recibe un código exclusivo de bienvenida.',
+                onChange: (v) => updateSetting('popup.body_text', v)
+            }),
+            el('div', { className: 'drw-colors-grid' },
+                el(TextControl, {
+                    label: 'Texto del botón',
+                    value: pu.button_label || '',
+                    placeholder: 'Obtener mi descuento',
+                    onChange: (v) => updateSetting('popup.button_label', v)
+                }),
+                el(TextControl, {
+                    label: 'Aviso legal (opcional)',
+                    value: pu.disclaimer_text || '',
+                    placeholder: 'Solo para nuevos suscriptores. Aplica un uso por persona.',
+                    onChange: (v) => updateSetting('popup.disclaimer_text', v)
+                })
+            ),
+
+            el('p', { className: 'drw-settings-label' }, 'Disparadores'),
+            el('div', { className: 'drw-settings-toggles' },
+                el(ToggleControl, {
+                    label: 'Mostrar tras un retraso de tiempo',
+                    checked: !!pu.delay_enabled,
+                    onChange: (v) => updateSetting('popup.delay_enabled', v)
+                }),
+                el(ToggleControl, {
+                    label: 'Mostrar al detectar intención de salida',
+                    checked: !!pu.exit_intent_enabled,
+                    onChange: (v) => updateSetting('popup.exit_intent_enabled', v)
+                })
+            ),
+            pu.delay_enabled && el('div', { style: { marginTop: '8px', maxWidth: '200px' } },
+                el(TextControl, {
+                    label: 'Retraso (segundos)',
+                    type: 'number',
+                    value: String(pu.delay_seconds != null ? pu.delay_seconds : 8),
+                    onChange: (v) => updateSetting('popup.delay_seconds', parseInt(v, 10) || 0)
+                })
+            ),
+
+            el('p', { className: 'drw-settings-label' }, 'Cupón de bienvenida'),
+            el('div', { className: 'drw-colors-grid' },
+                el(SelectControl, {
+                    label: 'Tipo de descuento',
+                    value: pu.discount_type || 'percent',
+                    options: [
+                        { label: 'Porcentaje', value: 'percent' },
+                        { label: 'Monto fijo', value: 'fixed' }
+                    ],
+                    onChange: (v) => updateSetting('popup.discount_type', v)
+                }),
+                el(TextControl, {
+                    label: 'Valor del descuento',
+                    type: 'number',
+                    value: String(pu.discount_value != null ? pu.discount_value : 10),
+                    onChange: (v) => updateSetting('popup.discount_value', parseFloat(v) || 0)
+                }),
+                el(TextControl, {
+                    label: 'Vigencia (días)',
+                    type: 'number',
+                    value: String(pu.expiry_days != null ? pu.expiry_days : 7),
+                    onChange: (v) => updateSetting('popup.expiry_days', parseInt(v, 10) || 1)
+                }),
+                el(TextControl, {
+                    label: 'Monto mínimo de carrito',
+                    type: 'number',
+                    value: String(pu.min_cart_amount != null ? pu.min_cart_amount : 0),
+                    onChange: (v) => updateSetting('popup.min_cart_amount', parseFloat(v) || 0)
+                })
+            ),
+
+            el('p', { className: 'drw-settings-label' }, 'Revelado y límites'),
+            el(ToggleControl, {
+                label: 'Requerir confirmación por correo antes de revelar el código',
+                checked: !!pu.require_confirmation,
+                onChange: (v) => updateSetting('popup.require_confirmation', v)
+            }),
+            el('div', { className: 'drw-colors-grid' },
+                el(TextControl, {
+                    label: 'No volver a mostrar tras cerrarlo (días)',
+                    type: 'number',
+                    value: String(pu.frequency_cap_days != null ? pu.frequency_cap_days : 7),
+                    onChange: (v) => updateSetting('popup.frequency_cap_days', parseInt(v, 10) || 0)
+                }),
+                el(TextControl, {
+                    label: 'Máximo de cupones emitidos por día',
+                    type: 'number',
+                    value: String(pu.daily_mint_cap != null ? pu.daily_mint_cap : 200),
+                    onChange: (v) => updateSetting('popup.daily_mint_cap', parseInt(v, 10) || 1)
+                })
+            ),
+
+            pu.require_confirmation && el('div', null,
+                el('p', { className: 'drw-settings-label' }, 'Correo de confirmación'),
+                el('p', { className: 'drw-help-text', style: { marginTop: 0 } }, 'Se envía al registrarse cuando la confirmación por correo está activa. Déjalo en blanco para usar el texto predeterminado.'),
+                el(ToggleControl, {
+                    label: 'Usar HTML personalizado',
+                    checked: !!pu.email_confirm_use_custom_html,
+                    onChange: (v) => updateSetting('popup.email_confirm_use_custom_html', v)
+                }),
+                pu.email_confirm_use_custom_html
+                    ? el('div', null,
+                        el(VariableChips, { variables: CONFIRM_EMAIL_VARIABLES }),
+                        el(TextareaControl, {
+                            label: 'HTML del correo',
+                            className: 'drw-email-html-textarea',
+                            rows: 14,
+                            value: pu.email_confirm_html || '',
+                            onChange: (v) => updateSetting('popup.email_confirm_html', v)
+                        })
+                    )
+                    : el('div', null,
+                        el(TextControl, {
+                            label: 'Asunto',
+                            value: pu.email_subject || '',
+                            placeholder: 'Confirma tu correo y obtén tu descuento de bienvenida',
+                            onChange: (v) => updateSetting('popup.email_subject', v)
+                        }),
+                        el(TextControl, {
+                            label: 'Encabezado',
+                            value: pu.email_heading || '',
+                            placeholder: 'Ya casi tienes tu descuento',
+                            onChange: (v) => updateSetting('popup.email_heading', v)
+                        }),
+                        el(TextControl, {
+                            label: 'Texto introductorio',
+                            value: pu.email_intro || '',
+                            placeholder: 'Haz clic en el botón para confirmar tu correo y ver tu código de descuento.',
+                            onChange: (v) => updateSetting('popup.email_intro', v)
+                        })
+                    ),
+                el(ToggleControl, {
+                    label: 'Incluir encabezado y pie de WooCommerce',
+                    checked: !!pu.email_confirm_wrap_wc_chrome,
+                    help: 'Desactívalo para un diseño de borde a borde, sin el encabezado ni el pie de página que WooCommerce añade normalmente a sus correos.',
+                    onChange: (v) => updateSetting('popup.email_confirm_wrap_wc_chrome', v)
+                }),
+                el(PopupEmailPreview, {
+                    template: 'confirm',
+                    subject: pu.email_subject || '',
+                    heading: pu.email_heading || '',
+                    intro: pu.email_intro || '',
+                    html: pu.email_confirm_html || '',
+                    useCustomHtml: !!pu.email_confirm_use_custom_html,
+                    wrapWcChrome: !!pu.email_confirm_wrap_wc_chrome
+                })
+            ),
+
+            pu.require_confirmation && el('div', null,
+                el('p', { className: 'drw-settings-label' }, 'Correo con el código'),
+                el('p', { className: 'drw-help-text', style: { marginTop: 0 } }, 'Se envía justo después de confirmar el correo, con el código de descuento ya listo para usar. Déjalo en blanco para usar el texto predeterminado.'),
+                el(ToggleControl, {
+                    label: 'Usar HTML personalizado',
+                    checked: !!pu.email_code_use_custom_html,
+                    onChange: (v) => updateSetting('popup.email_code_use_custom_html', v)
+                }),
+                pu.email_code_use_custom_html
+                    ? el('div', null,
+                        el(VariableChips, { variables: CODE_EMAIL_VARIABLES }),
+                        el(TextareaControl, {
+                            label: 'HTML del correo',
+                            className: 'drw-email-html-textarea',
+                            rows: 14,
+                            value: pu.email_code_html || '',
+                            onChange: (v) => updateSetting('popup.email_code_html', v)
+                        })
+                    )
+                    : el('div', null,
+                        el(TextControl, {
+                            label: 'Asunto',
+                            value: pu.email_code_subject || '',
+                            placeholder: 'Tu código de descuento de bienvenida',
+                            onChange: (v) => updateSetting('popup.email_code_subject', v)
+                        }),
+                        el(TextControl, {
+                            label: 'Encabezado',
+                            value: pu.email_code_heading || '',
+                            placeholder: '¡Aquí está tu código!',
+                            onChange: (v) => updateSetting('popup.email_code_heading', v)
+                        }),
+                        el(TextControl, {
+                            label: 'Texto introductorio',
+                            value: pu.email_code_intro || '',
+                            placeholder: 'Tu código de descuento de bienvenida ya está listo. Úsalo en tu próxima compra antes de que expire.',
+                            onChange: (v) => updateSetting('popup.email_code_intro', v)
+                        })
+                    ),
+                el(ToggleControl, {
+                    label: 'Incluir encabezado y pie de WooCommerce',
+                    checked: !!pu.email_code_wrap_wc_chrome,
+                    help: 'Desactívalo para un diseño de borde a borde, sin el encabezado ni el pie de página que WooCommerce añade normalmente a sus correos.',
+                    onChange: (v) => updateSetting('popup.email_code_wrap_wc_chrome', v)
+                }),
+                el(PopupEmailPreview, {
+                    template: 'code',
+                    subject: pu.email_code_subject || '',
+                    heading: pu.email_code_heading || '',
+                    intro: pu.email_code_intro || '',
+                    html: pu.email_code_html || '',
+                    useCustomHtml: !!pu.email_code_use_custom_html,
+                    wrapWcChrome: !!pu.email_code_wrap_wc_chrome
+                })
+            )
+        );
+
         /* ── Panel: Condiciones y Filtros Habilitados ──────────────── */
         const conditionsMap = settings.conditions || {};
         const conditionsPanel = el('div', { className: 'drw-form-section' },
@@ -1821,6 +2299,7 @@
             behavior:   behaviorPanel,
             features:   featuresPanel,
             appearance: appearancePanel,
+            popup:      popupPanel,
             conditions: conditionsPanel
         };
 
@@ -1836,6 +2315,7 @@
                     { name: 'behavior',   title: 'Comportamiento' },
                     { name: 'features',   title: 'Características' },
                     { name: 'appearance', title: 'Apariencia' },
+                    { name: 'popup',      title: 'Popup' },
                     { name: 'conditions', title: 'Condiciones y Filtros Habilitados' }
                 ]
             }, (tab) => panels[tab.name] || null),

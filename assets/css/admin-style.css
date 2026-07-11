@@ -3,7 +3,15 @@
     margin-top: 20px;
     font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Oxygen-Sans, Ubuntu, Cantarell, "Helvetica Neue", sans-serif;
     color: #1e1e1e;
-    max-width: 1200px;
+    /* WP admin's #wpbody-content is already sidebar-aware and routinely 1700px+
+       wide on common desktop monitors. A 1200px cap here left a large empty
+       strip to the right of the card at any viewport wider than ~1250px
+       (plus the sidebar). 1600px matches the generous-but-proportional caps
+       competitor WooCommerce plugins use, while `width: 100%` keeps the app
+       from overflowing narrower admin viewports (~1280px laptops). */
+    max-width: 1600px;
+    width: 100%;
+    box-sizing: border-box;
 }
 
 /* Gradients and Containers */
@@ -13,6 +21,125 @@
     box-shadow: 0 10px 30px rgba(0, 0, 0, 0.05);
     padding: 24px;
     border: 1px solid #e2e8f0;
+    /* Establishes a query container so .drw-dashboard-grid below can react to
+       the card's OWN available width, not the browser viewport. WP admin's
+       sidebar can be full-width, icon-only ("Cerrar menú"), or fully hidden
+       on the merchant's choice/screen size, so the same viewport width can
+       leave very different amounts of room here — a viewport media query
+       would get this wrong in either direction. */
+    container-type: inline-size;
+}
+
+@media (min-width: 1300px) {
+    .drw-dashboard {
+        padding: 32px;
+    }
+}
+
+/* Reglas screen body: rule list + quick-stats sidebar. Stacks to a single
+   column until the card itself is genuinely wide enough to hold both
+   without squeezing the rule cards' meta row (priority / applies-to / type
+   badge). 1024px of container width leaves >=650px for the rule list even
+   with the 300px sidebar and 28px gap. */
+.drw-dashboard-grid {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    gap: 28px;
+    align-items: start;
+}
+
+@container (min-width: 1024px) {
+    .drw-dashboard-grid {
+        grid-template-columns: minmax(0, 1fr) 300px;
+    }
+}
+
+.drw-dashboard-main {
+    min-width: 0;
+}
+
+/* Quick-stats sidebar: uses the width freed up by the wider max-width
+   without stretching the rule list itself thin. Real, already-available
+   data (counts derived from the fetched rules) — not decorative filler. */
+.drw-quick-stats {
+    background: #f8fafc;
+    border: 1px solid #e2e8f0;
+    border-radius: 10px;
+    padding: 20px;
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+}
+
+.drw-quick-stats-title {
+    font-size: 13px;
+    font-weight: 600;
+    color: #1e293b;
+    margin: 0;
+}
+
+.drw-quick-stats-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 12px;
+}
+
+.drw-quick-stat {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+
+.drw-quick-stat-value {
+    font-size: 22px;
+    font-weight: 700;
+    color: #1e293b;
+    line-height: 1.2;
+}
+
+.drw-quick-stat-value.drw-quick-stat-active {
+    color: #166534;
+}
+
+.drw-quick-stat-value.drw-quick-stat-inactive {
+    color: #64748b;
+}
+
+.drw-quick-stat-label {
+    font-size: 11px;
+    color: #64748b;
+}
+
+.drw-quick-stats-subtitle {
+    font-size: 11px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    color: #94a3b8;
+    margin: 0 0 10px 0;
+}
+
+.drw-quick-stats-breakdown {
+    border-top: 1px solid #e2e8f0;
+    padding-top: 16px;
+}
+
+.drw-quick-stats-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-size: 13px;
+    color: #334155;
+    padding: 6px 0;
+}
+
+.drw-quick-stats-count {
+    font-weight: 600;
+    color: #1e293b;
+    background: #eff6ff;
+    border-radius: 9999px;
+    padding: 1px 9px;
+    font-size: 12px;
 }
 
 .drw-header {
@@ -71,13 +198,16 @@
     font-size: 12px;
     color: #64748b;
     display: flex;
-    gap: 16px;
+    flex-wrap: wrap;
+    row-gap: 6px;
+    column-gap: 16px;
 }
 
 .drw-rule-meta span {
     display: flex;
     align-items: center;
     gap: 4px;
+    white-space: nowrap;
 }
 
 .drw-rule-actions {
@@ -636,6 +766,209 @@
     outline-offset: 2px;
 }
 
+/* ── Correo de confirmación: live preview (PopupEmailPreview) ───────
+   A small "device" card -- a muted chrome bar (dots + resolved subject,
+   like an email client's message header) sitting on top of the actual
+   rendered HTML in a sandboxed <iframe srcdoc>. Reuses the settings
+   screen's own palette (#e2e8f0 border / #f8fafc surface / #1e293b ink)
+   rather than the Analíticas screen's --drw-* custom properties, which
+   are scoped to #drw-analytics-app and unavailable here. */
+.drw-email-preview {
+    margin-top: 16px;
+}
+
+.drw-email-preview-device {
+    border: 1px solid #e2e8f0;
+    border-radius: 10px;
+    overflow: hidden;
+    background: #ffffff;
+    box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04);
+}
+
+.drw-email-preview-chrome {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 10px 14px;
+    background: #f8fafc;
+    border-bottom: 1px solid #e2e8f0;
+}
+
+.drw-email-preview-dots {
+    display: flex;
+    gap: 5px;
+    flex-shrink: 0;
+}
+
+.drw-email-preview-dots span {
+    width: 7px;
+    height: 7px;
+    border-radius: 999px;
+    background: #cbd5e1;
+}
+
+.drw-email-preview-subject-row {
+    display: flex;
+    align-items: baseline;
+    gap: 8px;
+    min-width: 0;
+    flex: 1;
+}
+
+.drw-email-preview-subject-label {
+    flex-shrink: 0;
+    font-size: 11px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    color: #94a3b8;
+}
+
+.drw-email-preview-subject {
+    font-size: 13px;
+    font-weight: 600;
+    color: #1e293b;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    min-width: 0;
+}
+
+.drw-email-preview-body {
+    position: relative;
+    background: #f1f5f9;
+}
+
+.drw-email-preview-iframe {
+    display: block;
+    width: 100%;
+    height: 360px;
+    border: none;
+    background: #ffffff;
+    opacity: 1;
+    transition: opacity 160ms ease;
+}
+
+.drw-email-preview-iframe.is-refreshing {
+    opacity: 0.55;
+}
+
+.drw-email-preview-error {
+    margin: 0;
+    padding: 32px 20px;
+    text-align: center;
+    font-size: 12px;
+    color: #b91c1c;
+}
+
+/* Skeleton: entry/refresh-only shimmer, mirrors the final shape instead of
+   a generic spinner (same technique as .drw-an-skeleton in the Analíticas
+   panel, re-declared locally since that class's colours are scoped to
+   #drw-analytics-app). */
+.drw-email-preview-skeleton {
+    background: linear-gradient(90deg, #f1f5f9 25%, #f8fafc 37%, #f1f5f9 63%);
+    background-size: 400% 100%;
+    animation: drwEmailPreviewSkeletonPulse 1.6s ease infinite;
+    color: transparent;
+    border-radius: 4px;
+}
+
+.drw-email-preview-skeleton-subject {
+    display: inline-block;
+    width: 220px;
+    max-width: 60%;
+    height: 13px;
+}
+
+.drw-email-preview-skeleton-body {
+    height: 360px;
+}
+
+@keyframes drwEmailPreviewSkeletonPulse {
+    0%   { background-position: 100% 50%; }
+    100% { background-position: 0 50%; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .drw-email-preview-skeleton { animation: none; background: #f1f5f9; }
+    .drw-email-preview-iframe { transition: none; }
+}
+
+/* ── Custom-HTML mode: variable-chip reference row + HTML textarea ──
+   Sits directly above the textarea in custom-HTML mode only. Chips read as
+   a quiet reference strip (small, muted, monospace token text) rather than
+   a row of buttons competing with the real controls -- clicking one copies
+   its exact "{{token}}" text so the merchant never mistypes a variable
+   name into the textarea below. */
+.drw-var-chips {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 8px;
+    margin: 4px 0 10px;
+}
+
+.drw-var-chips-label {
+    font-size: 11px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    color: #94a3b8;
+    flex-shrink: 0;
+}
+
+.drw-var-chips-list {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+}
+
+.drw-var-chip {
+    font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    font-size: 11.5px;
+    line-height: 1;
+    color: #2563eb;
+    background: #eff6ff;
+    border: 1px solid #dbeafe;
+    border-radius: 999px;
+    padding: 5px 10px;
+    cursor: pointer;
+    transition: background 120ms ease, border-color 120ms ease, transform 120ms cubic-bezier(0.23, 1, 0.32, 1);
+}
+
+.drw-var-chip:hover {
+    background: #dbeafe;
+    border-color: #bfdbfe;
+}
+
+.drw-var-chip:active {
+    transform: scale(0.96);
+}
+
+.drw-var-chip:focus-visible {
+    outline: 2px solid #2563eb;
+    outline-offset: 2px;
+}
+
+.drw-var-chip.is-copied {
+    color: #166534;
+    background: #dcfce7;
+    border-color: #bbf7d0;
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .drw-var-chip { transition: none; }
+}
+
+/* Custom-HTML textarea -- monospace so tag/brace structure and
+   {{variable}} tokens are easy to scan, generous height (14 rows) since
+   merchants are pasting full email markup, not a one-line snippet. */
+.drw-email-html-textarea textarea.components-textarea-control__input {
+    font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    font-size: 12.5px;
+    line-height: 1.5;
+}
+
 /* ── Settings tabs (wp.components TabPanel) ──────────────────────── */
 .drw-settings-tabs .components-tab-panel__tabs {
     display: flex;
@@ -731,4 +1064,547 @@
     border-radius: 999px;
     font-size: 12px;
     font-weight: 600;
+}
+
+/* ==========================================================
+   Analíticas — drw-analytics.js
+   Reuses the plugin's existing slate/blue visual language
+   (see .drw-dashboard, .drw-quick-stat*, .drw-badge* above)
+   instead of the paper/leaf palette scoped to the Promos
+   screen (#drw-promos-app in admin-promos.css). Tokens below
+   are named identically (--drw-*) so both palettes share a
+   vocabulary even though their values differ per screen.
+   ========================================================== */
+#drw-analytics-app {
+    --drw-ink:      #1e293b;
+    --drw-txt:      #334155;
+    --drw-muted:    #64748b;
+    --drw-faint:    #94a3b8;
+    --drw-border:   #e2e8f0;
+    --drw-surface:  #f8fafc;
+    --drw-surface-2: #f1f5f9;
+    --drw-accent:   #3b82f6;
+    --drw-accent-2: #2563eb;
+    --drw-accent-soft: #eff6ff;
+    --drw-success:  #16a34a;
+    --drw-success-soft: #dcfce7;
+    --drw-radius:   10px;
+    --drw-radius-lg: 12px;
+
+    margin-top: 20px;
+    max-width: 1600px;
+    width: 100%;
+    box-sizing: border-box;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
+                 Oxygen-Sans, Ubuntu, Cantarell, "Helvetica Neue", sans-serif;
+    color: var(--drw-txt);
+    container-type: inline-size;
+}
+
+#drw-analytics-app *,
+#drw-analytics-app *::before,
+#drw-analytics-app *::after {
+    box-sizing: border-box;
+}
+
+#drw-analytics-app :focus-visible {
+    outline: 2px solid var(--drw-accent-2);
+    outline-offset: 2px;
+}
+
+.drw-an-toolbar {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    margin-bottom: 20px;
+}
+
+.drw-an-toolbar-field {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.drw-an-toolbar-field label {
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--drw-ink);
+}
+
+.drw-an-select {
+    appearance: none;
+    -webkit-appearance: none;
+    background: #fff url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6' viewBox='0 0 10 6'%3E%3Cpath d='M1 1l4 4 4-4' stroke='%2364748b' stroke-width='1.5' fill='none' fill-rule='evenodd'/%3E%3C/svg%3E") no-repeat right 12px center;
+    border: 1px solid var(--drw-border);
+    border-radius: 8px;
+    padding: 7px 32px 7px 12px;
+    font-size: 13px;
+    color: var(--drw-ink);
+    cursor: pointer;
+    transition: border-color 160ms ease;
+}
+
+.drw-an-select:hover {
+    border-color: var(--drw-faint);
+}
+
+.drw-an-meta {
+    font-size: 12px;
+    color: var(--drw-faint);
+}
+
+/* Stat tiles */
+.drw-an-stats {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 14px;
+    margin-bottom: 20px;
+}
+
+@container (min-width: 720px) {
+    .drw-an-stats {
+        grid-template-columns: repeat(4, minmax(0, 1fr));
+    }
+}
+
+.drw-an-stat {
+    background: #fff;
+    border: 1px solid var(--drw-border);
+    border-radius: var(--drw-radius);
+    padding: 16px 18px;
+    min-width: 0;
+}
+
+.drw-an-stat-label {
+    font-size: 11px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    color: var(--drw-faint);
+    margin: 0 0 8px;
+}
+
+.drw-an-stat-value {
+    font-size: 26px;
+    font-weight: 700;
+    color: var(--drw-ink);
+    line-height: 1.15;
+    font-variant-numeric: tabular-nums;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.drw-an-stat-sub {
+    font-size: 12px;
+    color: var(--drw-muted);
+    margin-top: 4px;
+}
+
+/* Panels (chart + ranking cards share this shell) */
+.drw-an-panel {
+    background: #fff;
+    border: 1px solid var(--drw-border);
+    border-radius: var(--drw-radius-lg);
+    padding: 20px;
+    margin-bottom: 20px;
+}
+
+.drw-an-panel-header {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 8px;
+    margin-bottom: 16px;
+}
+
+.drw-an-panel-title {
+    font-size: 15px;
+    font-weight: 700;
+    color: var(--drw-ink);
+    margin: 0;
+}
+
+.drw-an-panel-caption {
+    font-size: 12px;
+    color: var(--drw-faint);
+}
+
+/* Trend chart: lightweight inline SVG bars, no charting dependency. */
+.drw-an-chart-wrap {
+    width: 100%;
+}
+
+.drw-an-chart-svg {
+    display: block;
+    width: 100%;
+    height: 160px;
+    overflow: visible;
+}
+
+.drw-an-bar {
+    fill: var(--drw-accent);
+    transition: fill 120ms ease;
+}
+
+.drw-an-bar:hover {
+    fill: var(--drw-accent-2);
+}
+
+.drw-an-chart-axis {
+    display: flex;
+    justify-content: space-between;
+    margin-top: 8px;
+    font-size: 11px;
+    color: var(--drw-faint);
+    font-variant-numeric: tabular-nums;
+}
+
+.drw-an-empty {
+    padding: 28px 12px;
+    text-align: center;
+    color: var(--drw-faint);
+    font-size: 13px;
+}
+
+/* Ranking cards */
+.drw-an-rankings {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    gap: 20px;
+}
+
+@container (min-width: 900px) {
+    .drw-an-rankings {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+}
+
+.drw-an-rank-group-title {
+    font-size: 13px;
+    font-weight: 700;
+    color: var(--drw-ink);
+    margin: 0 0 10px;
+}
+
+.drw-an-rank-list {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+}
+
+.drw-an-rank-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 8px 0;
+}
+
+.drw-an-rank-row + .drw-an-rank-row {
+    border-top: 1px solid var(--drw-surface-2);
+}
+
+.drw-an-rank-badge {
+    flex-shrink: 0;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 22px;
+    height: 22px;
+    border-radius: 999px;
+    background: var(--drw-surface-2);
+    color: var(--drw-muted);
+    font-size: 11px;
+    font-weight: 700;
+}
+
+.drw-an-rank-info {
+    flex: 1;
+    min-width: 0;
+}
+
+.drw-an-rank-title {
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--drw-ink);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.drw-an-rank-sub {
+    font-size: 11px;
+    color: var(--drw-faint);
+}
+
+.drw-an-rank-deleted {
+    display: inline-block;
+    font-size: 10px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.03em;
+    color: var(--drw-muted);
+    background: var(--drw-surface-2);
+    border-radius: 4px;
+    padding: 1px 5px;
+    margin-left: 4px;
+    vertical-align: middle;
+}
+
+.drw-an-rank-value {
+    flex-shrink: 0;
+    font-size: 13px;
+    font-weight: 700;
+    color: var(--drw-ink);
+    font-variant-numeric: tabular-nums;
+    text-align: right;
+}
+
+/* Loading skeleton: mirrors the final grid shape instead of a generic
+   spinner. Entry-only pulse, respects prefers-reduced-motion. */
+.drw-an-skeleton {
+    background: linear-gradient(90deg, var(--drw-surface-2) 25%, var(--drw-surface) 37%, var(--drw-surface-2) 63%);
+    background-size: 400% 100%;
+    border-radius: var(--drw-radius);
+    animation: drwAnSkeletonPulse 1.6s ease infinite;
+}
+
+@keyframes drwAnSkeletonPulse {
+    0%   { background-position: 100% 50%; }
+    100% { background-position: 0 50%; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .drw-an-skeleton { animation: none; background: var(--drw-surface-2); }
+}
+
+.drw-an-error {
+    background: #fef2f2;
+    border: 1px solid #fecaca;
+    color: #b91c1c;
+    border-radius: var(--drw-radius);
+    padding: 14px 16px;
+    font-size: 13px;
+}
+
+/* ==========================================================
+   Popup — pestaña Configuración → Popup
+   drw-popup-media-picker.js's image preview/picker, scoped to
+   #drw-admin-app's existing hex-value settings palette (see
+   .drw-settings-label / .drw-colors-grid above) rather than the
+   --drw-* token set, which is scoped to #drw-analytics-app only.
+   ========================================================== */
+.drw-popup-media-picker {
+    margin-top: 16px;
+}
+
+.drw-popup-media-empty {
+    display: flex;
+}
+
+.drw-popup-media-preview {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    flex-wrap: wrap;
+}
+
+.drw-popup-media-preview-img {
+    width: 96px;
+    height: 96px;
+    object-fit: cover;
+    border-radius: 8px;
+    border: 1px solid #e2e8f0;
+    background: #f8fafc;
+    flex-shrink: 0;
+}
+
+.drw-popup-media-preview-actions {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+}
+
+/* ==========================================================
+   Popup — Registros del popup (drw-popup-submissions.js)
+   Own submenu screen, same slate/blue token set as Analíticas
+   (#drw-analytics-app above) reproduced locally since this is a
+   different mount point.
+   ========================================================== */
+#drw-popup-submissions-app {
+    --drw-ink:      #1e293b;
+    --drw-txt:      #334155;
+    --drw-muted:    #64748b;
+    --drw-faint:    #94a3b8;
+    --drw-border:   #e2e8f0;
+    --drw-surface:  #f8fafc;
+    --drw-surface-2: #f1f5f9;
+    --drw-accent:   #3b82f6;
+    --drw-accent-2: #2563eb;
+    --drw-radius:   10px;
+    --drw-radius-lg: 12px;
+
+    margin-top: 20px;
+    max-width: 1600px;
+    width: 100%;
+    box-sizing: border-box;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
+                 Oxygen-Sans, Ubuntu, Cantarell, "Helvetica Neue", sans-serif;
+    color: var(--drw-txt);
+}
+
+#drw-popup-submissions-app *,
+#drw-popup-submissions-app *::before,
+#drw-popup-submissions-app *::after {
+    box-sizing: border-box;
+}
+
+#drw-popup-submissions-app :focus-visible {
+    outline: 2px solid var(--drw-accent-2);
+    outline-offset: 2px;
+}
+
+.drw-pop-toolbar {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    margin-bottom: 16px;
+}
+
+.drw-pop-meta {
+    font-size: 12px;
+    color: var(--drw-faint);
+}
+
+.drw-pop-export-link {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--drw-accent-2);
+    text-decoration: none;
+    border: 1px solid var(--drw-border);
+    border-radius: 8px;
+    padding: 7px 14px;
+    background: #fff;
+    transition: border-color 160ms ease, background 160ms ease;
+}
+
+.drw-pop-export-link:hover {
+    border-color: var(--drw-accent-2);
+    background: var(--drw-surface);
+}
+
+.drw-pop-table-wrap {
+    background: #fff;
+    border: 1px solid var(--drw-border);
+    border-radius: var(--drw-radius-lg);
+    overflow-x: auto;
+}
+
+.drw-pop-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 13px;
+    white-space: nowrap;
+}
+
+.drw-pop-table th,
+.drw-pop-table td {
+    padding: 10px 14px;
+    text-align: left;
+    border-bottom: 1px solid var(--drw-surface-2);
+}
+
+.drw-pop-table th {
+    font-size: 11px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    color: var(--drw-faint);
+    background: var(--drw-surface);
+}
+
+.drw-pop-table tbody tr:last-child td {
+    border-bottom: none;
+}
+
+.drw-pop-table tbody tr:hover {
+    background: var(--drw-surface);
+}
+
+.drw-pop-email {
+    font-weight: 600;
+    color: var(--drw-ink);
+}
+
+.drw-pop-badge {
+    display: inline-block;
+    padding: 2px 8px;
+    border-radius: 999px;
+    font-size: 11px;
+    font-weight: 700;
+    white-space: nowrap;
+}
+
+.drw-pop-badge-issued   { background: #dcfce7; color: #166534; }
+.drw-pop-badge-pending  { background: #fef3c7; color: #92400e; }
+.drw-pop-badge-claimed  { background: var(--drw-surface-2); color: var(--drw-muted); }
+
+.drw-pop-code {
+    font-variant-numeric: tabular-nums;
+    font-weight: 600;
+    color: var(--drw-accent-2);
+    text-decoration: none;
+}
+
+.drw-pop-code:hover {
+    text-decoration: underline;
+}
+
+.drw-pop-ip {
+    font-variant-numeric: tabular-nums;
+    color: var(--drw-faint);
+    font-size: 12px;
+}
+
+.drw-pop-pagination {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 12px;
+    margin-top: 16px;
+}
+
+.drw-pop-pagination button {
+    background: #fff;
+    border: 1px solid var(--drw-border);
+    border-radius: 8px;
+    padding: 6px 14px;
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--drw-ink);
+    cursor: pointer;
+}
+
+.drw-pop-pagination button:disabled {
+    opacity: 0.45;
+    cursor: not-allowed;
+}
+
+.drw-pop-pagination button:not(:disabled):hover {
+    border-color: var(--drw-accent-2);
+}
+
+.drw-pop-empty {
+    padding: 40px 12px;
+    text-align: center;
+    color: var(--drw-faint);
+    font-size: 13px;
 }

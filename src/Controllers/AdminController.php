@@ -157,6 +157,14 @@ class AdminController
         wp_enqueue_script('wp-components');
         wp_enqueue_script('wp-api-fetch');
 
+        // wp.media() for the Popup tab's image picker
+        // (drw-popup-media-picker.js). This gated block already covers every
+        // OmniDiscount SPA screen (Reglas/Cupones y Promociones/
+        // Configuración) via $this->hook_suffixes above, so the media
+        // library JS/CSS loads on the Configuración screen without widening
+        // this guard.
+        wp_enqueue_media();
+
         // Enqueue custom CSS
         wp_enqueue_style(
             'drw-admin-style',
@@ -211,6 +219,13 @@ class AdminController
             'drw-product-category-picker',
             DRW_PLUGIN_URL . 'assets/js/drw-product-category-picker.js',
             ['wp-element', 'wp-components', 'wp-api-fetch'],
+            DRW_VERSION,
+            true
+        );
+        wp_enqueue_script(
+            'drw-popup-media-picker',
+            DRW_PLUGIN_URL . 'assets/js/drw-popup-media-picker.js',
+            ['wp-element', 'wp-components'],
             DRW_VERSION,
             true
         );
@@ -395,8 +410,10 @@ class AdminController
 
     /**
      * Render the "Gestionado por OmniDiscount" badge for coupons that were
-     * compiled from a promo (Vía A — carry '_drw_promo_id' post meta).
-     * Plain coupons created by hand render an em dash and stay untouched.
+     * compiled from a promo (Vía A — carry '_drw_promo_id' post meta) or
+     * minted by the email-capture popup (carry '_drw_popup_submission_id' —
+     * see PopupCouponBridge::mint_coupon()). Plain coupons created by hand
+     * render an em dash and stay untouched.
      *
      * @param string $column
      * @param int    $post_id
@@ -407,17 +424,29 @@ class AdminController
             return;
         }
 
-        $promo_id = (new \WC_Coupon($post_id))->get_meta('_drw_promo_id');
-        if (empty($promo_id)) {
-            echo '&#8212;';
+        $coupon = new \WC_Coupon($post_id);
+
+        $promo_id = $coupon->get_meta('_drw_promo_id');
+        if (!empty($promo_id)) {
+            printf(
+                '<span style="display:inline-block;padding:2px 8px;border-radius:10px;background:#eef2ff;color:#4338ca;font-size:11px;font-weight:600;white-space:nowrap;" title="%1$s">%2$s</span>',
+                esc_attr__('Este cupón fue generado automáticamente por una promoción de OmniDiscount.', 'discount-rules-woo'),
+                esc_html__('Gestionado por OmniDiscount', 'discount-rules-woo')
+            );
             return;
         }
 
-        printf(
-            '<span style="display:inline-block;padding:2px 8px;border-radius:10px;background:#eef2ff;color:#4338ca;font-size:11px;font-weight:600;white-space:nowrap;" title="%1$s">%2$s</span>',
-            esc_attr__('Este cupón fue generado automáticamente por una promoción de OmniDiscount.', 'discount-rules-woo'),
-            esc_html__('Gestionado por OmniDiscount', 'discount-rules-woo')
-        );
+        $popup_submission_id = $coupon->get_meta('_drw_popup_submission_id');
+        if (!empty($popup_submission_id)) {
+            printf(
+                '<span style="display:inline-block;padding:2px 8px;border-radius:10px;background:#fef3c7;color:#92400e;font-size:11px;font-weight:600;white-space:nowrap;" title="%1$s">%2$s</span>',
+                esc_attr__('Este cupón fue generado automáticamente por un registro en el popup de bienvenida de OmniDiscount.', 'discount-rules-woo'),
+                esc_html__('Popup de bienvenida', 'discount-rules-woo')
+            );
+            return;
+        }
+
+        echo '&#8212;';
     }
 
     /**

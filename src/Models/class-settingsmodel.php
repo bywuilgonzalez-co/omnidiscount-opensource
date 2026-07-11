@@ -93,6 +93,36 @@ class SettingsModel {
 				'show_minicart_promos'  => true,
 				'round_prices'          => 'standard',
 			),
+			'popup'          => array(
+				'enabled'              => false,
+				'image_url'            => '',
+				'headline'             => '',
+				'body_text'            => '',
+				'button_label'         => '',
+				'disclaimer_text'      => '',
+				'require_confirmation' => false,
+				'delay_enabled'        => true,
+				'delay_seconds'        => 8,
+				'exit_intent_enabled'  => true,
+				'frequency_cap_days'   => 7,
+				'discount_type'        => 'percent', // 'percent' | 'fixed'
+				'discount_value'       => 10.0,
+				'expiry_days'          => 7,
+				'min_cart_amount'      => 0.0,
+				'daily_mint_cap'       => 200,
+				'email_subject'                 => '',
+				'email_heading'                 => '',
+				'email_intro'                   => '',
+				'email_confirm_use_custom_html' => false,
+				'email_confirm_html'            => '',
+				'email_confirm_wrap_wc_chrome'  => true,
+				'email_code_subject'            => '',
+				'email_code_heading'            => '',
+				'email_code_intro'              => '',
+				'email_code_use_custom_html'    => false,
+				'email_code_html'               => '',
+				'email_code_wrap_wc_chrome'     => true,
+			),
 		);
 	}
 
@@ -170,7 +200,7 @@ class SettingsModel {
 			return self::sanitize_scalar( $value );
 		}
 
-		return self::sanitize_against_default( $value, $default );
+		return self::sanitize_against_default( $value, $default, $key );
 	}
 
 	/**
@@ -373,20 +403,58 @@ class SettingsModel {
 	}
 
 	/**
-	 * Sanitize value against default structure.
+	 * Dot-path keys sanitized as URLs (esc_url_raw()) instead of the sanitizer inferred from their default's PHP type.
 	 */
-	private static function sanitize_against_default( $value, $fallback ) {
+	private static $url_paths = array(
+		'popup.image_url',
+	);
+
+	/**
+	 * Dot-path keys sanitized as admin-trusted rich HTML (wp_kses_post())
+	 * instead of the sanitizer inferred from their default's PHP type.
+	 * These are merchant-authored EMAIL BODY templates (custom-HTML mode
+	 * for the popup's confirmation/code-reveal emails) — sanitize_text_field()
+	 * would strip all markup (useless for an HTML email), and esc_url_raw()
+	 * doesn't apply. wp_kses_post() is WordPress's own standard filter for
+	 * this trust level (same as post content): it strips <script>, event-
+	 * handler attributes (onclick etc.), <iframe>, <object>, and any
+	 * disallowed tag, while preserving headings/links/images/tables/inline
+	 * style="" attributes. That last part is deliberate, not an oversight:
+	 * most email clients strip <style> blocks entirely, so only inline
+	 * style="" attributes render reliably across clients — wp_kses_post()
+	 * keeps exactly those and drops <style> blocks, which is actually the
+	 * technically correct behaviour for email HTML, not just "the safest
+	 * available option".
+	 */
+	private static $html_paths = array(
+		'popup.email_confirm_html',
+		'popup.email_code_html',
+	);
+
+	/**
+	 * Sanitize value against default structure. $path is the dot-path of this node, used to route specific keys (e.g. 'popup.image_url') to a non-default sanitizer.
+	 */
+	private static function sanitize_against_default( $value, $fallback, $path = '' ) {
 		if ( is_array( $fallback ) && self::is_assoc( $fallback ) ) {
 			$value = is_array( $value ) ? $value : array();
 			$clean = array();
 			foreach ( $fallback as $sub_key => $sub_default ) {
+				$sub_path = ( '' === $path ) ? (string) $sub_key : $path . '.' . $sub_key;
 				if ( array_key_exists( $sub_key, $value ) ) {
-					$clean[ $sub_key ] = self::sanitize_against_default( $value[ $sub_key ], $sub_default );
+					$clean[ $sub_key ] = self::sanitize_against_default( $value[ $sub_key ], $sub_default, $sub_path );
 				} else {
 					$clean[ $sub_key ] = $sub_default;
 				}
 			}
 			return $clean;
+		}
+
+		if ( in_array( $path, self::$url_paths, true ) ) {
+			return esc_url_raw( (string) $value );
+		}
+
+		if ( in_array( $path, self::$html_paths, true ) ) {
+			return wp_kses_post( (string) $value );
 		}
 
 		if ( is_bool( $fallback ) ) {

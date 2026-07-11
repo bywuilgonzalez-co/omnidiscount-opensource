@@ -90,6 +90,70 @@ class ShortcodeController
             DRW_VERSION,
             true
         );
+
+        $this->enqueue_popup_assets();
+    }
+
+    /**
+     * Enqueue the email-capture popup script and localize the data it needs
+     * to render itself entirely client-side (no server-rendered markup — see
+     * assets/js/drw-popup.js's header comment). Unconditional, like the
+     * other scripts above: the popup settings can be toggled on/off without
+     * a page reload elsewhere on the site, and the script itself is a no-op
+     * when 'popup.enabled' is false (see its init()), so there is no
+     * meaningful cost to always registering it.
+     *
+     * The render/dwell-time token (PopupController::issue_render_token())
+     * is deliberately generated HERE, at page-render time, and not fetched
+     * on demand later — a bot that never fetches this page's HTML at all
+     * never gets a valid signature to replay. Note (round-7 audit fix,
+     * docblock accuracy): "renders" means the SERVER generating this page's
+     * HTML in response to an HTTP request, which happens for any client —
+     * a plain `curl` included, no JS execution required — not a browser
+     * actually displaying the popup; see PopupController's MIN_DWELL_SECONDS
+     * docblock for the precise, non-overstated scope of this guarantee.
+     */
+    private function enqueue_popup_assets()
+    {
+        wp_enqueue_script(
+            'drw-popup',
+            DRW_PLUGIN_URL . 'assets/js/drw-popup.js',
+            [],
+            DRW_VERSION,
+            true
+        );
+
+        $popup_settings = SettingsModel::get_setting('popup', []);
+        $popup_settings = is_array($popup_settings) ? $popup_settings : [];
+        $render_token   = PopupController::issue_render_token();
+
+        $currency_symbol = function_exists('get_woocommerce_currency_symbol')
+            ? html_entity_decode(get_woocommerce_currency_symbol(), ENT_QUOTES)
+            : '$';
+
+        wp_localize_script('drw-popup', 'drwPopupData', [
+            'ajaxUrl'         => admin_url('admin-ajax.php'),
+            'nonce'           => wp_create_nonce(PopupController::NONCE_ACTION),
+            'honeypotField'   => PopupController::HONEYPOT_FIELD,
+            'renderedAt'      => $render_token['rendered_at'],
+            'renderSignature' => $render_token['signature'],
+            'currencySymbol'  => $currency_symbol,
+            'settings'        => [
+                'enabled'             => !empty($popup_settings['enabled']),
+                'imageUrl'            => !empty($popup_settings['image_url']) ? esc_url_raw((string)$popup_settings['image_url']) : '',
+                'headline'            => !empty($popup_settings['headline']) ? (string)$popup_settings['headline'] : '',
+                'bodyText'            => !empty($popup_settings['body_text']) ? (string)$popup_settings['body_text'] : '',
+                'buttonLabel'         => !empty($popup_settings['button_label']) ? (string)$popup_settings['button_label'] : '',
+                'disclaimerText'      => !empty($popup_settings['disclaimer_text']) ? (string)$popup_settings['disclaimer_text'] : '',
+                'requireConfirmation' => !empty($popup_settings['require_confirmation']),
+                'delayEnabled'        => !empty($popup_settings['delay_enabled']),
+                'delaySeconds'        => isset($popup_settings['delay_seconds']) ? max(0, (int)$popup_settings['delay_seconds']) : 8,
+                'exitIntentEnabled'   => !empty($popup_settings['exit_intent_enabled']),
+                'frequencyCapDays'    => isset($popup_settings['frequency_cap_days']) ? max(0, (int)$popup_settings['frequency_cap_days']) : 7,
+                'discountType'        => ('fixed' === ($popup_settings['discount_type'] ?? '')) ? 'fixed' : 'percent',
+                'discountValue'       => isset($popup_settings['discount_value']) ? (float)$popup_settings['discount_value'] : 0.0,
+            ],
+        ]);
     }
 
     /**
