@@ -5,7 +5,7 @@
  * Description: Premium dynamic pricing, discount rules, and promotional coupon engine for WooCommerce.
  * Author: Bywuilgonzalez.com
  * Author URI: https://bywuilgonzalez.com
- * Version: 1.5.0
+ * Version: 1.5.4
  * Text Domain: discount-rules-woo
  * Domain Path: /languages/
  * Requires at least: 5.6
@@ -28,12 +28,24 @@ add_action('before_woocommerce_init', function() {
 });
 
 // Define core constants
-define('DRW_VERSION', '1.5.0');
+define('DRW_VERSION', '1.5.4');
 define('DRW_PLUGIN_PATH', plugin_dir_path(__FILE__));
 define('DRW_PLUGIN_URL', plugin_dir_url(__FILE__));
 define('DRW_PLUGIN_BASENAME', plugin_basename(__FILE__));
 define('DRW_TEXT_DOMAIN', 'discount-rules-woo');
 define('DRW_DB_PREFIX', 'drw_');
+
+// Optional read-only GitHub token for the private updater repo, baked into
+// the distributed ZIP at release-build time (.github/workflows/build-release.yml).
+// This file is generated only by that workflow and is never committed --
+// it will not exist in dev/Local environments or in old pre-token copies of
+// the plugin. When absent, Updater.php falls back to unauthenticated,
+// public-repo-style behavior with no fatal errors.
+$drw_github_token_config = DRW_PLUGIN_PATH . 'src/Config/github-token.php';
+if (file_exists($drw_github_token_config)) {
+    require_once $drw_github_token_config;
+}
+unset($drw_github_token_config);
 
 // Check and load Composer autoload
 $autoload_file = DRW_PLUGIN_PATH . 'vendor/autoload.php';

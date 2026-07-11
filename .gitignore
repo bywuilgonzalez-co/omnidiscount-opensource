@@ -23,3 +23,8 @@ scratch/
 .gemini/
 .cursor/
 .trae/
+
+# Generated only by .github/workflows/build-release.yml at release-build
+# time (bakes in the DRW_UPDATER_GH_TOKEN secret for the private updater
+# repo). Must never be committed locally.
+src/Config/github-token.php
