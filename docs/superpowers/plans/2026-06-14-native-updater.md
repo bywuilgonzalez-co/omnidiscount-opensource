@@ -78,7 +78,7 @@ class Updater
                 $obj->plugin = DRW_PLUGIN_BASENAME;
                 $obj->new_version = $remote_version;
                 $obj->package = !empty($release->zipball_url) ? $release->zipball_url : '';
-                $obj->url = 'https://github.com/bywuilgonzalez-co/discount-rules-woo';
+                $obj->url = 'https://github.com/bywuilgonzalez-co/omnidiscount-opensource';
 
                 if (!isset($transient->response)) {
                     $transient->response = [];
@@ -120,7 +120,7 @@ class Updater
         $res->slug = 'discount-rules-woo';
         $res->version = $remote_version;
         $res->author = '<a href="https://bywuilgonzalez.com">Bywuilgonzalez.com</a>';
-        $res->homepage = 'https://github.com/bywuilgonzalez-co/discount-rules-woo';
+        $res->homepage = 'https://github.com/bywuilgonzalez-co/omnidiscount-opensource';
         $res->download_link = !empty($release->zipball_url) ? $release->zipball_url : '';
         $res->trunk = !empty($release->zipball_url) ? $release->zipball_url : '';
 
@@ -189,7 +189,7 @@ class Updater
     {
         $release = get_transient('drw_github_latest_release');
         if (false === $release) {
-            $url = 'https://api.github.com/repos/bywuilgonzalez-co/discount-rules-woo/releases/latest';
+            $url = 'https://api.github.com/repos/bywuilgonzalez-co/omnidiscount-opensource/releases/latest';
             $response = wp_remote_get($url, [
                 'headers' => [
                     'User-Agent' => 'WordPress/' . get_bloginfo('version') . '; DiscountRulesWooUpdater'

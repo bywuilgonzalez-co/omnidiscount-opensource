@@ -11,9 +11,9 @@ class Updater
     /**
      * GitHub "owner/repo" slug that serves as the update-distribution channel.
      *
-     * This is the private repo going forward. The old public repo
-     * (bywuilgonzalez-co/discount-rules-woo) is frozen and no longer used
-     * as an active update source.
+     * This is the private repo going forward. The public repo
+     * (bywuilgonzalez-co/omnidiscount-opensource) is frozen and no longer
+     * used as an active update source.
      */
     const GITHUB_REPO = 'bywuilgonzalez-co/omnidiscount-pro';
 

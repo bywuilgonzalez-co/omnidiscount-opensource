@@ -11,8 +11,8 @@ Thank you for your interest in contributing to this plugin.
 ## Setup
 
 ```bash
-git clone https://github.com/bywuilgonzalez-co/discount-rules-woo.git
-cd discount-rules-woo
+git clone https://github.com/bywuilgonzalez-co/omnidiscount-opensource.git
+cd omnidiscount-opensource
 ```
 
 No build step is required for PHP files. The compiled React admin app (`assets/js/admin-app.js`) is committed to the repository.
