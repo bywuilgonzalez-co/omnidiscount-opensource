@@ -226,6 +226,9 @@ class PromoModel
         $row['limit_user']   = !empty($row['limit_user']) ? (int)$row['limit_user'] : null;
         $row['active']       = (int)$row['active'] === 1;
         $row['home']         = (int)$row['home'] === 1;
+        $row['exclusive']    = (int)$row['exclusive'] === 1;
+        $row['exclude_sale_items'] = (int)$row['exclude_sale_items'] === 1;
+        $row['show_in_minicart'] = (int)$row['show_in_minicart'] === 1;
 
         $row['scope']        = !empty($row['scope']) ? json_decode($row['scope'], true) : null;
         $row['gift_config']  = !empty($row['gift_config']) ? json_decode($row['gift_config'], true) : null;

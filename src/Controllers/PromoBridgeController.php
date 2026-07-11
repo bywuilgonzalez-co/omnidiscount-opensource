@@ -341,6 +341,21 @@ class PromoBridgeController
     /**
      * Compile a stored promo into a real, engine-visible discount.
      *
+     * Dispatches purely on the promo's CURRENT type — but a merchant can
+     * freely change an existing promo's type in the admin edit modal (no
+     * read-only guard on the type field for edit mode), and update_promo()
+     * only ever calls compile() again (never decompile() first, see
+     * PromosController::update_promo()). Without the cleanup below, flipping
+     * a promo between a rule-compiled type (e.g. 'flash') and a coupon type
+     * (e.g. 'welcome') would leave the OTHER channel's artifact (an old
+     * WC_Coupon or wp_drw_rules row) orphaned: still enabled/live forever
+     * with no UI to turn it off, and CartController::reserve_promo_usage()
+     * (which resolves purely off the promo's stored rule_id, not its type)
+     * would keep enforcing/reserving usage against the stale row too.
+     * Detect and decompile the OTHER channel's stale artifact first, so at
+     * most one artifact is ever live for a given promo (round-8 audit
+     * finding).
+     *
      * @param int $promo_id Promo primary key.
      * @return array|false Result descriptor, or false if the promo is missing.
      */
@@ -351,7 +366,27 @@ class PromoBridgeController
             return false;
         }
 
-        if (PromoTypeRegistry::needs_code($promo['type'])) {
+        $needs_code = PromoTypeRegistry::needs_code($promo['type']);
+
+        if ($needs_code && !empty($promo['rule_id'])) {
+            // Type switched FROM a rule-compiled type TO a coupon type:
+            // the old wp_drw_rules row is now orphaned.
+            $this->decompile_rule($promo);
+            $promo = PromoModel::get_promo((int)$promo_id);
+            if (null === $promo) {
+                return false;
+            }
+        } elseif (!$needs_code && !empty($promo['wc_coupon_id'])) {
+            // Type switched FROM a coupon type TO a rule-compiled type:
+            // the old WC_Coupon is now orphaned.
+            $this->decompile_coupon($promo);
+            $promo = PromoModel::get_promo((int)$promo_id);
+            if (null === $promo) {
+                return false;
+            }
+        }
+
+        if ($needs_code) {
             return $this->compile_coupon($promo);
         }
 
@@ -412,6 +447,20 @@ class PromoBridgeController
         $coupon->set_discount_type($data['discount_type']);
         $coupon->set_amount($data['amount']);
         $coupon->set_free_shipping((bool)$data['free_shipping']);
+
+        // Two independent stacking dimensions, each mirrored onto its own
+        // native WooCommerce coupon flag. Both are set explicitly (not only
+        // when true) so toggling either one back off also reverts a REUSED
+        // coupon (see the idempotency branch above) to its default,
+        // non-exclusive behaviour instead of leaving a stale true from an
+        // earlier compile:
+        //   - 'exclusive' (combinable with other coupons/rules) -> individual_use.
+        //   - 'exclude_sale_items' (applies to items already on sale) -> its
+        //     own native flag. Deliberately NOT derived from 'exclusive' --
+        //     a promo may be exclusive without excluding sale items, or vice
+        //     versa, or both, or neither.
+        $coupon->set_individual_use(!empty($promo['exclusive']));
+        $coupon->set_exclude_sale_items(!empty($promo['exclude_sale_items']));
 
         if (null !== $data['date_expires']) {
             $coupon->set_date_expires($data['date_expires']);
@@ -536,21 +585,23 @@ class PromoBridgeController
         $json     = function_exists('wp_json_encode') ? 'wp_json_encode' : 'json_encode';
 
         $db_data = [
-            'enabled'     => !empty($promo['active']) ? 1 : 0,
-            'deleted'     => 0,
-            'exclusive'   => 0,
-            'title'       => $payload['title'],
-            'priority'    => 10,
-            'apply_to'    => $payload['apply_to'],
-            'filters'     => $json($payload['filters']),
-            'conditions'  => $json($payload['conditions']),
-            'adjustments' => $json($payload['adjustments']),
-            'date_from'   => $payload['date_from'],
-            'date_to'     => $payload['date_to'],
-            'usage_limit' => !empty($promo['limit_global']) ? (int)$promo['limit_global'] : null,
-            'source'      => 'promo',
-            'promo_id'    => $promo_id,
-            'modified_at' => current_time('mysql'),
+            'enabled'            => !empty($promo['active']) ? 1 : 0,
+            'deleted'            => 0,
+            'exclusive'          => !empty($promo['exclusive']) ? 1 : 0,
+            'exclude_sale_items' => !empty($promo['exclude_sale_items']) ? 1 : 0,
+            'title'              => $payload['title'],
+            'priority'           => 10,
+            'apply_to'           => $payload['apply_to'],
+            'filters'            => $json($payload['filters']),
+            'conditions'         => $json($payload['conditions']),
+            'adjustments'        => $json($payload['adjustments']),
+            'date_from'          => $payload['date_from'],
+            'date_to'            => $payload['date_to'],
+            'usage_limit'        => !empty($promo['limit_global']) ? (int)$promo['limit_global'] : null,
+            'limit_user'         => !empty($promo['limit_user']) ? (int)$promo['limit_user'] : null,
+            'source'             => 'promo',
+            'promo_id'           => $promo_id,
+            'modified_at'        => current_time('mysql'),
         ];
 
         // Idempotency: one rule per promo.
@@ -578,6 +629,15 @@ class PromoBridgeController
     /**
      * Soft-delete the wp_drw_rules row owned by a promo.
      *
+     * Also clears the promo's own rule_id pointer (mirrors decompile_coupon()
+     * clearing wc_coupon_id) so a stale, soft-deleted row's id never lingers
+     * on the promo row — CartController::reserve_promo_usage() resolves the
+     * rule to reserve against purely from promo['rule_id'], so leaving it set
+     * after decompile would keep that pointer around even though get_rule()
+     * itself already filters deleted=0 and would harmlessly no-op today; a
+     * cleared pointer removes the stale reference outright instead of
+     * relying on that filter as the only backstop (round-8 audit finding).
+     *
      * @param array $promo Formatted promo row.
      * @return array
      */
@@ -593,6 +653,8 @@ class PromoBridgeController
             ['deleted' => 1, 'modified_at' => current_time('mysql')],
             ['promo_id' => $promo_id, 'source' => 'promo']
         );
+
+        PromoModel::update($promo_id, ['rule_id' => null]);
 
         return [
             'via'      => 'B',

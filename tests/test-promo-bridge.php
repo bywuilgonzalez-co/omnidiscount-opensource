@@ -96,6 +96,8 @@ namespace {
         public function set_minimum_amount( $v )       { $this->props['minimum_amount'] = $v; }
         public function set_product_ids( $v )          { $this->props['product_ids'] = $v; }
         public function set_product_categories( $v )   { $this->props['product_categories'] = $v; }
+        public function set_individual_use( $v )       { $this->props['individual_use'] = $v; }
+        public function set_exclude_sale_items( $v )   { $this->props['exclude_sale_items'] = $v; }
         public function update_meta_data( $k, $v )     { $this->meta[ $k ] = $v; }
         public function get_meta( $k )                 { return isset( $this->meta[ $k ] ) ? $this->meta[ $k ] : ''; }
         public function get_id()                       { return $this->id; }
@@ -129,21 +131,23 @@ namespace {
     function make_promo( $overrides = array() ) {
         return array_merge(
             array(
-                'id'           => 1,
-                'name'         => 'Promo de prueba',
-                'code'         => '',
-                'type'         => 'percent',
-                'value'        => 15,
-                'scope'        => null,
-                'min_amount'   => 0,
-                'limit_global' => null,
-                'limit_user'   => null,
-                'date_from'    => null,
-                'date_to'      => null,
-                'active'       => true,
-                'gift_config'  => null,
-                'tier_config'  => null,
-                'wc_coupon_id' => null,
+                'id'                 => 1,
+                'name'               => 'Promo de prueba',
+                'code'               => '',
+                'type'               => 'percent',
+                'value'              => 15,
+                'scope'              => null,
+                'min_amount'         => 0,
+                'limit_global'       => null,
+                'limit_user'         => null,
+                'date_from'          => null,
+                'date_to'            => null,
+                'active'             => true,
+                'exclusive'          => false,
+                'exclude_sale_items' => false,
+                'gift_config'        => null,
+                'tier_config'        => null,
+                'wc_coupon_id'       => null,
             ),
             $overrides
         );
@@ -185,6 +189,112 @@ namespace {
     assert_same( 7, $coupon->meta['_drw_promo_id'], 'The _drw_promo_id meta must point back to the promo.' );
     assert_true( isset( PromoModel::$updated[7]['wc_coupon_id'] ), 'compile() must persist wc_coupon_id back to the promo.' );
     assert_same( $coupon->get_id(), PromoModel::$updated[7]['wc_coupon_id'], 'Persisted wc_coupon_id must match the saved coupon id.' );
+    assert_same( false, $coupon->props['individual_use'], 'A non-exclusive promo must not set individual_use.' );
+    assert_same( false, $coupon->props['exclude_sale_items'], 'A non-exclusive promo must not set exclude_sale_items.' );
+
+    // (a2) exclusive=true, exclude_sale_items left at its default (false) must
+    // flip ONLY individual_use — proves the two native WooCommerce exclusivity
+    // flags are driven by two INDEPENDENT promo fields, not the single old
+    // 'exclusive' flag that used to drive both at once.
+    PromoModel::reset();
+    $GLOBALS['wc_coupon_id_by_code'] = 0;
+    PromoModel::$rows[8] = make_promo( array(
+        'id'        => 8,
+        'code'      => 'VIPONLY',
+        'type'      => 'percent',
+        'value'     => 20,
+        'exclusive' => true,
+    ) );
+    $bridge->compile( 8 );
+    $exclusive_coupon = $GLOBALS['last_saved_coupon'];
+    assert_same( true, $exclusive_coupon->props['individual_use'], 'exclusive=true must set individual_use(true).' );
+    assert_same( false, $exclusive_coupon->props['exclude_sale_items'], 'exclusive=true alone (exclude_sale_items still false) must NOT set exclude_sale_items -- the two flags are independent.' );
+
+    // (a3) toggling exclusive back off must produce false/default flags again
+    // (not a stale true carried over) — proves the setters are driven by the
+    // CURRENT promo value on every compile, not only ever set to true once.
+    PromoModel::reset();
+    $GLOBALS['wc_coupon_id_by_code'] = 0;
+    PromoModel::$rows[8] = make_promo( array(
+        'id'        => 8,
+        'code'      => 'VIPONLY',
+        'type'      => 'percent',
+        'value'     => 20,
+        'exclusive' => false,
+    ) );
+    $bridge->compile( 8 );
+    $reverted_coupon = $GLOBALS['last_saved_coupon'];
+    assert_same( false, $reverted_coupon->props['individual_use'], 'exclusive=false must set individual_use(false).' );
+    assert_same( false, $reverted_coupon->props['exclude_sale_items'], 'exclusive=false must set exclude_sale_items(false).' );
+
+    // (a4) DECOUPLING, combination 1: exclusive=true / exclude_sale_items=false
+    // -> individual_use(true), exclude_sale_items(false). Same as (a2), spelled
+    // out explicitly with exclude_sale_items passed rather than defaulted, so
+    // this case survives even if make_promo()'s default ever changes.
+    PromoModel::reset();
+    $GLOBALS['wc_coupon_id_by_code'] = 0;
+    PromoModel::$rows[9] = make_promo( array(
+        'id'                 => 9,
+        'code'               => 'COMBO1',
+        'type'               => 'percent',
+        'value'              => 20,
+        'exclusive'          => true,
+        'exclude_sale_items' => false,
+    ) );
+    $bridge->compile( 9 );
+    $combo1_coupon = $GLOBALS['last_saved_coupon'];
+    assert_same( true, $combo1_coupon->props['individual_use'], 'Combo exclusive=true/exclude_sale_items=false -> individual_use(true).' );
+    assert_same( false, $combo1_coupon->props['exclude_sale_items'], 'Combo exclusive=true/exclude_sale_items=false -> exclude_sale_items(false).' );
+
+    // (a5) DECOUPLING, combination 2: exclusive=false / exclude_sale_items=true
+    // -> individual_use(false), exclude_sale_items(true). The mirror image of
+    // (a4) -- proves exclude_sale_items can be driven ON while exclusive stays
+    // OFF, which was impossible before the two flags were decoupled.
+    PromoModel::reset();
+    $GLOBALS['wc_coupon_id_by_code'] = 0;
+    PromoModel::$rows[9] = make_promo( array(
+        'id'                 => 9,
+        'code'               => 'COMBO2',
+        'type'               => 'percent',
+        'value'              => 20,
+        'exclusive'          => false,
+        'exclude_sale_items' => true,
+    ) );
+    $bridge->compile( 9 );
+    $combo2_coupon = $GLOBALS['last_saved_coupon'];
+    assert_same( false, $combo2_coupon->props['individual_use'], 'Combo exclusive=false/exclude_sale_items=true -> individual_use(false).' );
+    assert_same( true, $combo2_coupon->props['exclude_sale_items'], 'Combo exclusive=false/exclude_sale_items=true -> exclude_sale_items(true).' );
+
+    // (a6) DECOUPLING, both true and both false -- rounds out every combination.
+    PromoModel::reset();
+    $GLOBALS['wc_coupon_id_by_code'] = 0;
+    PromoModel::$rows[9] = make_promo( array(
+        'id'                 => 9,
+        'code'               => 'COMBO3',
+        'type'               => 'percent',
+        'value'              => 20,
+        'exclusive'          => true,
+        'exclude_sale_items' => true,
+    ) );
+    $bridge->compile( 9 );
+    $combo3_coupon = $GLOBALS['last_saved_coupon'];
+    assert_same( true, $combo3_coupon->props['individual_use'], 'Combo both true -> individual_use(true).' );
+    assert_same( true, $combo3_coupon->props['exclude_sale_items'], 'Combo both true -> exclude_sale_items(true).' );
+
+    PromoModel::reset();
+    $GLOBALS['wc_coupon_id_by_code'] = 0;
+    PromoModel::$rows[9] = make_promo( array(
+        'id'                 => 9,
+        'code'               => 'COMBO4',
+        'type'               => 'percent',
+        'value'              => 20,
+        'exclusive'          => false,
+        'exclude_sale_items' => false,
+    ) );
+    $bridge->compile( 9 );
+    $combo4_coupon = $GLOBALS['last_saved_coupon'];
+    assert_same( false, $combo4_coupon->props['individual_use'], 'Combo both false -> individual_use(false).' );
+    assert_same( false, $combo4_coupon->props['exclude_sale_items'], 'Combo both false -> exclude_sale_items(false).' );
 
     // (b) idempotency: existing coupon we own is reused, not duplicated.
     PromoModel::reset();

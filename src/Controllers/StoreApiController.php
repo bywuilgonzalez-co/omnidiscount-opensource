@@ -224,13 +224,21 @@ class StoreApiController {
      * mini-cart widget (CartController) can render the exact same badges
      * without duplicating it; this thin wrapper keeps the existing internal
      * call sites unchanged. See PromoBadgeHelper::collect() for the full
-     * behaviour contract, including the "applied" caveat.
+     * behaviour contract, including the "applied" caveat and the
+     * $require_minicart_opt_in parameter.
      *
      * @param \WC_Cart $cart
+     * @param bool     $require_minicart_opt_in Forwarded to
+     *   PromoBadgeHelper::collect() — true for the mini-cart drawer badge
+     *   data (get_cart_extension_data()'s 'promos' schema, the only
+     *   consumer of which is the Mini-Cart drawer script), false for the
+     *   Cart/Checkout Block page notices (emit_promo_cart_notices()), which
+     *   are a different surface than the mini-cart and must not be gated by
+     *   a toggle labeled/documented as mini-cart-only.
      * @return array List of badge descriptors.
      */
-    private function collect_promo_badges($cart) {
-        return \Drw\App\Models\PromoBadgeHelper::collect($cart);
+    private function collect_promo_badges($cart, $require_minicart_opt_in = true) {
+        return \Drw\App\Models\PromoBadgeHelper::collect($cart, $require_minicart_opt_in);
     }
 
     /**
@@ -250,6 +258,12 @@ class StoreApiController {
      * wc_has_notice() guards against duplicate notices if this hook fires
      * more than once for the same request.
      *
+     * Deliberately calls collect_promo_badges() with $require_minicart_opt_in
+     * = false: this method renders on the Cart/Checkout Block PAGE, not the
+     * mini-cart drawer, so it must not be silently gated by a promo's
+     * "Mostrar en el mini-carrito" toggle — that opt-in is documented and
+     * labeled as controlling the mini-cart drawer badge only.
+     *
      * @param \WC_Cart $cart
      */
     private function emit_promo_cart_notices($cart) {
@@ -257,7 +271,7 @@ class StoreApiController {
             return;
         }
 
-        foreach ($this->collect_promo_badges($cart) as $badge) {
+        foreach ($this->collect_promo_badges($cart, false) as $badge) {
             $message = $badge['message'];
             if ('' === $message) {
                 continue;

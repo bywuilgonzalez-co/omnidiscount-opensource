@@ -1552,20 +1552,23 @@ class PromosController {
 	 */
 	private function preview_draft( $promo, $type ) {
 		return array(
-			'name'        => isset( $promo['name'] ) ? sanitize_text_field( $promo['name'] ) : '',
-			'code'        => isset( $promo['code'] ) ? strtoupper( sanitize_text_field( $promo['code'] ) ) : '',
-			'type'        => $type,
-			'value'       => isset( $promo['value'] ) ? floatval( $promo['value'] ) : 0,
-			'scope'       => $this->sanitize_scope( isset( $promo['scope'] ) ? $promo['scope'] : '' ),
-			'minAmount'   => isset( $promo['minAmount'] ) ? floatval( $promo['minAmount'] ) : 0,
-			'limitGlobal' => isset( $promo['limitGlobal'] ) ? absint( $promo['limitGlobal'] ) : 0,
-			'limitUser'   => isset( $promo['limitUser'] ) ? absint( $promo['limitUser'] ) : 0,
-			'start'       => isset( $promo['start'] ) ? sanitize_text_field( $promo['start'] ) : '',
-			'end'         => isset( $promo['end'] ) ? sanitize_text_field( $promo['end'] ) : '',
-			'active'      => isset( $promo['active'] ) ? (bool) $promo['active'] : true,
-			'home'        => isset( $promo['home'] ) ? (bool) $promo['home'] : false,
-			'cartMessage' => isset( $promo['cartMessage'] ) ? sanitize_text_field( $promo['cartMessage'] ) : '',
-			'giftText'    => isset( $promo['giftText'] ) ? sanitize_text_field( $promo['giftText'] ) : '',
+			'name'              => isset( $promo['name'] ) ? sanitize_text_field( $promo['name'] ) : '',
+			'code'              => isset( $promo['code'] ) ? strtoupper( sanitize_text_field( $promo['code'] ) ) : '',
+			'type'              => $type,
+			'value'             => isset( $promo['value'] ) ? floatval( $promo['value'] ) : 0,
+			'scope'             => $this->sanitize_scope( isset( $promo['scope'] ) ? $promo['scope'] : '' ),
+			'minAmount'         => isset( $promo['minAmount'] ) ? floatval( $promo['minAmount'] ) : 0,
+			'limitGlobal'       => isset( $promo['limitGlobal'] ) ? absint( $promo['limitGlobal'] ) : 0,
+			'limitUser'         => isset( $promo['limitUser'] ) ? absint( $promo['limitUser'] ) : 0,
+			'start'             => isset( $promo['start'] ) ? sanitize_text_field( $promo['start'] ) : '',
+			'end'               => isset( $promo['end'] ) ? sanitize_text_field( $promo['end'] ) : '',
+			'active'            => isset( $promo['active'] ) ? (bool) $promo['active'] : true,
+			'home'              => isset( $promo['home'] ) ? (bool) $promo['home'] : false,
+			'exclusive'         => isset( $promo['exclusive'] ) ? (bool) $promo['exclusive'] : false,
+			'excludeSaleItems' => isset( $promo['excludeSaleItems'] ) ? (bool) $promo['excludeSaleItems'] : false,
+			'showInMinicart'   => isset( $promo['showInMinicart'] ) ? (bool) $promo['showInMinicart'] : false,
+			'cartMessage'      => isset( $promo['cartMessage'] ) ? sanitize_text_field( $promo['cartMessage'] ) : '',
+			'giftText'         => isset( $promo['giftText'] ) ? sanitize_text_field( $promo['giftText'] ) : '',
 		);
 	}
 
@@ -1843,20 +1846,23 @@ class PromosController {
 	 */
 	public function to_columns( $data ) {
 		return array(
-			'name'         => $data['name'],
-			'code'         => '' !== $data['code'] ? $data['code'] : null,
-			'type'         => $data['type'],
-			'value'        => $data['value'],
-			'scope'        => $this->scope_to_storage( $data['scope'] ),
-			'min_amount'   => $data['minAmount'],
-			'limit_global' => $data['limitGlobal'] ? (int) $data['limitGlobal'] : null,
-			'limit_user'   => $data['limitUser'] ? (int) $data['limitUser'] : null,
-			'date_from'    => '' !== $data['start'] ? $data['start'] : null,
-			'date_to'      => '' !== $data['end'] ? $data['end'] : null,
-			'active'       => $data['active'] ? 1 : 0,
-			'home'         => $data['home'] ? 1 : 0,
-			'cart_message' => $data['cartMessage'],
-			'gift_config'  => array( 'text' => $data['giftText'] ),
+			'name'               => $data['name'],
+			'code'               => '' !== $data['code'] ? $data['code'] : null,
+			'type'               => $data['type'],
+			'value'              => $data['value'],
+			'scope'              => $this->scope_to_storage( $data['scope'] ),
+			'min_amount'         => $data['minAmount'],
+			'limit_global'       => $data['limitGlobal'] ? (int) $data['limitGlobal'] : null,
+			'limit_user'         => $data['limitUser'] ? (int) $data['limitUser'] : null,
+			'date_from'          => '' !== $data['start'] ? $data['start'] : null,
+			'date_to'            => '' !== $data['end'] ? $data['end'] : null,
+			'active'             => $data['active'] ? 1 : 0,
+			'home'               => $data['home'] ? 1 : 0,
+			'exclusive'          => $data['exclusive'] ? 1 : 0,
+			'exclude_sale_items' => $data['excludeSaleItems'] ? 1 : 0,
+			'show_in_minicart'   => $data['showInMinicart'] ? 1 : 0,
+			'cart_message'       => $data['cartMessage'],
+			'gift_config'        => array( 'text' => $data['giftText'] ),
 		);
 	}
 
@@ -1919,23 +1925,26 @@ class PromosController {
 		$gift_text = ( is_array( $gift ) && isset( $gift['text'] ) ) ? (string) $gift['text'] : '';
 
 		return array(
-			'id'          => (int) $row['id'],
-			'name'        => isset( $row['name'] ) ? (string) $row['name'] : '',
-			'code'        => ( isset( $row['code'] ) && null !== $row['code'] ) ? (string) $row['code'] : '',
-			'type'        => isset( $row['type'] ) ? (string) $row['type'] : '',
-			'value'       => isset( $row['value'] ) ? (float) $row['value'] : 0,
-			'scope'       => $scope,
-			'minAmount'   => isset( $row['min_amount'] ) ? (float) $row['min_amount'] : 0,
-			'limitGlobal' => isset( $row['limit_global'] ) ? (int) $row['limit_global'] : 0,
-			'limitUser'   => isset( $row['limit_user'] ) ? (int) $row['limit_user'] : 0,
-			'uses'        => isset( $row['uses'] ) ? (int) $row['uses'] : 0,
-			'start'       => ! empty( $row['date_from'] ) ? substr( $row['date_from'], 0, 10 ) : '',
-			'end'         => ! empty( $row['date_to'] ) ? substr( $row['date_to'], 0, 10 ) : '',
-			'active'      => ! empty( $row['active'] ),
-			'home'        => ! empty( $row['home'] ),
-			'priority'    => 1,
-			'cartMessage' => ( isset( $row['cart_message'] ) && null !== $row['cart_message'] ) ? (string) $row['cart_message'] : '',
-			'giftText'    => $gift_text,
+			'id'               => (int) $row['id'],
+			'name'             => isset( $row['name'] ) ? (string) $row['name'] : '',
+			'code'             => ( isset( $row['code'] ) && null !== $row['code'] ) ? (string) $row['code'] : '',
+			'type'             => isset( $row['type'] ) ? (string) $row['type'] : '',
+			'value'            => isset( $row['value'] ) ? (float) $row['value'] : 0,
+			'scope'            => $scope,
+			'minAmount'        => isset( $row['min_amount'] ) ? (float) $row['min_amount'] : 0,
+			'limitGlobal'      => isset( $row['limit_global'] ) ? (int) $row['limit_global'] : 0,
+			'limitUser'        => isset( $row['limit_user'] ) ? (int) $row['limit_user'] : 0,
+			'uses'             => isset( $row['uses'] ) ? (int) $row['uses'] : 0,
+			'start'            => ! empty( $row['date_from'] ) ? substr( $row['date_from'], 0, 10 ) : '',
+			'end'              => ! empty( $row['date_to'] ) ? substr( $row['date_to'], 0, 10 ) : '',
+			'active'           => ! empty( $row['active'] ),
+			'home'             => ! empty( $row['home'] ),
+			'exclusive'        => ! empty( $row['exclusive'] ),
+			'excludeSaleItems' => ! empty( $row['exclude_sale_items'] ),
+			'showInMinicart'   => ! empty( $row['show_in_minicart'] ),
+			'priority'         => 1,
+			'cartMessage'      => ( isset( $row['cart_message'] ) && null !== $row['cart_message'] ) ? (string) $row['cart_message'] : '',
+			'giftText'         => $gift_text,
 		);
 	}
 
@@ -2175,8 +2184,11 @@ class PromosController {
 		$priority     = max( 1, min( 10, $priority ) );
 
 		// --- booleans -------------------------------------------------------
-		$active = isset( $data['active'] ) ? (bool) $data['active'] : true;
-		$home   = isset( $data['home'] ) ? (bool) $data['home'] : false;
+		$active              = isset( $data['active'] ) ? (bool) $data['active'] : true;
+		$home                = isset( $data['home'] ) ? (bool) $data['home'] : false;
+		$exclusive           = isset( $data['exclusive'] ) ? (bool) $data['exclusive'] : false;
+		$exclude_sale_items = isset( $data['excludeSaleItems'] ) ? (bool) $data['excludeSaleItems'] : false;
+		$show_in_minicart    = isset( $data['showInMinicart'] ) ? (bool) $data['showInMinicart'] : false;
 
 		// --- scope ----------------------------------------------------------
 		// Accepts BOTH the new structured { target, ids } object (produced by
@@ -2189,22 +2201,25 @@ class PromosController {
 		$gift_text    = isset( $data['giftText'] ) ? sanitize_text_field( $data['giftText'] ) : '';
 
 		return array(
-			'name'        => $name,
-			'code'        => $code,
-			'type'        => $type,
-			'value'       => $value,
-			'scope'       => $scope,
-			'minAmount'   => $min_amount,
-			'limitGlobal' => $limit_global,
-			'limitUser'   => $limit_user,
-			'uses'        => 0,
-			'start'       => $start,
-			'end'         => $end,
-			'active'      => $active,
-			'home'        => $home,
-			'priority'    => $priority,
-			'cartMessage' => $cart_message,
-			'giftText'    => $gift_text,
+			'name'             => $name,
+			'code'             => $code,
+			'type'             => $type,
+			'value'            => $value,
+			'scope'            => $scope,
+			'minAmount'        => $min_amount,
+			'limitGlobal'      => $limit_global,
+			'limitUser'        => $limit_user,
+			'uses'             => 0,
+			'start'            => $start,
+			'end'              => $end,
+			'active'           => $active,
+			'home'             => $home,
+			'exclusive'        => $exclusive,
+			'excludeSaleItems' => $exclude_sale_items,
+			'showInMinicart'   => $show_in_minicart,
+			'priority'         => $priority,
+			'cartMessage'      => $cart_message,
+			'giftText'         => $gift_text,
 		);
 	}
 

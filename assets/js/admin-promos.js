@@ -76,6 +76,7 @@
 		if (!toastContainer) {
 			toastContainer = document.createElement('div');
 			toastContainer.className = 'drw-toasts';
+			toastContainer.setAttribute('aria-live', 'polite');
 			document.body.appendChild(toastContainer);
 		}
 		var toast = document.createElement('div');
@@ -191,7 +192,7 @@
 			name: '', code: '', type: 'percent', value: 10, scope: 'Todo el carrito',
 			minAmount: 0, limitGlobal: 0, limitUser: 1,
 			start: new Date().toISOString().slice(0, 10), end: '',
-			active: true, home: false, priority: 5, cartMessage: '', giftText: '', uses: 0
+			active: true, home: false, exclusive: false, excludeSaleItems: false, showInMinicart: false, priority: 5, cartMessage: '', giftText: '', uses: 0
 		};
 
 		var initial = promo ? Object.assign({}, promo) : defaultPromo;
@@ -335,8 +336,8 @@
 						),
 						el('div', { className: 'drw-field' },
 							el('label', null, 'Termina'),
-							el('span', { className: 'drw-field-hint' }, 'vacío = permanente'),
-							el('input', { type: 'date', value: f.end, onChange: function (e) { set('end', e.target.value); } })
+							el('input', { type: 'date', value: f.end, onChange: function (e) { set('end', e.target.value); } }),
+							el('span', { className: 'drw-field-hint' }, 'vacío = permanente')
 						)
 					),
 
@@ -345,7 +346,7 @@
 						el('input', { value: f.cartMessage, onChange: function (e) { set('cartMessage', e.target.value); }, placeholder: 'Ej. ¡Descuento aplicado!' })
 					),
 
-					el('div', { style: { display: 'flex', gap: 18, padding: '4px 2px' } },
+					el('div', { style: { display: 'flex', gap: 18, padding: '4px 2px', flexWrap: 'wrap' } },
 						el('label', { className: 'drw-toggle-label' },
 							el('button', { className: 'drw-sw' + (f.active ? ' on' : ''), onClick: function () { set('active', !f.active); } }),
 							' Activa'
@@ -353,6 +354,18 @@
 						el('label', { className: 'drw-toggle-label' },
 							el('button', { className: 'drw-sw' + (f.home ? ' on' : ''), onClick: function () { set('home', !f.home); } }),
 							' Mostrar en portada'
+						),
+						el('label', { className: 'drw-toggle-label' },
+							el('button', { className: 'drw-sw' + (f.exclusive ? ' on' : ''), onClick: function () { set('exclusive', !f.exclusive); } }),
+							' Exclusiva (no combinable con otras promociones)'
+						),
+						el('label', { className: 'drw-toggle-label' },
+							el('button', { className: 'drw-sw' + (f.excludeSaleItems ? ' on' : ''), onClick: function () { set('excludeSaleItems', !f.excludeSaleItems); } }),
+							' No aplica a productos en oferta'
+						),
+						el('label', { className: 'drw-toggle-label' },
+							el('button', { className: 'drw-sw' + (f.showInMinicart ? ' on' : ''), onClick: function () { set('showInMinicart', !f.showInMinicart); } }),
+							' Mostrar en el mini-carrito'
 						)
 					),
 

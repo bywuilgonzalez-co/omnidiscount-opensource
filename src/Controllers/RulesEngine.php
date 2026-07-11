@@ -249,6 +249,72 @@ class RulesEngine
     }
 
     /**
+     * Whether a rule should be skipped for a given product because the rule
+     * excludes on-sale items (exclude_sale_items) and the product is
+     * currently on sale. Narrow, opt-in guard: returns false (never skip)
+     * unless both the flag is set on the rule AND a product is available.
+     *
+     * @param array            $rule    Rule array with optional exclude_sale_items key.
+     * @param \WC_Product|null $product Product object, when available.
+     * @return bool
+     */
+    private function should_skip_due_to_sale_item(array $rule, \WC_Product $product = null)
+    {
+        if (empty($rule['exclude_sale_items'])) {
+            return false;
+        }
+
+        if (!$product) {
+            return false;
+        }
+
+        return $product->is_on_sale();
+    }
+
+    /**
+     * BOGO (Bogo::calculate()) and Bundle Set (BundleSet::calculate()) do
+     * their own internal cart iteration/matching — unlike the percentage/
+     * fixed/bulk per-item loops above, there is no single call site inside
+     * those engines to gate with should_skip_due_to_sale_item(). Instead,
+     * when a rule opts into exclude_sale_items, hand those engines a
+     * read-only view of the cart with on-sale product lines removed
+     * entirely, so on-sale items can neither trigger the promo (as a "buy"
+     * item / bundle component) nor receive its discount (as a "get" item).
+     * Returns the original $cart untouched whenever the flag is off or
+     * nothing needs excluding, to keep the default path byte-for-byte
+     * identical to before this guard existed.
+     *
+     * @param array     $rule Rule array with optional exclude_sale_items key.
+     * @param \WC_Cart  $cart
+     * @return \WC_Cart|SaleExcludedCartView
+     */
+    private function filter_cart_for_sale_exclusion($rule, $cart)
+    {
+        if (empty($rule['exclude_sale_items']) || !$cart) {
+            return $cart;
+        }
+
+        $original_items = $cart->get_cart();
+        $filtered_items = [];
+        $excluded_any = false;
+
+        foreach ($original_items as $key => $item) {
+            $product = isset($item['data']) ? $item['data'] : null;
+            if ($product instanceof \WC_Product && $product->is_on_sale()) {
+                $excluded_any = true;
+                continue;
+            }
+            $filtered_items[$key] = $item;
+        }
+
+        if (!$excluded_any) {
+            return $cart;
+        }
+
+        return new SaleExcludedCartView($filtered_items);
+    }
+
+    /**
      * Calculate catalog discount for a specific product.
      * Used for product page and shop loops to show dynamic pricing.
      *
@@ -286,6 +352,10 @@ class RulesEngine
                 }
 
                 if ($this->should_skip_due_to_coupons($rule)) {
+                    continue;
+                }
+
+                if ($this->should_skip_due_to_sale_item($rule, $product)) {
                     continue;
                 }
 
@@ -344,6 +414,10 @@ class RulesEngine
                 }
 
                 if ($this->should_skip_due_to_coupons($rule)) {
+                    continue;
+                }
+
+                if ($this->should_skip_due_to_sale_item($rule, $product)) {
                     continue;
                 }
 
@@ -668,6 +742,10 @@ class RulesEngine
             } elseif (in_array($type, ['percentage', 'fixed'])) {
                 $subtotal = 0.0;
                 foreach ($cart->get_cart() as $key => $item) {
+                    $product = $item['data'];
+                    if ($this->should_skip_due_to_sale_item($rule, $product)) {
+                        continue;
+                    }
                     $subtotal += $item_prices[$key] * $item['quantity'];
                 }
 
@@ -693,7 +771,7 @@ class RulesEngine
                 $value = (float)$adjustments['value'];
                 foreach ($cart->get_cart() as $key => $item) {
                     $product = $item['data'];
-                    if ($this->is_product_targeted_by_rule($rule, $product)) {
+                    if ($this->is_product_targeted_by_rule($rule, $product) && !$this->should_skip_due_to_sale_item($rule, $product)) {
                         if ($type === 'percentage') {
                             $item_prices[$key] = max(0.0, $item_prices[$key] - $item_prices[$key] * ($value / 100));
                         } elseif ($type === 'fixed') {
@@ -705,7 +783,7 @@ class RulesEngine
                 $tiers = !empty($adjustments['tiers']) ? (array)$adjustments['tiers'] : [];
                 foreach ($cart->get_cart() as $key => $item) {
                     $product = $item['data'];
-                    if ($this->is_product_targeted_by_rule($rule, $product)) {
+                    if ($this->is_product_targeted_by_rule($rule, $product) && !$this->should_skip_due_to_sale_item($rule, $product)) {
                         $qty = (int)$item['quantity'];
                         foreach ($tiers as $tier) {
                             $min_qty = isset($tier['min']) ? (int)$tier['min'] : 0;
@@ -727,7 +805,8 @@ class RulesEngine
                 }
             } elseif ($type === 'bogo') {
                 $bogo_engine = new Bogo();
-                $bogo_results = $bogo_engine->calculate($adjustments, $cart);
+                $bogo_cart = $this->filter_cart_for_sale_exclusion($rule, $cart);
+                $bogo_results = $bogo_engine->calculate($adjustments, $bogo_cart);
                 if (!empty($bogo_results)) {
                     foreach ($bogo_results as $key => $new_price) {
                         $item = $cart->get_cart()[$key];
@@ -740,7 +819,8 @@ class RulesEngine
                 }
             } elseif ($type === 'bundle_set') {
                 $bundle_engine = new BundleSet();
-                $bundle_results = $bundle_engine->calculate($adjustments, $cart);
+                $bundle_cart = $this->filter_cart_for_sale_exclusion($rule, $cart);
+                $bundle_results = $bundle_engine->calculate($adjustments, $bundle_cart);
                 if (!empty($bundle_results['applied']) && !empty($bundle_results['items'])) {
                     foreach ($bundle_results['items'] as $key => $new_price) {
                         $item = $cart->get_cart()[$key];
@@ -753,5 +833,33 @@ class RulesEngine
                 }
             }
         }
+    }
+}
+
+/**
+ * Minimal read-only $cart shim exposing only get_cart()/is_empty() — the
+ * only two methods Bogo::calculate()/BundleSet::calculate() call on their
+ * $cart argument. Used by RulesEngine::filter_cart_for_sale_exclusion() to
+ * hand those engines a view of the cart with on-sale product lines removed,
+ * without duplicating either engine's internal matching/allocation logic.
+ */
+class SaleExcludedCartView
+{
+    /** @var array */
+    private $items;
+
+    public function __construct(array $items)
+    {
+        $this->items = $items;
+    }
+
+    public function get_cart()
+    {
+        return $this->items;
+    }
+
+    public function is_empty()
+    {
+        return empty($this->items);
     }
 }

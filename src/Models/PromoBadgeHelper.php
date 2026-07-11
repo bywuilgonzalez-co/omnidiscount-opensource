@@ -36,9 +36,16 @@ class PromoBadgeHelper
      * triggers it appearing in the cart.
      *
      * @param \WC_Cart $cart
+     * @param bool     $require_minicart_opt_in Whether to gate each promo on
+     *   its own show_in_minicart flag. True (default) for the two surfaces
+     *   this gate is actually documented/labeled for — the classic mini-cart
+     *   widget and the Blocks Mini-Cart drawer badge. Pass false for
+     *   surfaces that are NOT the mini-cart drawer (e.g. Cart/Checkout Block
+     *   page notices), which must not be silently suppressed by a toggle
+     *   scoped to a different UI element.
      * @return array List of badge descriptors.
      */
-    public static function collect($cart)
+    public static function collect($cart, $require_minicart_opt_in = true)
     {
         if (!$cart || $cart->is_empty()) {
             return [];
@@ -69,6 +76,21 @@ class PromoBadgeHelper
                 continue;
             }
 
+            // Opt-in per promo: the mini-cart badge is OFF by default
+            // (show_in_minicart defaults to 0 in wp_drw_promos) and only
+            // renders once the merchant explicitly turns it on for THIS
+            // promo. This gate only applies to promo-compiled rules (the
+            // branch above already `continue`s past hand-authored "Reglas
+            // avanzadas", which have no promo to check the flag on, so their
+            // badge behaviour is unchanged by this gate). Callers that are
+            // not the mini-cart drawer itself (e.g. Cart/Checkout Block page
+            // notices) pass $require_minicart_opt_in = false to skip this
+            // gate entirely — it is scoped to "Mostrar en el mini-carrito",
+            // not to whether the promo's message may appear anywhere at all.
+            if ($require_minicart_opt_in && empty($promo['show_in_minicart'])) {
+                continue;
+            }
+
             $adjustments = !empty($rule['adjustments']) ? (array)$rule['adjustments'] : [];
             $type        = !empty($adjustments['type']) ? $adjustments['type'] : '';
 
@@ -96,6 +118,17 @@ class PromoBadgeHelper
                 ];
             } else {
                 $applied = $engine->is_rule_matched($rule, $cart);
+                // Best-effort re-check against exclude_sale_items: is_rule_matched()
+                // only evaluates conditions, so it can't see that a rule opted out of
+                // discounting on-sale products. If the cart's contents are entirely
+                // on sale, the rule's real per-item discount is $0 even though its
+                // conditions matched, so the badge must not claim "applied". Same
+                // best-effort spirit as the rest of this method (see class docblock):
+                // this does not re-verify product-level targeting (apply_to/filters),
+                // it only checks whether ANY non-sale product exists in the cart.
+                if ($applied && !empty($rule['exclude_sale_items'])) {
+                    $applied = self::has_non_sale_cart_item($cart);
+                }
             }
 
             $message = isset($promo['cart_message']) ? (string)$promo['cart_message'] : '';
@@ -116,5 +149,24 @@ class PromoBadgeHelper
         }
 
         return $badges;
+    }
+
+    /**
+     * Whether at least one cart line is a WC_Product NOT currently on sale.
+     * Used only as the best-effort exclude_sale_items re-check above.
+     *
+     * @param \WC_Cart $cart
+     * @return bool
+     */
+    private static function has_non_sale_cart_item($cart)
+    {
+        foreach ($cart->get_cart() as $item) {
+            $product = isset($item['data']) ? $item['data'] : null;
+            if ($product instanceof \WC_Product && !$product->is_on_sale()) {
+                return true;
+            }
+        }
+
+        return false;
     }
 }

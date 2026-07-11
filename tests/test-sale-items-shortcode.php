@@ -13,6 +13,33 @@ namespace Drw\App\Controllers {
             return $product->dynamic_discount;
         }
     }
+
+    // Minimal stub: ShortcodeController::enqueue_popup_assets() (a later
+    // phase's popup feature, out of scope for this sale-items smoke test)
+    // only needs the render-token issuer and its two public constants.
+    class PopupController {
+        const NONCE_ACTION   = 'drw_popup_submit';
+        const HONEYPOT_FIELD = 'drw_popup_hp';
+
+        public static function issue_render_token() {
+            return ['rendered_at' => 0, 'signature' => ''];
+        }
+    }
+}
+
+namespace Drw\App\Models {
+    class SettingsModel {
+        public static function get_theme_css_variables() {
+            return [];
+        }
+
+        // Popup settings are irrelevant to this shortcode test; always
+        // fall back so ShortcodeController::enqueue_popup_assets() sees an
+        // empty/disabled popup config.
+        public static function get_setting($key, $fallback = null) {
+            return $fallback;
+        }
+    }
 }
 
 namespace {
@@ -64,6 +91,10 @@ namespace {
         public function get_visible_children() {
             return [];
         }
+
+        public function add_to_cart_url() {
+            return 'https://example.test/?add-to-cart=' . (int)$this->id;
+        }
     }
 
     function add_shortcode($tag, $callback) {
@@ -82,6 +113,18 @@ namespace {
     function wp_enqueue_style($handle, $src, $deps = [], $ver = false) {
         global $enqueued_styles;
         $enqueued_styles[$handle] = [$src, $deps, $ver];
+    }
+
+    function wp_enqueue_script($handle, $src, $deps = [], $ver = false, $in_footer = false) {
+        return true;
+    }
+
+    function wp_localize_script($handle, $object_name, $data) {
+        return true;
+    }
+
+    function esc_url_raw($url) {
+        return (string)$url;
     }
 
     function get_posts($args) {
@@ -111,8 +154,48 @@ namespace {
         return htmlspecialchars((string)$value, ENT_QUOTES, 'UTF-8');
     }
 
+    function esc_attr__($value, $domain = null) {
+        return htmlspecialchars((string)$value, ENT_QUOTES, 'UTF-8');
+    }
+
     function esc_html($value) {
         return htmlspecialchars((string)$value, ENT_QUOTES, 'UTF-8');
+    }
+
+    function esc_html__($value, $domain = null) {
+        return htmlspecialchars((string)$value, ENT_QUOTES, 'UTF-8');
+    }
+
+    function __($value, $domain = null) {
+        return $value;
+    }
+
+    function wp_json_encode($data, $options = 0, $depth = 512) {
+        return json_encode($data, $options, $depth);
+    }
+
+    function admin_url($path = '') {
+        return 'https://example.test/wp-admin/' . ltrim((string)$path, '/');
+    }
+
+    function wp_create_nonce($action = -1) {
+        return 'test-nonce';
+    }
+
+    function selected($a, $b = true, $echo = true) {
+        $result = ((string)$a === (string)$b) ? ' selected="selected"' : '';
+        if ($echo) {
+            echo $result;
+        }
+        return $result;
+    }
+
+    function get_terms($args = []) {
+        return [];
+    }
+
+    function is_wp_error($thing) {
+        return false;
     }
 
     function esc_url($value) {
@@ -125,6 +208,10 @@ namespace {
 
     function absint($value) {
         return max(0, abs((int)$value));
+    }
+
+    function sanitize_key($value) {
+        return strtolower(preg_replace('/[^a-z0-9_\-]/', '', (string)$value));
     }
 
     function assert_true($condition, $message) {
@@ -146,7 +233,7 @@ namespace {
 
     $html = call_user_func($shortcodes['awdr_sale_items_list'], ['limit' => 4, 'columns' => 4, 'scan_limit' => 4]);
 
-    assert_true(strpos($html, '<div class="sale-perc">-12 %</div>') !== false, 'Shortcode should render the exact sale percentage badge.');
+    assert_true(strpos($html, '<div class="drw-sale-badge">-12 %</div>') !== false, 'Shortcode should render the exact sale percentage badge.');
     assert_true(strpos($html, 'Combo Energia') !== false, 'Shortcode should render the product name.');
     assert_true(isset($enqueued_styles['drw-public-style']), 'Shortcode should enqueue public CSS.');
     assert_true($last_query_args['posts_per_page'] === 4, 'Shortcode limit should control the product query.');

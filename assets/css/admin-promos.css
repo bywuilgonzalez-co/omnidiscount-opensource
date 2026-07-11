@@ -15,6 +15,13 @@
 #drw-promos-app,
 .drw-token-scope {
     --drw-ink:          #16271d;
+    /* Establishes a query container so grids below (promo card grid) can
+       react to the CARD'S own available width, not the raw browser
+       viewport — same technique as .drw-dashboard / #drw-analytics-app in
+       admin-style.css: WP admin's sidebar can be full-width, icon-only, or
+       hidden, so a viewport media query would size this wrong depending on
+       the merchant's own sidebar state. */
+    container-type: inline-size;
     --drw-ink-soft:     #4a4a4a;
     --drw-txt:          #3c3c3c;
     --drw-muted:        #8b8b8b;
@@ -61,8 +68,18 @@
    2. Page Shell
    ---------------------------------------------------------- */
 #drw-promos-app {
+    /* WP admin's #wpbody-content is sidebar-aware and routinely 1700px+ wide
+       on common desktop monitors (confirmed via getBoundingClientRect():
+       1740px on a 1920px-wide viewport with the sidebar expanded). A
+       1280px cap here left a large empty gray strip to the right of the
+       card at any viewport wider than ~1330px. 1600px matches the cap
+       already used by #drw-admin-app (Reglas) and #drw-analytics-app
+       (Analíticas) in admin-style.css, so all three admin screens use the
+       available width the same way. `width: 100%` keeps the app from
+       overflowing narrower admin viewports (~1280px laptops). */
     padding: 24px;
-    max-width: 1280px;
+    max-width: 1600px;
+    width: 100%;
 }
 
 .drw-page-header {
@@ -233,10 +250,30 @@
 /* ----------------------------------------------------------
    6. Promo Grid
    ---------------------------------------------------------- */
+/* Explicit @container-driven column counts (1 -> 2 -> 3), matching the
+   pattern already established by .drw-dashboard-grid / .drw-an-stats /
+   .drw-an-rankings in admin-style.css, rather than an auto-fill track that
+   is blind to actual item count. With few promos, auto-fill still reserved
+   as many tracks as the container could physically fit, so 2 cards in a
+   1232px-wide grid rendered as narrow ~360px tiles with an empty phantom
+   3rd track trailing them — a smaller-scale echo of the same "dead space"
+   complaint, just one level down from the page-width bug above. */
 .drw-promo-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(330px, 1fr));
+    grid-template-columns: minmax(0, 1fr);
     gap: 16px;
+}
+
+@container (min-width: 640px) {
+    .drw-promo-grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+}
+
+@container (min-width: 1040px) {
+    .drw-promo-grid {
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+    }
 }
 
 /* ----------------------------------------------------------
@@ -807,6 +844,20 @@
     margin-top: 1px;
 }
 
+/* Two-column field pairs (e.g. "Compra (cantidad)" / "Lleva (cantidad)",
+   or the BOGO "Productos que activan/se llevan" picker labels): reserve
+   room for a 2-line label on every field in the row. Sibling labels in a
+   .drw-fields-row don't know about each other's height, so when one label's
+   text wraps and the other doesn't, their inputs land at different Y
+   positions. Reserving 2 lines' worth of height for any field label inside
+   a paired row keeps both columns' inputs aligned regardless of how long
+   the label copy is, in this or any future language. */
+.drw-fields-row .drw-field label,
+.drw-fields-row .drw-field .components-base-control__label {
+    display: block;
+    min-height: 2.8em;
+}
+
 /* Section divider inside modal */
 .drw-section-label {
     font-size: 11px;
@@ -883,7 +934,12 @@
 }
 
 .drw-toast {
-    background: var(--drw-ink);
+    /* Fallback values are load-bearing, not decorative: showToast() in
+       admin-promos.js appends this container straight to document.body,
+       outside the '#drw-promos-app' scope these --drw-* tokens are actually
+       defined on (see section 1 above) -- without a fallback, var(--drw-ink)
+       resolves to nothing and the toast rendered white-on-white/invisible. */
+    background: var(--drw-ink, #16271d);
     color: #ffffff;
     border-radius: 12px;
     padding: 11px 16px;
@@ -900,26 +956,32 @@
     animation: drwToastIn 0.25s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
+@media (prefers-reduced-motion: reduce) {
+    .drw-toast {
+        animation: none;
+    }
+}
+
 @keyframes drwToastIn {
     from { opacity: 0; transform: translateY(12px) scale(0.95); }
     to   { opacity: 1; transform: translateY(0)   scale(1);    }
 }
 
 .drw-toast.drw-toast-success {
-    background: var(--drw-success);
+    background: var(--drw-success, #10b981);
 }
 
 .drw-toast.drw-toast-error {
-    background: var(--drw-error);
+    background: var(--drw-error, #ef4444);
 }
 
 .drw-toast.drw-toast-warning {
-    background: var(--drw-warning);
-    color: var(--drw-ink);
+    background: var(--drw-warning, #f59e0b);
+    color: var(--drw-ink, #16271d);
 }
 
 .drw-toast.drw-toast-info {
-    background: var(--drw-info);
+    background: var(--drw-info, #3b82f6);
 }
 
 /* ----------------------------------------------------------
